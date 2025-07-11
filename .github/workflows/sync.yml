@@ -23,8 +23,8 @@ jobs:
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
         with:
           upstream_sync_repo: note-gen/note-gen # *** 这里是上游仓库的完整路径 ***
-          upstream_sync_branch: main # *** 确认上游仓库的默认分支是否为 main ***
-          target_sync_branch: main # *** 确认你的 Fork 仓库要同步的分支是否为 main ***
+          upstream_sync_branch: dev # *** 已修改为 dev，假设上游默认分支也是 dev ***
+          target_sync_branch: dev # *** 已修改为 dev，你的 Fork 仓库默认分支是 dev ***
           target_repo_token: ${{ secrets.GITHUB_TOKEN }} # 使用 GitHub 提供的默认 Token
 
       - name: Sync check
