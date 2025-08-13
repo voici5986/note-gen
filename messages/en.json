@@ -49,7 +49,23 @@
       "title": "Markdown Editor",
       "desc": "Here, you can customize the Markdown editor, creating a writing experience tailored to your needs.",
       "typewriterMode": "Typewriter Mode",
-      "typewriterModeDesc": "In typewriter mode, the editor will simulate a typewriter effect, helping you better immerse in writing."
+      "typewriterModeDesc": "In typewriter mode, the editor will simulate a typewriter effect, helping you better immerse in writing.",
+      "outlineEnable": "Default outline enabled",
+      "outlineEnableDesc": "Enabling it will make the outline visible by default.",
+      "outlinePosition": "Outline position",
+      "outlinePositionDesc": "Set outline position.",
+      "outlinePositionOptions": {
+        "left": "Left",
+        "right": "Right"
+      },
+      "pageView": "Page view",
+      "pageViewDesc": "In immersive view, the editor will reserve a large amount of blank space on both sides, and in panorama view, the editor content will occupy the entire editing area.",
+      "pageViewOptions": {
+        "immersiveView": "Immersive view",
+        "panoramaView": "Panorama view"
+      },
+      "enableLineNumber": "Enable line number",
+      "enableLineNumberDesc": "Enabling it will make the line number visible in code blocks."
     },
     "uploadStore": {
       "uploadConfirm": "Upload configuration please ensure the sync repository is private, otherwise the data will be leaked!",
@@ -72,21 +88,35 @@
       "updateInstalled": "Restart app",
       "noUpdate": "Current version is the latest",
       "items": {
+        "home": {
+          "title": "Home",
+          "buttonName": "Open",
+          "desc": "Visit the website to learn more about NoteGen."
+        },
+        "guide": {
+          "title": "Guide",
+          "buttonName": "Open",
+          "desc": "View configuration guide, learn how to configure models, sync, etc. information."
+        },
         "github": {
           "title": "GitHub",
-          "buttonName": "View"
+          "buttonName": "View",
+          "desc": "If NoteGen helps you, please give a star to encourage!"
         },
         "releases": {
           "title": "Update Log",
-          "buttonName": "View"
+          "buttonName": "View",
+          "desc": "View update log, learn more about NoteGen's updates."
         },
         "issues": {
           "title": "Issue Feedback",
-          "buttonName": "Feedback"
+          "buttonName": "Feedback",
+          "desc": "If you find a bug in NoteGen, please feedback here."
         },
         "discussions": {
           "title": "Discussions",
-          "buttonName": "Discuss"
+          "buttonName": "Discuss",
+          "desc": "If you want to discuss with the author or other users, you can join the group discussion."
         }
       }
     },
@@ -121,6 +151,21 @@
         "reranking": {
           "title": "Reranking Model",
           "desc": "Used for reordering and optimizing search results."
+        }
+      }
+    },
+    "readAloud": {
+      "title": "Read Aloud",
+      "desc": "Here, you can configure read aloud related settings to provide voice playback functionality for chat content.",
+      "noModel": "Do not use",
+      "options": {
+        "audioModel": {
+          "title": "Audio Model",
+          "desc": "Select the AI model for text-to-speech conversion, supporting various voice types and parameter configurations."
+        },
+        "speed": {
+          "title": "Speech Rate",
+          "desc": "Adjust the playback speed of the voice, ranging from 0.25x to 4x speed, with 1x being the normal speed."
         }
       }
     },
@@ -162,6 +207,14 @@
       "backupMethodDesc": "After setting as the primary backup method, all sync-related functions in writing will use the current backup method (except for image hosting)",
       "isPrimaryBackup": "{type} is current primary backup",
       "setPrimaryBackup": "Set as Primary Backup",
+      "gitlabInstanceType": "GitLab Instance Type",
+      "gitlabInstanceTypeDesc": "Select the GitLab instance type to connect to",
+      "gitlabInstanceTypePlaceholder": "Select GitLab instance type",
+      "gitlabInstanceTypeOptions": {
+        "selfHosted": "Self-hosted instance",
+        "selfHostedDesc": "Enter your self-hosted GitLab server address (e.g. https://gitlab.example.com)"
+      },
+      "gitlabAccessTokenDesc": "Create a personal access token in {instanceDisplayName}, requires api permission",
       "autoSyncOptions": {
         "placeholder": "Select auto sync time",
         "disabled": "Disabled",
@@ -176,7 +229,36 @@
       "title": "Image Hosting",
       "desc": "Here, you can configure image hosting, uploading images to the image hosting service.",
       "isPrimaryBackup": "Current {type} primary image hosting method",
-      "setPrimaryBackup": "Set as Primary Image Hosting"
+      "setPrimaryBackup": "Set as Primary Image Hosting",
+      "smms": {
+        "token": {
+          "desc": "Please create and input SM.MS Token.",
+          "createToken": "Create Token"
+        },
+        "disk": "Disk Usage",
+        "error": "Failed to get, please check network or Token is correct."
+      },
+      "picgo": {
+        "desc": "PicGo server URL",
+        "ok": "Service is running, please ensure PicGo image hosting is configured.",
+        "error": "Service is not running, please ensure PicGo (v2.2.0+) is running, otherwise image upload will fail."
+      }
+    },
+    "imageMethod": {
+      "title": "Image Recognition",
+      "desc": "Here, you can configure image recognition related settings, supporting OCR and VLM two ways.",
+      "setPrimary": "Set as default",
+      "isPrimary": "{type} has been set as default",
+      "ocr": {
+        "title": "OCR",
+        "languagePacks": "Language Pack",
+        "checkModels": "Here you can search all models",
+        "modelInstruction": "Comma separated, for example: eng,chi_sim"
+      },
+      "vlm": {
+        "title": "Visual Language Model",
+        "desc": "Use visual language model to recognize image content."
+      }
     },
     "backupSync": {
       "title": "Backup Data",
@@ -191,7 +273,7 @@
         "backupTo": "Backup to WebDAV",
         "syncFrom": "Sync from WebDAV",
         "serverUrl": "WebDAV Server URL",
-        "serverUrlDesc": "Enter the URL of the WebDAV server, e.g: https://dav.example.com",
+        "serverUrlDesc": "Enter the URL of the WebDAV server No path included, e.g: https://dav.example.com http://192.8.8.88:9999",
         "serverUrlPlaceholder": "https://dav.example.com",
         "username": "Username",
         "usernameDesc": "WebDAV server username",
@@ -205,7 +287,19 @@
         "backupSuccess": "Backup Successful",
         "backupSuccessDesc": "Backed up {count} files to WebDAV.",
         "syncSuccess": "Sync Successful",
-        "syncSuccessDesc": "Synced {count} files from WebDAV to local."
+        "syncSuccessDesc": "Synced {count} files from WebDAV to local.",
+        "syncFailed": "Sync Failed",
+        "backupFailed": "Backup Failed",
+        "directoryCreated": "Directory Created",
+        "directoryCreatedDesc": "Directory {path} created successfully.",
+        "createDir": "Create Directory",
+        "success": "Success",
+        "failed": "Failed",
+        "error": {
+          "pathNotFound": "Path not found or server inaccessible.",
+          "createDirFailed": "Failed to create directory",
+          "connectionTimeOut": "Connection timed out, please check network or server."
+        }
       }
     },
     "template": {
@@ -220,7 +314,15 @@
       "selectScope": "Select Scope",
       "addTemplateDesc": "Please enter the custom template name and content, helping AI better understand your needs.",
       "editTemplate": "Edit Custom Template",
-      "noContent": "No content"
+      "noContent": "No content",
+      "range": {
+        "all": "All",
+        "today": "Today",
+        "week": "Past Week",
+        "month": "Past Month",
+        "threeMonth": "Past 3 Months",
+        "year": "Past Year"
+      }
     },
     "shortcut": {
       "title": "Shortcuts",
@@ -282,7 +384,13 @@
       "modelBaseUrlDesc": "You only need to configure the version number, for example: https://api.openai.com/v1, the suffix will be automatically added.",
       "modelDesc": "Some models support getting model list, if not supported please manually configure.",
       "temperatureDesc": "Controls randomness of output. Lower values make generated content more deterministic.",
-      "topPDesc": "A nucleus sampling method, where the model considers the results of tokens with top_p probability mass. So 0.1 means only consider the top 10% probability mass. Usually we suggest to change this or temperature but not both."
+      "topPDesc": "A nucleus sampling method, where the model considers the results of tokens with top_p probability mass. So 0.1 means only consider the top 10% probability mass. Usually we suggest to change this or temperature but not both.",
+      "customHeaders": "Custom Headers",
+      "customHeadersDesc": "Add custom HTTP headers with key-value pairs.",
+      "connectionSuccess": "AI connection test passed",
+      "headerKey": "Key",
+      "headerValue": "Value",
+      "addHeader": "Add Header"
     },
     "ocr": {
       "title": "OCR",
@@ -320,6 +428,23 @@
         "title": "Assets Path",
         "desc": "Set the path where resources (e.g. images, videos, files etc.) used in writing will be saved. Resources will be saved at the same level as the currently edited markdown file.",
         "select": "Set the path where resources used in writing will be saved"
+      }
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "desc": "Here, you can configure shortcuts to help you use NoteGen more efficiently.",
+      "resetDefaults": "Reset",
+      "clear": "Clear",
+      "noShortcut": "No Shortcut",
+      "shortcuts": {
+        "openWindow": {
+          "title": "Open/Hide Window",
+          "desc": "Open/Hide the main window."
+        },
+        "quickRecordText": {
+          "title": "Quick Record Text",
+          "desc": "Quickly open the main window and switch to text recording."
+        }
       }
     }
   },
@@ -559,7 +684,14 @@
         "rootDirectory": "Root directory",
         "deleteTag": "Delete current tag, records and notes (can be restored from trash)",
         "warning": "After conversion, you will be redirected to the writing page.",
-        "convert_button": "Convert"
+        "convert_button": "Convert",
+        "organizeAs": "Organize your records into an article:",
+        "templateContent": "Template content",
+        "recordRange": "Record range",
+        "filterThinkingContent": "Remove thinking content from records",
+        "startOrganize": "Start organizing",
+        "manageTemplate": "Manage template",
+        "cancel": "Cancel"
       },
       "mark": {
         "recorded": "Recorded",
@@ -632,7 +764,11 @@
         }
       },
       "messageControl": {
-        "words": "words"
+        "words": "words",
+        "readAloud": "Read Aloud",
+        "playing": "Playing",
+        "loading": "Loading",
+        "stop": "Stop Playing"
       },
       "preview": {
         "close": "Close",
@@ -680,7 +816,7 @@
     "record": "Record",
     "write": "Write",
     "search": "Search",
-    "gallery": "Gallery",
+    "githubImageHosting": "Github Image Hosting",
     "login": "Login",
     "loading": "Loading",
     "view": "View",
@@ -740,8 +876,16 @@
         "deleteSyncFile": "Delete Sync File",
         "deleteLocalFile": "Delete Local File",
         "delete": "Delete",
+        "confirmDelete": "Are you sure you want to delete the folder \"{name}\"? This will delete the folder and all its contents.",
+        "deleteSuccess": "Deleted successfully",
+        "deleteFailed": "Delete failed",
         "newFile": "New File",
         "newFolder": "New Folder",
+        "syncFolder": "Sync Folder",
+        "syncFolderDesc": "Sync all Markdown files in the current folder",
+        "syncFolderSuccess": "Sync folder success",
+        "syncFolderError": "Sync folder error",
+        "syncFolderProgress": "Syncing folder...",
         "deleteSyncFileSuccess": "Delete Sync File Success",
         "deleteSyncFileError": "Delete Sync File Error"
       },
@@ -755,19 +899,6 @@
         "pasteFailed": "Paste operation failed",
         "empty": "Clipboard is empty",
         "confirmOverwrite": "File already exists, do you want to overwrite it?",
-        "notSupported": "Operation not supported"
-      },
-      "deleteConfirm": "Are you sure you want to delete this file?"
-    },
-    "editor": {
-      "copySuccess": "Copied to clipboard",
-      "copySuccessDescription": "Copied to clipboard",
-      "upload": {
-        "error": "Upload Failed",
-        "needToken": "Upload image requires accessToken configuration",
-        "uploading": "Uploading image"
-      },
-      "toolbar": {
         "mark": {
           "title": "Records",
           "tooltip": "Use Records",
@@ -778,28 +909,88 @@
         "question": {
           "tooltip": "Q&A",
           "selectContent": "Please select content first",
-          "promptTemplate": "Reference text: {content}\nBased on the question: {question}, directly provide the answer content."
+          "promptTemplate": "Reference text: \n{content}\nBased on the question: \n{question}\n, directly provide the answer content."
         },
         "continue": {
           "tooltip": "Continue",
-          "promptTemplate": "Based on the preceding text: \"{content}\" continue writing and return content not exceeding 100 words.\nYou can reference the following text: \"{endContent}\", but avoid duplicating its content."
+          "promptTemplate": "Based on the preceding text: \n{content}\n continue writing and return content not exceeding 100 words.\nYou can reference the following text: \n{endContent}\n, but avoid duplicating its content."
         },
         "polish": {
           "tooltip": "Polish",
           "selectContent": "Please select content first",
-          "promptTemplate": "Polish this text: {content}, keep the language unchanged, fix typos and grammatical errors, directly return the polished result."
+          "promptTemplate": "Polish this text: \n{content}\n, keep the language unchanged, fix typos and grammatical errors, directly return the polished result."
         },
         "eraser": {
           "tooltip": "Simplify",
           "selectContent": "Please select content first",
-          "promptTemplate": "Simplify this text: {content}, this text is too verbose, reduce the word count by at least half, keep the language unchanged, directly return the optimized result."
+          "promptTemplate": "Simplify this text: \n{content}\n, this text is too verbose, reduce the word count by at least half, keep the language unchanged, directly return the optimized result."
+        },
+        "expansion": {
+          "tooltip": "Expand",
+          "selectContent": "Please select content first",
+          "promptTemplate": "Expand this text: \n{content}\n, this text is too short, increase the word count by at least half, keep the language unchanged, directly return the expanded result."
         },
         "translation": {
           "tooltip": "Translate",
           "description": "Translate the selected text",
           "selectContent": "Please select content first",
-          "promptTemplate": "Translate this text: {content}, into {language}, directly return the translated result."
+          "promptTemplate": "Translate this text: \n{content}\n, into {language}, directly return the translated result."
         }
+      }
+    },
+    "editor": {
+      "copySuccess": "Copy Success",
+      "copySuccessDescription": "Copied to clipboard",
+      "floatbar": {
+        "readAloud": {
+          "start": "Read Aloud",
+          "stop": "Stop Reading",
+          "loading": "Loading..."
+        }
+      },
+      "toolbar": {
+        "mark": {
+          "title": "Records",
+          "tooltip": "Records",
+          "description": "Convert records into content to insert into the article.",
+          "noRecords": "No records",
+          "ocrNoContent": "OCR did not recognize any content"
+        },
+        "question": {
+          "tooltip": "Q&A",
+          "selectContent": "Please select content first",
+          "promptTemplate": "Reference text: \n{content}\nBased on the question: \n{question}\n, directly provide the answer content."
+        },
+        "continue": {
+          "tooltip": "Continue",
+          "promptTemplate": "Based on the preceding text: \n{content}\n continue writing and return content not exceeding 100 words.\nYou can reference the following text: \n{endContent}\n, but avoid duplicating its content."
+        },
+        "polish": {
+          "tooltip": "Polish",
+          "selectContent": "Please select content first",
+          "promptTemplate": "Polish this text: \n{content}\n, keep the language unchanged, fix typos and grammatical errors, directly return the polished result."
+        },
+        "eraser": {
+          "tooltip": "Simplify",
+          "selectContent": "Please select content first",
+          "promptTemplate": "Simplify this text: \n{content}\n, this text is too verbose, reduce the word count by at least half, keep the language unchanged, directly return the optimized result."
+        },
+        "expansion": {
+          "tooltip": "Expand",
+          "selectContent": "Please select content first",
+          "promptTemplate": "Expand this text: \n{content}\n, this text is too short, increase the word count by at least half, keep the language unchanged, directly return the expanded result."
+        },
+        "translation": {
+          "tooltip": "Translate",
+          "description": "Translate the selected text",
+          "selectContent": "Please select content first",
+          "promptTemplate": "Translate this text: \n{content}\n, into {language}, directly return the translated result."
+        }
+      },
+      "upload": {
+        "error": "Upload failed",
+        "needToken": "Upload images need to configure accessToken",
+        "uploading": "Uploading image"
       }
     },
     "footer": {
@@ -809,7 +1000,7 @@
         "synced": "Synced",
         "syncing": "Syncing",
         "syncFailed": "Sync Failed",
-        "checkNetworkOrToken": "Please check network connection or GitHub token",
+        "checkNetworkOrToken": "Please check network connection or token",
         "quickSync": "Quick Sync"
       },
       "history": {

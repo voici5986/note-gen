@@ -107,3 +107,10 @@
 .vditor-outline{
   font-size: 14px;
 }
+
+.vditor-hint{
+  @apply min-w-[8rem] overflow-hidden rounded-md border bg-popover;
+  button {
+    @apply text-xs text-primary cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 outline-none;
+  }
+}

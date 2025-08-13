@@ -11,19 +11,22 @@ import useImageStore from "@/stores/imageHosting"
 import { RepoNames } from "@/lib/github.types"
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from "@/components/ui/context-menu"
-import useSettingStore from '@/stores/setting'
 import { useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Store } from "@tauri-apps/plugin-store";
 
 export function ImageCard({file}: {file: GithubFile}) {
   const [loading, setLoading] = useState(false)
   const { deleteImage } = useImageStore()
-  const { githubUsername } = useSettingStore()
 
   async function handleDelete(file: GithubFile) {
     setLoading(true)
-    const res = await deleteFile({path: file.path, sha: file.sha, repo: RepoNames.image})
+    const store = await Store.load('store.json');
+    const token = await store.get<string>('githubImageAccessToken')
+    const username = await store.get<string>('githubImageUsername')
+    if (!token || !username) return;
+    const res = await deleteFile({path: file.path, sha: file.sha, repo: RepoNames.image, token, username})
     if (res) {
       toast({ title: '文件已删除', description: file.name })
       deleteImage(file.name)
@@ -34,21 +37,30 @@ export function ImageCard({file}: {file: GithubFile}) {
   }
 
   async function handleCopyLink() {
-    const fileLink = `https://cdn.jsdelivr.net/gh/${githubUsername}/${RepoNames.image}@main/${file.name}`
-    navigator.clipboard.writeText(fileLink)
-    toast({ title: '已复制 URL 到剪切板', description: fileLink })
+    navigator.clipboard.writeText(file.download_url)
+    toast({ title: '已复制 URL 到剪切板', description: file.download_url })
+  }
+
+  async function handleCopyJsdelivrLink() {
+    // 取 file.download_url 最后一个 / 后面的文件名
+    const store = await Store.load('store.json');
+    const username = await store.get<string>('githubImageUsername')
+    const fileName = file.download_url.split('/').pop()
+    const jsdelivrLink = `https://cdn.jsdelivr.net/gh/${username}/${RepoNames.image}@main/${fileName}`
+    navigator.clipboard.writeText(jsdelivrLink)
+    toast({ title: '已复制 jsdelivr 链接 到剪切板', description: jsdelivrLink })
   }
 
   async function handleCopyMarkdown() {
-    const fileLink = `![${file.name}](https://cdn.jsdelivr.net/gh/${githubUsername}/${RepoNames.image}@main/${file.name})`
-    navigator.clipboard.writeText(fileLink)
-    toast({ title: '已复制 Markdown 到剪切板', description: fileLink })
+    const text = `![${file.name}](${file.download_url})`
+    navigator.clipboard.writeText(text)
+    toast({ title: '已复制 Markdown 到剪切板', description: text })
   }
 
   async function handleCopyHTML() {
-    const fileLink = `<img src="https://cdn.jsdelivr.net/gh/${githubUsername}/${RepoNames.image}@main/${file.name}" />`
-    navigator.clipboard.writeText(fileLink)
-    toast({ title: '已复制 HTML 到剪切板', description: fileLink })
+    const text = `<img src="${file.download_url}" alt="${file.name}">`
+    navigator.clipboard.writeText(text)
+    toast({ title: '已复制 HTML 到剪切板', description: text })
   }
 
   return (
@@ -93,6 +105,9 @@ export function ImageCard({file}: {file: GithubFile}) {
         </ContextMenuSub>
         <ContextMenuItem inset onClick={() => handleCopyLink()}>
           复制链接
+        </ContextMenuItem>
+        <ContextMenuItem inset onClick={() => handleCopyJsdelivrLink()}>
+          复制 jsdelivr 链接
         </ContextMenuItem>
         <ContextMenuItem inset onClick={() => handleCopyMarkdown()}>
           复制 Markdown

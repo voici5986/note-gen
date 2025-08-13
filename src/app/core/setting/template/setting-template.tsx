@@ -1,6 +1,7 @@
 import useSettingStore, { GenTemplate, GenTemplateRange } from "@/stores/setting";
 import { SettingType } from "../components/setting-base";
 import { useTranslations } from 'next-intl';
+import { getTemplateRangeLabel, getTemplateRangeOptions } from '@/lib/template-range-utils';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash, Pencil } from "lucide-react";
@@ -143,8 +144,8 @@ export function SettingTemplate({id, icon}: {id: string, icon?: React.ReactNode}
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        {Object.values(GenTemplateRange).map((value) => (
-                          <SelectItem key={value} value={value}>{value}</SelectItem>
+                        {getTemplateRangeOptions(t).map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                         ))}
                       </SelectGroup>
                     </SelectContent>
@@ -209,8 +210,8 @@ export function SettingTemplate({id, icon}: {id: string, icon?: React.ReactNode}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {Object.values(GenTemplateRange).map((value) => (
-                        <SelectItem key={value} value={value}>{value}</SelectItem>
+                      {getTemplateRangeOptions(t).map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                       ))}
                     </SelectGroup>
                   </SelectContent>
@@ -262,7 +263,7 @@ export function SettingTemplate({id, icon}: {id: string, icon?: React.ReactNode}
                     </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {t('settings.template.scope')}: <span className="font-medium">{item.range}</span>
+                    {t('settings.template.scope')}: <span className="font-medium">{getTemplateRangeLabel(item.range, t)}</span>
                   </div>
                   <p className={`text-sm whitespace-pre-wrap mt-2 line-clamp-3 ${!item.status ? 'opacity-50' : ''}`}>
                     {item.content || t('settings.template.noContent') || 'No content'}

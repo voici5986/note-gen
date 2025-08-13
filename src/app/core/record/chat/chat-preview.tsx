@@ -1,3 +1,4 @@
+'use client'
 import useSettingStore from "@/stores/setting";
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes'
@@ -9,14 +10,20 @@ import bash from 'highlight.js/lib/languages/bash';
 import json from 'highlight.js/lib/languages/json';
 import xml from 'highlight.js/lib/languages/xml';
 import css from 'highlight.js/lib/languages/css';
-import 'highlight.js/styles/github.css';
-import 'highlight.js/styles/github-dark.css';
-import 'github-markdown-css';
+import 'highlight.js/styles/github.min.css';
 import './chat.scss';
 
 type ThemeType = 'light' | 'dark' | 'system';
 
 export default function ChatPreview({text}: {text: string, themeReverse?: boolean}) {
+  const previewRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme()
+  const [mdTheme, setMdTheme] = useState<ThemeType>('light')
+  const { codeTheme } = useSettingStore()
+  const [htmlContent, setHtmlContent] = useState<string>('');
+
+  const md = useRef<MarkdownIt | null>(null);
+
   useEffect(() => {
     hljs.registerLanguage('javascript', javascript);
     hljs.registerLanguage('typescript', typescript);
@@ -25,13 +32,6 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
     hljs.registerLanguage('html', xml);
     hljs.registerLanguage('css', css);
   }, []);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme()
-  const [mdTheme, setMdTheme] = useState<ThemeType>('light')
-  const { codeTheme } = useSettingStore()
-  const [htmlContent, setHtmlContent] = useState<string>('');
-
-  const md = useRef<MarkdownIt | null>(null);
   
   useEffect(() => {
     md.current = new MarkdownIt({
@@ -39,20 +39,20 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
       linkify: true,
       typographer: true,
       highlight: function (str, lang): string {
-      if (lang && hljs.getLanguage(lang)) {
-        try {
-          const themeClass = mdTheme === 'dark' ? 'hljs-dark' : 'hljs-light';
-          return `<pre class="hljs ${themeClass}"><code>` +
-                 hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
-                 '</code></pre>';
-        } catch {}
+        if (lang && hljs.getLanguage(lang)) {
+          try {
+            const themeClass = mdTheme === 'dark' ? 'hljs-dark' : 'hljs-light';
+            return `<pre class="hljs ${themeClass}"><code>` +
+              hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+            '</code></pre>';
+          } catch {}
+        }
+        // 使用通用高亮
+        const themeClass = mdTheme === 'dark' ? 'hljs-dark' : 'hljs-light';
+        return `<pre class="hljs ${themeClass}"><code>` +
+          (md.current ? md.current.utils.escapeHtml(str) : str) +
+          '</code></pre>';
       }
-      // 使用通用高亮
-      const themeClass = mdTheme === 'dark' ? 'hljs-dark' : 'hljs-light';
-      return `<pre class="hljs ${themeClass}"><code>` +
-             (md.current ? md.current.utils.escapeHtml(str) : str) +
-             '</code></pre>';
-    }
     });
 
     md.current.renderer.rules.link_open = function (tokens, idx, options, env, self) {
@@ -61,8 +61,6 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
       return self.renderToken(tokens, idx, options);
     }
     
-    
-    // Re-render content when instance is updated
     if (text) {
       setHtmlContent(md.current.render(text));
     }
@@ -90,6 +88,31 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
   }, [theme])
 
   useEffect(() => {
+    // 加载Markdown主题样式
+    const link = document.createElement('link');
+    link.id = 'markdown-theme-style';
+    link.rel = 'stylesheet';
+    switch (theme) {
+      case 'dark':
+        link.href = '/markdown/github-markdown-dark.css';
+        break;
+      case 'light':
+        link.href = '/markdown/github-markdown-light.css';
+        break;
+      case 'system':
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          link.href = '/markdown/github-markdown-dark.css';
+        } else {
+          link.href = '/markdown/github-markdown-light.css';
+        }
+        break;
+    }
+    
+    const existingLink = document.getElementById('markdown-theme-style');
+    if (existingLink) document.head.removeChild(existingLink);
+    document.head.appendChild(link);
+
+    // 监听系统主题变化
     const matchMedia = window.matchMedia('(prefers-color-scheme: dark)')
     const handler = () => {
       if (theme === 'system') {

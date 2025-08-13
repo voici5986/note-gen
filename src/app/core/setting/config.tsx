@@ -1,4 +1,20 @@
-import { BotMessageSquare, LayoutTemplate, ScanText, Store, UserRoundCog, Drama, FolderOpen, Package, Database, DatabaseBackup, ImageUp, FileCog, Book } from "lucide-react"
+import {
+  BotMessageSquare,
+  LayoutTemplate,
+  ScanText,
+  Store,
+  UserRoundCog,
+  Drama,
+  FolderOpen,
+  Package,
+  Database,
+  DatabaseBackup,
+  ImageUp,
+  FileCog,
+  Book,
+  KeyboardIcon,
+  Volume2
+} from "lucide-react"
 
 const baseConfig = [
   {
@@ -49,8 +65,16 @@ const baseConfig = [
     anchor: 'editor',
   },
   {
+    icon: <KeyboardIcon className="size-4 lg:size-6" />,
+    anchor: 'shortcuts',
+  },
+  {
     icon: <ScanText className="size-4 lg:size-6" />,
-    anchor: 'ocr',
+    anchor: 'imageMethod',
+  },
+  {
+    icon: <Volume2 className="size-4 lg:size-6" />,
+    anchor: 'readAloud',
   },
   '-',
   {
@@ -74,6 +98,9 @@ export interface AiConfig {
   modelType?: ModelType
   icon?: string
   apiKeyUrl?: string
+  customHeaders?: Record<string, string>
+  voice?: string
+  speed?: number
 }
 
 export interface Model {

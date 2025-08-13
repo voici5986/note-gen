@@ -36,7 +36,7 @@ export function ChatInput() {
   const [text, setText] = useState("")
   const { primaryModel } = useSettingStore()
   const { currentTagId } = useTagStore()
-  const { insert, loading, setLoading, saveChat, chats, isPlaceholderEnabled } = useChatStore()
+  const { insert, loading, setLoading, saveChat, chats, isPlaceholderEnabled, locale } = useChatStore()
   const { fetchMarks, marks, trashState } = useMarkStore()
   const [isComposing, setIsComposing] = useState(false)
   const [placeholder, setPlaceholder] = useState('')
@@ -109,40 +109,39 @@ export function ChatInput() {
         if (ragContext) {
           // 如果获取到了相关内容，将其作为独立部分添加到请求中
           ragContext = `
-以下是你的知识库中与该问题最相关的内容，请充分利用这些信息来回答问题：
-
+Your knowledge library is the most relevant content related to this question. Please use these information to answer the question:
 ${ragContext}
-
 `
         }
       } catch (error) {
-        console.error('获取RAG上下文失败:', error)
+        console.error('Failed to get RAG context:', error)
       }
     }
-    
+
     const request_content = `
-      可以参考以下内容笔记的记录：
-      以下是通过截图后，使用OCR识别出的文字片段：
-      ${scanMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}。
-      以下是通过文本复制记录的片段：
-      ${textMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}。
-      以下是插图记录的片段描述：
-      ${imageMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}。
-      以下是链接记录的片段描述：
-      ${linkMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}。
-      以下是文件记录的片段描述：
-      ${fileMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}。
-      以下聊天记录：
+      Use ${locale} language, don't use any other language.
+      ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks].length ? 'You can refer to the following content notes:' : ''}
+      ${scanMarks.length ? 'The following are screenshots after using OCR to identify text fragments:' : ''}
+      ${scanMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
+      ${textMarks.length ? 'The following are text copy records:' : ''}
+      ${textMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
+      ${imageMarks.length ? 'The following are image records:' : ''}
+      ${imageMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
+      ${linkMarks.length ? 'The following are link records:' : ''}
+      ${linkMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
+      ${fileMarks.length ? 'The following are file records:' : ''}
+      ${fileMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
+      ${chatsAfterClear.length ? 'Refer to the following chat records:' : ''}
       ${
         chatsAfterClear
           .filter((item) => item.tagId === currentTagId && item.type === "chat")
           .map((item, index) => `${index + 1}. ${item.content}`)
           .join(';\n\n')
-      }。
-      ${ragContext}
-      ${text}
-    `
-    
+      }
+      ${ragContext.trim()}
+      ${text.trim()}
+    `.trim()
+
     // 先保存空消息，然后通过流式请求更新
     await saveChat({
       ...message,
@@ -181,7 +180,7 @@ ${ragContext}
 
   // 获取输入框占位符
   async function genInputPlaceholder() {
-    setPlaceholder('...')
+    setPlaceholder(t('record.chat.input.placeholder.default'))
     if (!primaryModel) return
     if (trashState) return
     // 检查是否启用了AI占位符功能
@@ -197,35 +196,16 @@ ${ragContext}
     const lastClearIndex = chats.findLastIndex(item => item.type === 'clear')
     const chatsAfterClear = chats.slice(lastClearIndex + 1)
     const request_content = `
-      请你扮演一个笔记软件的智能助手的 placeholder，可以参考以下内容笔记的记录，
-      以下是通过截图后，使用OCR识别出的文字片段：
-      ${scanMarks.map((item, index) => `${index + 1}. ${item.desc?.slice(0, 30)}`).join(';\n\n')}。
-      以下是通过文本复制记录的片段：
-      ${textMarks.map((item, index) => `${index + 1}. ${item.content?.slice(0, 30)}`).join(';\n\n')}。
-      以下是插图记录的片段描述：
-      ${imageMarks.map((item, index) => `${index + 1}. ${item.desc?.slice(0, 30)}`).join(';\n\n')}。
-      以下是文件记录的片段描述：
-      ${fileMarks.map((item, index) => `${index + 1}. ${item.desc?.slice(0, 30)}`).join(';\n\n')}。
-      以下是链接记录的片段描述：
-      ${linkMarks.map((item, index) => `${index + 1}. ${item.desc?.slice(0, 30)}`).join(';\n\n')}。
-      以下聊天记录：
-      ${chatsAfterClear
-        .filter((item) => item.tagId === currentTagId && item.type === "chat")
-        .map((item, index) => `${index + 1}. ${item.content}`)
-        .join(';\n\n')
-      }。
-      以下是用户之前的提问记录：
-      ${chatsAfterClear
-        .filter((item) => item.tagId === currentTagId && item.type === "chat" && item.role === 'user')
-        .map((item, index) => `${index + 1}. ${item.content}`)
-        .join(';\n\n')}。
-      分析这些记录的内容，编写一个可能会向你提问的问题，用于辅助用户向你提问，不要返回用户已经提过的类似问题，不许超过 20 个字。
-    `
+      Use ${locale} language, don't use any other language.
+      ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks]
+        .slice(0, 5)
+        .map(item => item.content?.replace(/<thinking>[\s\S]*?<thinking>/g, '').slice(0, 60))
+        .join(';\n\n')}
+      ${chatsAfterClear.slice(0, 5).map(item => item.content?.replace(/<thinking>[\s\S]*?<thinking>/g, '').slice(0, 60)).join(';\n\n')}
+    `.trim()
     // 使用非流式请求获取placeholder内容
     const content = await fetchAiPlaceholder(request_content)
-    if (content.length < 30 && content.length > 10) {
-      setPlaceholder(content + '[Tab]')
-    }
+    setPlaceholder(content + ' [Tab]')
   }
 
   // 切换输入类型

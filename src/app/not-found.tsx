@@ -4,10 +4,21 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { isMobileDevice } from '@/lib/check';
+import { Store } from '@tauri-apps/plugin-store';
 
 export default function NotFound() {
   const router = useRouter();
   const [countdown, setCountdown] = useState(5);
+
+  async function clearRouteStore() {
+    const store = await Store.load('store.json');
+    await store.delete('lastSettingPage')
+    await store.delete('lastRecordPage')
+  }
+
+  useEffect(() => {
+    clearRouteStore()
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {

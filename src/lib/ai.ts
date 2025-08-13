@@ -133,7 +133,7 @@ export async function checkRerankModelAvailable(): Promise<boolean> {
     if (!modelInfo) return false;
     
     const { baseURL, apiKey, model } = modelInfo;
-    if (!baseURL || !apiKey || !model) return false;
+    if (!baseURL || !model) return false;
     
     // 测试重排序模型
     const testQuery = '测试查询';
@@ -184,7 +184,7 @@ export async function fetchEmbedding(text: string): Promise<number[] | null> {
       
       const { baseURL, apiKey, model } = modelInfo;
 
-      if (!baseURL || !apiKey || !model) {
+      if (!baseURL || !model) {
         throw new Error('嵌入模型配置不完整');
       }
       
@@ -247,7 +247,7 @@ export async function rerankDocuments(
     
     const { baseURL, apiKey, model } = modelInfo;
     
-    if (!baseURL || !apiKey || !model) {
+    if (!baseURL || !model) {
       return documents; // 配置不完整，返回原始排序
     }
     
@@ -285,7 +285,7 @@ export async function rerankDocuments(
     // 将原始文档与新的相似度分数结合
     const rerankResults = data.results.map((result: any, index: number) => {
       return {
-        ...documents[result.document_index || index],
+        ...documents[result.document_index || result.index || index],
         similarity: result.relevance_score || result.score || documents[index].similarity
       };
     });
@@ -364,6 +364,7 @@ export async function createOpenAIClient(AiConfig?: AiConfig) {
       "x-stainless-runtime": null,
       "x-stainless-runtime-version": null,
       "x-stainless-timeout": null,
+      ...(AiConfig?.customHeaders || {})
     },
     ...(proxyUrl ? { httpAgent: proxyUrl } : {})
   })
@@ -514,6 +515,42 @@ export async function fetchAiDesc(text: string) {
   }
 }
 
+export async function fetchAiDescByImage(base64: string) {
+  try {
+    // 获取AI设置
+    const aiConfig = await getAISettings('imageMethodPrimaryModel')
+
+    const descContent = `根据截图的内容，返回一条描述。`
+    
+    const openai = await createOpenAIClient(aiConfig)
+    const completion = await openai.chat.completions.create({
+      model: aiConfig?.model || '',
+      messages: [{
+        role: 'user' as const,
+        content: [
+          {
+            type: 'image_url',
+            image_url: {
+              url: base64
+            }
+          },
+          {
+            type: 'text',
+            text: descContent
+          }
+        ]
+      }],
+      temperature: aiConfig?.temperature || 1,
+      top_p: aiConfig?.topP || 1,
+    })
+    
+    return completion.choices[0].message.content || ''
+  } catch (error) {
+    handleAIError(error, false)
+    return null
+  }
+}
+
 // placeholder
 export async function fetchAiPlaceholder(text: string): Promise<string> {
   try {
@@ -521,7 +558,12 @@ export async function fetchAiPlaceholder(text: string): Promise<string> {
     const aiConfig = await getAISettings('placeholderPrimaryModel')
 
     // 构建 placeholder 提示词
-    const placeholderPrompt = `Generate a placeholder for the following text: ${text}`
+    const placeholderPrompt = `
+      You are an intelligent assistant of a note-taking software, you can refer to the records of the content notes.
+      Don't exceed 20 characters.
+      Do not generate any special characters.
+      Generate a question based on the following content:
+      ${text}`
 
     // 准备消息
     const { messages } = await prepareMessages(`${placeholderPrompt}\n\n${text}`, false)
@@ -536,8 +578,9 @@ export async function fetchAiPlaceholder(text: string): Promise<string> {
     })
 
     const result = completion.choices[0]?.message?.content || ''
-    // 去掉所有换行符和各种特殊符号
-    return result.replace(/\n/g, '').replace(/\s/g, '')
+
+    // 去掉所有换行符和各种特殊符号，不包括空格
+    return result.trim()
   } catch (error) {
     return handleAIError(error) || ''
   }

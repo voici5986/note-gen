@@ -2,14 +2,15 @@ import { Store } from '@tauri-apps/plugin-store'
 import { create } from 'zustand'
 import { getVersion } from '@tauri-apps/api/app'
 import { AiConfig } from '@/app/core/setting/config'
+import { GitlabInstanceType } from '@/lib/gitlab.types'
 
 export enum GenTemplateRange {
-  All = '全部',
-  Today = '今天',
-  Week = '近一周',
-  Month = '近一月',
-  ThreeMonth = '近三个月',
-  Year = '近一年',
+  All = 'all',
+  Today = 'today',
+  Week = 'week',
+  Month = 'month',
+  ThreeMonth = 'threeMonth',
+  Year = 'year',
 }
 
 export interface GenTemplate {
@@ -57,6 +58,12 @@ interface SettingState {
   rerankingModel: string
   setRerankingModel: (rerankingModel: string) => Promise<void>
 
+  imageMethodModel: string
+  setImageMethodModel: (imageMethodModel: string) => Promise<void>
+
+  audioModel: string
+  setAudioModel: (audioModel: string) => Promise<void>
+
   templateList: GenTemplate[]
   setTemplateList: (templateList: GenTemplate[]) => Promise<void>
 
@@ -95,9 +102,25 @@ interface SettingState {
   giteeAutoSync: string
   setGiteeAutoSync: (giteeAutoSync: string) => Promise<void>
 
+  // Gitlab 相关设置
+  gitlabInstanceType: GitlabInstanceType
+  setGitlabInstanceType: (instanceType: GitlabInstanceType) => Promise<void>
+
+  gitlabCustomUrl: string
+  setGitlabCustomUrl: (customUrl: string) => Promise<void>
+
+  gitlabAccessToken: string
+  setGitlabAccessToken: (gitlabAccessToken: string) => void
+
+  gitlabAutoSync: string
+  setGitlabAutoSync: (gitlabAutoSync: string) => Promise<void>
+
+  gitlabUsername: string
+  setGitlabUsername: (gitlabUsername: string) => Promise<void>
+
   // 主要备份方式设置
-  primaryBackupMethod: 'github' | 'gitee'
-  setPrimaryBackupMethod: (method: 'github' | 'gitee') => Promise<void>
+  primaryBackupMethod: 'github' | 'gitee' | 'gitlab'
+  setPrimaryBackupMethod: (method: 'github' | 'gitee' | 'gitlab') => Promise<void>
 
   lastSettingPage: string
   setLastSettingPage: (page: string) => Promise<void>
@@ -111,6 +134,10 @@ interface SettingState {
   // 图床设置
   githubImageAccessToken: string
   setGithubImageAccessToken: (githubImageAccessToken: string) => Promise<void>
+
+  // 图片识别设置
+  primaryImageMethod: 'ocr' | 'vlm'
+  setPrimaryImageMethod: (method: 'ocr' | 'vlm') => Promise<void>
 }
 
 
@@ -193,6 +220,20 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ rerankingModel })
   },
 
+  imageMethodModel: '',
+  setImageMethodModel: async (imageMethodModel) => {
+    const store = await Store.load('store.json');
+    await store.set('imageMethodModel', imageMethodModel)
+    set({ imageMethodModel })
+  },
+
+  audioModel: '',
+  setAudioModel: async (audioModel) => {
+    const store = await Store.load('store.json');
+    await store.set('audioPrimaryModel', audioModel)
+    set({ audioModel })
+  },
+
   templateList: [
     {
       id: '0',
@@ -254,7 +295,7 @@ const useSettingStore = create<SettingState>((set, get) => ({
     await store.set('jsdelivr', jsdelivr)
   },
 
-  useImageRepo: true,
+  useImageRepo: false,
   setUseImageRepo: async (useImageRepo: boolean) => {
     set({ useImageRepo })
     const store = await Store.load('store.json');
@@ -297,12 +338,51 @@ const useSettingStore = create<SettingState>((set, get) => ({
     await store.set('giteeAutoSync', giteeAutoSync)
   },
 
+  // Gitlab 相关设置
+  gitlabInstanceType: GitlabInstanceType.OFFICIAL,
+  setGitlabInstanceType: async (instanceType: GitlabInstanceType) => {
+    const store = await Store.load('store.json')
+    await store.set('gitlabInstanceType', instanceType)
+    await store.save()
+    set({ gitlabInstanceType: instanceType })
+  },
+
+  gitlabCustomUrl: '',
+  setGitlabCustomUrl: async (customUrl: string) => {
+    const store = await Store.load('store.json')
+    await store.set('gitlabCustomUrl', customUrl)
+    await store.save()
+    set({ gitlabCustomUrl: customUrl })
+  },
+
+  gitlabAccessToken: '',
+  setGitlabAccessToken: (gitlabAccessToken: string) => {
+    set({ gitlabAccessToken })
+  },
+
+  gitlabAutoSync: 'disabled',
+  setGitlabAutoSync: async (gitlabAutoSync: string) => {
+    const store = await Store.load('store.json')
+    await store.set('gitlabAutoSync', gitlabAutoSync)
+    await store.save()
+    set({ gitlabAutoSync })
+  },
+
+  gitlabUsername: '',
+  setGitlabUsername: async (gitlabUsername: string) => {
+    const store = await Store.load('store.json')
+    await store.set('gitlabUsername', gitlabUsername)
+    await store.save()
+    set({ gitlabUsername })
+  },
+
   // 默认使用 GitHub 作为主要备份方式
   primaryBackupMethod: 'github',
-  setPrimaryBackupMethod: async (method: 'github' | 'gitee') => {
-    set({ primaryBackupMethod: method })
-    const store = await Store.load('store.json');
+  setPrimaryBackupMethod: async (method: 'github' | 'gitee' | 'gitlab') => {
+    const store = await Store.load('store.json')
     await store.set('primaryBackupMethod', method)
+    await store.save()
+    set({ primaryBackupMethod: method })
   },
 
   assetsPath: 'assets',
@@ -319,6 +399,15 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ githubImageAccessToken })
     const store = await Store.load('store.json');
     await store.set('githubImageAccessToken', githubImageAccessToken)
+    await store.save()
+  },
+
+  // 图片识别设置
+  primaryImageMethod: 'ocr',
+  setPrimaryImageMethod: async (method: 'ocr' | 'vlm') => {
+    set({ primaryImageMethod: method })
+    const store = await Store.load('store.json');
+    await store.set('primaryImageMethod', method)
     await store.save()
   },
 }))

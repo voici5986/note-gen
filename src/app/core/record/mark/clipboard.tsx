@@ -9,7 +9,7 @@ import useSettingStore from "@/stores/setting";
 import useMarkStore from "@/stores/mark";
 import { v4 as uuid } from 'uuid'
 import ocr from "@/lib/ocr";
-import { fetchAiDesc } from "@/lib/ai";
+import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai";
 import { insertMark, Mark } from "@/db/marks";
 import { uint8ArrayToBase64, uploadFile } from "@/lib/github";
 import { RepoNames } from "@/lib/github.types";
@@ -24,7 +24,7 @@ export function Clipboard() {
   const [image, setImage] = useState('')
   const [fileSize, setFileSize] = useState('')
   const { currentTagId, fetchTags, getCurrentTag } = useTagStore()
-  const { primaryModel, githubUsername } = useSettingStore()
+  const { primaryModel, githubUsername, primaryImageMethod } = useSettingStore()
   const { fetchMarks, addQueue, setQueue, removeQueue } = useMarkStore()
 
   async function readHandler() {
@@ -64,14 +64,25 @@ export function Clipboard() {
       await mkdir('image', { baseDir: BaseDirectory.AppData})
     }
     await copyFile('clipboard.png', `image/${queueId}.png`, { fromPathBaseDir: BaseDirectory.AppData, toPathBaseDir: BaseDirectory.AppData})
-    setQueue(queueId, { progress: t('record.mark.progress.ocr') });
-    const content = await ocr(`image/${queueId}.png`)
+    let content = ''
     let desc = ''
-    if (primaryModel) {
+    if (primaryImageMethod === 'vlm') {
+      // 使用 VLM 识别图片
       setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
-      desc = await fetchAiDesc(content).then(res => res ? res : content)
-    } else {
+      const file = await readFile(`image/${queueId}.png`, { baseDir: BaseDirectory.AppData })
+      const base64 = `data:image/png;base64,${Buffer.from(file).toString('base64')}`
+      content = await fetchAiDescByImage(base64) || 'VLM Error'
       desc = content
+    } else {
+      // 使用 OCR 识别图片
+      setQueue(queueId, { progress: t('record.mark.progress.ocr') });
+      content = await ocr(`image/${queueId}.png`)
+      setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
+      if (primaryModel) {
+        desc = await fetchAiDesc(content).then(res => res ? res : content) || content
+      } else {
+        desc = content
+      }
     }
     const mark: Partial<Mark> = {
       tagId: currentTagId,

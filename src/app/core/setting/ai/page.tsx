@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from "react";
 import useSettingStore from "@/stores/setting";
 import { Store } from "@tauri-apps/plugin-store";
-import { BotMessageSquare, Copy, Eye, EyeOff, X } from "lucide-react";
+import { BotMessageSquare, Copy, Eye, EyeOff, X, Plus } from "lucide-react";
 import ModelSelect from "./modelSelect";
 import { AiConfig, ModelType } from "../config";
 import * as React from "react"
@@ -43,7 +43,21 @@ export default function AiPage() {
   const [temperature, setTemperature] = useState<number>(0.7)
   const [topP, setTopP] = useState<number>(1.0)
   const [modelType, setModelType] = useState<ModelType>('chat')
+  const [voice, setVoice] = useState<string>('')
   const [apiKeyVisible, setApiKeyVisible] = useState<boolean>(false)
+  const [headerPairs, setHeaderPairs] = useState<Array<{key: string, value: string, id: string}>>([])
+
+  const parseHeadersToKeyValue = (headers: Record<string, string> = {}) => {
+    return Object.entries(headers).map(([key, value]) => ({
+      key, value: String(value), id: Math.random().toString(36).substr(2, 9)
+    }))
+  }
+
+  const convertKeyValueToJson = (pairs: Array<{key: string, value: string}>) => {
+    const obj: Record<string, string> = {}
+    pairs.forEach(pair => { if (pair.key.trim()) obj[pair.key.trim()] = pair.value })
+    return obj
+  }
 
   // 通过本地存储查询当前的模型配置
   async function getModelByStore(key: string) {
@@ -67,6 +81,8 @@ export default function AiPage() {
     setTemperature(model.temperature || 0.7)
     setTopP(model.topP || 0.1)
     setModelType(model.modelType || 'chat')
+    setVoice(model.voice || '')
+    setHeaderPairs(parseHeadersToKeyValue(model.customHeaders))
   }
 
   // 数据变化保存
@@ -95,6 +111,13 @@ export default function AiPage() {
       case 'modelType':
         setModelType(value as ModelType)
         break;
+      case 'voice':
+        setVoice(value as string)
+        break;
+      case 'customHeaders':
+        emitter.emit('getSettingModelList')
+        setHeaderPairs(parseHeadersToKeyValue(value as Record<string, string>))
+        break;
     }
     const model = await getModelByStore(currentAi)
     if (!model) return
@@ -118,11 +141,32 @@ export default function AiPage() {
     if (!aiModelList) return
     aiModelList.splice(aiModelList.findIndex(item => item.key === currentAi), 1)
     await store.set('aiModelList', aiModelList)
-    setAiModelList(aiModelList)
+    setAiModelList(aiModelList);
+    await deleteDefaultModel(store);
     const first = aiModelList[0]
     if (!first) return
     modelConfigSelectChange(first.key)
     setCurrentAi(first.key)
+  }
+
+  // 删除配置的默认模型
+  async function deleteDefaultModel(store:Store) {
+    const doDelete = async (key:string)=>{
+      const model = await store.get<string>(key) || '';
+      if (model == currentAi) await store.set(key, '');
+    }
+    const defaultModelKeys = [
+      'primaryModel',
+      'placeholderModel',
+      'translateModel',
+      'markDescModel',
+      'embeddingModel',
+      'rerankingModel',
+      'imageMethodModel'
+    ];
+    defaultModelKeys.forEach(key => {
+      doDelete(key)
+    })
   }
 
   // 复制当前配置
@@ -180,7 +224,7 @@ export default function AiPage() {
         {/* 模型配置选择 */}
         <SettingRow>
           <FormItem title={t('modelConfigTitle')} desc={t('modelConfigDesc')}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 lg:flex-row flex-col">
               <Select value={currentAi} onValueChange={modelConfigSelectChange}>
                 <SelectTrigger className="w-full flex">
                   <div className="flex items-center gap-2">
@@ -205,8 +249,10 @@ export default function AiPage() {
                   }
                 </SelectContent>
               </Select>
-              <Button disabled={!aiModelList.length} variant={'outline'} onClick={copyConfig}><Copy />{t('copyConfig')}</Button>
-              <Button disabled={!aiModelList.length} variant={'destructive'} onClick={deleteCustomModelHandler}><X />{t('deleteCustomModel')}</Button>
+              <div className="flex items-center gap-2 lg:w-auto w-full">
+                <Button disabled={!aiModelList.length} variant={'outline'} onClick={copyConfig}><Copy />{t('copyConfig')}</Button>
+                <Button disabled={!aiModelList.length} variant={'destructive'} onClick={deleteCustomModelHandler}><X />{t('deleteCustomModel')}</Button>
+              </div>
             </div>
           </FormItem>
         </SettingRow>
@@ -268,7 +314,7 @@ export default function AiPage() {
                 <Label htmlFor="video" className="text-muted-foreground">{t('modelType.video')}</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="audio" id="audio" disabled />
+                <RadioGroupItem value="audio" id="audio" />
                 <Label htmlFor="audio" className="text-muted-foreground">{t('modelType.audio')}</Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -282,6 +328,68 @@ export default function AiPage() {
             </RadioGroup>
           </FormItem>
         </SettingRow>
+        {/* 自定义Headers */}
+        {!baseAiConfig.find(config => config.baseURL === baseURL) && (
+          <SettingRow>
+            <FormItem title={t('customHeaders')} desc={t('customHeadersDesc')}>
+              <div className="space-y-2">
+                {headerPairs.map((pair, index) => (
+                  <div key={pair.id} className="flex gap-2 items-center">
+                    <Input
+                      placeholder={t('headerKey')}
+                      value={pair.key}
+                      onChange={(e) => {
+                        const newPairs = [...headerPairs]
+                        newPairs[index].key = e.target.value
+                        setHeaderPairs(newPairs)
+                      }}
+                      onBlur={() => {
+                        const jsonObj = convertKeyValueToJson(headerPairs)
+                        valueChangeHandler('customHeaders', jsonObj)
+                      }}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder={t('headerValue')}
+                      value={pair.value}
+                      onChange={(e) => {
+                        const newPairs = [...headerPairs]
+                        newPairs[index].value = e.target.value
+                        setHeaderPairs(newPairs)
+                      }}
+                      onBlur={() => {
+                        const jsonObj = convertKeyValueToJson(headerPairs)
+                        valueChangeHandler('customHeaders', jsonObj)
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        const newPairs = headerPairs.filter((_, i) => i !== index)
+                        setHeaderPairs(newPairs)
+                        valueChangeHandler('customHeaders', convertKeyValueToJson(newPairs))
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  onClick={() => setHeaderPairs([...headerPairs, {
+                    key: '', value: '', id: Math.random().toString(36).substr(2, 9)
+                  }])}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('addHeader')}
+                </Button>
+              </div>
+            </FormItem>
+          </SettingRow>
+        )}
         {
           modelType === 'chat' && (
             <>
@@ -315,6 +423,19 @@ export default function AiPage() {
               </FormItem>
             </SettingRow>
           </>)
+        }
+        {
+          modelType === 'audio' && (
+            <SettingRow>
+              <FormItem title={t('voice')} desc={t('voiceDesc')}>
+                <Input
+                  value={voice}
+                  onChange={(e) => valueChangeHandler('voice', e.target.value)}
+                  placeholder={t('voicePlaceholder')}
+                />
+              </FormItem>
+            </SettingRow>
+          )
         }
       </>
     }

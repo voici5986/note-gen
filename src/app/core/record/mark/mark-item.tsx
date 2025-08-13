@@ -18,13 +18,14 @@ import useMarkStore from "@/stores/mark";
 import useTagStore from "@/stores/tag";
 import { LocalImage } from "@/components/local-image";
 import { fetchAiDesc } from "@/lib/ai";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { appDataDir } from "@tauri-apps/api/path";
 import { ImageUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { open } from "@tauri-apps/plugin-shell";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageViewer } from "@/components/image-viewer";
+import ChatPreview from "../chat/chat-preview";
 
 dayjs.extend(relativeTime)
 
@@ -47,36 +48,34 @@ function DetailViewer({mark, content, path}: {mark: Mark, content: string, path?
       <SheetTrigger asChild>
         <span className="line-clamp-2 leading-4 mt-2 text-xs break-words cursor-pointer hover:underline">{content}</span>
       </SheetTrigger>
-      <SheetContent className="min-w-[400px] p-0">
+      <SheetContent className="lg:min-w-[800px] w-full mt-[env(safe-area-inset-top)] p-0">
         <SheetHeader className="p-4 border-b">
           <SheetTitle>{t(mark.type)}</SheetTitle>
           <span className="mt-4 text-xs text-zinc-500">{markT('createdAt')}：{dayjs(mark.createdAt).format('YYYY-MM-DD HH:mm:ss')}</span>
         </SheetHeader>
-        <div className="h-[calc(100vh-88px)] overflow-y-auto p-4">
+        <div className="h-[calc(100vh-88px)] overflow-y-auto lg:p-8 p-2">
           {
             mark.url && (mark.type === 'image' || mark.type === 'scan') ?
             <LocalImage
               src={mark.url.includes('http') ? mark.url : `/${path}/${mark.url}`}
               alt=""
-              className="w-full"
+              className="w-full max-h-80 object-contain"
             /> :
             null
           }
-          <SheetDescription>
-            {
-              mark.type === 'text' || mark.desc === mark.content ? null :
-              <>
-                <span className="block my-4 text-md text-zinc-900 font-bold">{markT('desc')}</span>
-                <span className="leading-6">{mark.desc}</span>
-              </>
-            }
-            <span className="block my-4 text-md text-zinc-900 font-bold">{markT('content')}</span>
-            {
-              mark.type === "text" ? 
-              <Textarea placeholder="在此输入文本记录内容..." rows={14} value={value} onChange={textMarkChangeHandler} /> :
-              <span className="leading-6">{mark.content}</span>
-            }
-          </SheetDescription>
+          {
+            mark.type === 'text' || mark.desc === mark.content ? null :
+            <>
+              <span className="block my-4 text-md text-zinc-900 font-bold">{markT('desc')}</span>
+              <ChatPreview text={mark.desc || ''} />
+            </>
+          }
+          <span className="block my-4 text-md text-zinc-900 font-bold">{markT('content')}</span>
+          {
+            mark.type === "text" ? 
+            <Textarea placeholder="在此输入文本记录内容..." rows={14} value={value} onChange={textMarkChangeHandler} /> :
+            <ChatPreview text={mark.content || ''} />
+          }
         </div>
       </SheetContent>
     </Sheet>

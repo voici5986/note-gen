@@ -32,6 +32,12 @@
       "deleteVectorSuccess": "清空知识库成功",
       "enable": "启用知识库检索",
       "enableDesc": "启用后，AI 将在回答问题时检索你的笔记内容，提供更准确的回答。",
+      "topPDesc": "Top P 参数控制模型生成文本的多样性，值越小生成的文本越确定，值越大生成的文本越多样。",
+      "enableStreamDesc": "启用流式响应可以实时显示生成内容，但某些模型可能不支持此功能。",
+      "enableStream": "流式响应",
+      "voice": "语音类型",
+      "voiceDesc": "指定音频模型使用的语音类型，如 'alloy'、'echo'、'fable' 等。",
+      "voicePlaceholder": "请输入语音类型，如：alloy",
       "chunkSize": "分块大小",
       "chunkSizeDesc": "文本分块的最大字符数，较大的分块可能包含更多上下文，但会增加向量计算的复杂度。",
       "chunkOverlap": "重叠大小",
@@ -55,7 +61,15 @@
       "outlinePositionOptions": {
         "left": "左侧",
         "right": "右侧"
-      }
+      },
+      "pageView": "页面视图",
+      "pageViewDesc": "沉浸视图下编辑器两侧会保留大量空白，全景模式下编辑器内容占据整个编辑区域。",
+      "pageViewOptions": {
+        "immersiveView": "沉浸视图",
+        "panoramaView": "全景视图"
+      },
+      "enableLineNumber": "代码块行号",
+      "enableLineNumberDesc": "启用后，代码块将显示行号。"
     },
     "uploadStore": {
       "uploadConfirm": "上传配置请确保同步仓库为私有，否则数据将会泄露！",
@@ -112,6 +126,25 @@
         }
       }
     },
+    "readAloud": {
+      "title": "朗读",
+      "desc": "在这里，你可以配置朗读相关设置，为聊天内容提供语音播放功能。",
+      "noModel": "不使用模型",
+      "alert": {
+        "title": "你正在使用系统朗读",
+        "description": "当前未配置音频模型，正在使用系统朗读。"
+      },
+      "options": {
+        "audioModel": {
+          "title": "音频模型",
+          "desc": "选择用于文本转语音的AI模型，支持多种语音类型和参数配置。"
+        },
+        "speed": {
+          "title": "语速",
+          "desc": "调整语音播放的速度，范围从0.25倍到4倍速度，默认为1倍正常速度。"
+        }
+      }
+    },
     "about": {
       "title": "关于",
       "desc": "一款专注于记录与写作的 AI 笔记。",
@@ -125,21 +158,35 @@
       "updateInstalled": "重启应用",
       "noUpdate": "当前已是最新版本",
       "items": {
+        "home": {
+          "title": "官网",
+          "buttonName": "打开",
+          "desc": "访问官网，了解 NoteGen 的更多信息。"
+        },
+        "guide": {
+          "title": "配置指南",
+          "buttonName": "打开",
+          "desc": "查看配置指南，了解如何配置模型、同步等信息。"
+        },
         "github": {
           "title": "GitHub",
-          "buttonName": "查看"
+          "buttonName": "查看",
+          "desc": "如果 NoteGen 帮助到了你，请给颗 star 鼓励一下！"
         },
         "releases": {
           "title": "更新日志",
-          "buttonName": "查看"
+          "buttonName": "查看",
+          "desc": "查看更新日志，了解 NoteGen 的更新信息。"
         },
         "issues": {
           "title": "问题反馈",
-          "buttonName": "反馈"
+          "buttonName": "反馈",
+          "desc": "如果发现 NoteGen 有 bug，请在这里反馈。"
         },
         "discussions": {
           "title": "交流讨论",
-          "buttonName": "讨论"
+          "buttonName": "讨论",
+          "desc": "如果你想和作者或其他用户交流，可以加群讨论。"
         }
       }
     },
@@ -168,6 +215,14 @@
       "backupMethodDesc": "设置为主要备份方式后，写作中的所有同步相关功能将使用当前备份方式（图床功能除外）",
       "isPrimaryBackup": "当前 {type} 为主要备份方式",
       "setPrimaryBackup": "设为主要备份方式",
+      "gitlabInstanceType": "GitLab 实例类型",
+      "gitlabInstanceTypeDesc": "选择要连接的 GitLab 实例类型",
+      "gitlabInstanceTypePlaceholder": "选择 GitLab 实例类型",
+      "gitlabInstanceTypeOptions": {
+        "selfHosted": "自建实例",
+        "selfHostedDesc": "输入您的自建 GitLab 服务器地址（如：https://gitlab.example.com）"
+      },
+      "gitlabAccessTokenDesc": "在 {instanceDisplayName} 创建个人访问令牌，需要 api 权限",
       "autoSyncOptions": {
         "placeholder": "选择自动同步时间",
         "disabled": "关闭",
@@ -182,7 +237,20 @@
       "title": "图床",
       "desc": "在这里，你可以配置图床，将图片上传到图床。",
       "isPrimaryBackup": "当前 {type} 为主要图床",
-      "setPrimaryBackup": "设为主要图床"
+      "setPrimaryBackup": "设为主要图床",
+      "smms": {
+        "token": {
+          "desc": "请创建并输入 SM.MS Token。",
+          "createToken": "创建 Token"
+        },
+        "disk": "磁盘使用情况",
+        "error": "获取失败，请检查网络或 Token 是否正确。"
+      },
+      "picgo": {
+        "desc": "PicGo 服务器地址",
+        "ok": "检测到服务正在运行，请确保 PicGo 图床已配置。",
+        "error": "服务未运行，请确保 PicGo（需要 v2.2.0+） 应用正在运行，否则无法上传图片。"
+      }
     },
     "backupSync": {
       "title": "备用方案",
@@ -197,7 +265,7 @@
         "backupTo": "备份至 WebDAV",
         "syncFrom": "从 WebDAV 同步",
         "serverUrl": "WebDAV 服务器地址",
-        "serverUrlDesc": "输入WebDAV服务器的URL，例如：https://dav.example.com",
+        "serverUrlDesc": "输入WebDAV服务器的URL不含路径，例如：https://dav.example.com http://192.8.8.88:9999 ",
         "serverUrlPlaceholder": "https://dav.example.com",
         "username": "用户名",
         "usernameDesc": "WebDAV服务器的用户名",
@@ -211,7 +279,19 @@
         "backupSuccess": "备份成功",
         "backupSuccessDesc": "已备份 {count} 个文件至 WebDAV。",
         "syncSuccess": "同步成功",
-        "syncSuccessDesc": "已从 WebDAV 同步至本地 {count} 个文件。"
+        "syncSuccessDesc": "已从 WebDAV 同步至本地 {count} 个文件。",
+        "syncFailed": "同步失败",
+        "backupFailed": "备份失败",
+        "directoryCreated": "目录已创建",
+        "directoryCreatedDesc": "目录 {path} 已成功创建。",
+        "createDir": "创建目录",
+        "success": "成功",
+        "failed": "失败",
+        "error": {
+          "pathNotFound": "路径不存在或服务器无法访问。",
+          "createDirFailed": "创建目录失败",
+          "connectionTimeOut": "连接超时，请检查网络或服务器。"
+        }
       }
     },
     "template": {
@@ -226,7 +306,15 @@
       "selectScope": "选择范围",
       "addTemplateDesc": "请输入自定义模板名称和内容，帮助 AI 更好地理解你的需求。",
       "editTemplate": "编辑自定义模板",
-      "noContent": "暂无内容"
+      "noContent": "暂无内容",
+      "range": {
+        "all": "全部",
+        "today": "今天",
+        "week": "近一周",
+        "month": "近一月",
+        "threeMonth": "近三个月",
+        "year": "近一年"
+      }
     },
     "shortcut": {
       "title": "快捷键",
@@ -288,13 +376,32 @@
       "modelBaseUrlDesc": "你只需要配置到版本号即可，例如：https://api.openai.com/v1，后缀会自动添加。",
       "modelDesc": "部分模型支持获取模型列表，如果不支持请手动配置。",
       "temperatureDesc": "使用什么采样温度，介于 0 和 2 之间。较高的值（如 0.8）将使输出更加随机，而较低的值（如 0.2）将使输出更加集中和确定。 我们通常建议改变这个或top_p但不是两者。",
-      "topPDesc": "一种替代温度采样的方法，称为核采样，其中模型考虑具有 top_p 概率质量的标记的结果。所以 0.1 意味着只考虑构成前 10% 概率质量的标记。 我们通常建议改变这个或temperature但不是两者。"
+      "topPDesc": "一种替代温度采样的方法，称为核采样，其中模型考虑具有 top_p 概率质量的标记的结果。所以 0.1 意味着只考虑构成前 10% 概率质量的标记。 我们通常建议改变这个或temperature但不是两者。",
+      "customHeaders": "自定义请求头",
+      "customHeadersDesc": "添加自定义 HTTP 请求头，支持多个键值对配置。",
+      "headerKey": "键",
+      "headerValue": "值",
+      "addHeader": "添加 Header",
+      "connectionSuccess": "AI 连接测试通过",
+      "voice": "语音类型",
+      "voiceDesc": "指定音频模型使用的语音类型，如 'alloy'、'echo'、'fable' 等。",
+      "voicePlaceholder": "请输入语音类型，如：alloy"
     },
-    "ocr": {
-      "title": "OCR",
-      "languagePacks": "语言包",
-      "checkModels": "在此查询全部模型",
-      "modelInstruction": "以逗号分隔，例如：eng,chi_sim"
+    "imageMethod": {
+      "title": "图像识别",
+      "desc": "在这里，你可以配置图像识别相关设置，支持 OCR 和 VLM 两种方式。",
+      "setPrimary": "设置为默认",
+      "isPrimary": "{type} 已设置为默认",
+      "ocr": {
+        "title": "OCR",
+        "languagePacks": "语言包",
+        "checkModels": "在此查询全部模型",
+        "modelInstruction": "以逗号分隔，例如：eng,chi_sim"
+      },
+      "vlm": {
+        "title": "视觉语言模型",
+        "desc": "通过视觉语言模型识别图片内容。"
+      }
     },
     "file": {
       "title": "文件管理",
@@ -326,6 +433,23 @@
         "title": "写作资源路径",
         "desc": "设置写作资源的保存路径，例如图片、视频、文件等，与当前编辑的 markdown 文件同级。",
         "select": "请设置写作资源路径，例如：assets"
+      }
+    },
+    "shortcuts": {
+      "title": "快捷键",
+      "desc": "在这里，你可以配置快捷键，帮助你更高效地使用 NoteGen。",
+      "resetDefaults": "重置",
+      "clear": "清空",
+      "noShortcut": "未设置",
+      "shortcuts": {
+        "openWindow": {
+          "title": "打开/隐藏窗口",
+          "desc": "打开/隐藏程序主窗口。"
+        },
+        "quickRecordText": {
+          "title": "快速记录文本",
+          "desc": "快速打开程序主窗口，并调出文本记录。"
+        }
       }
     }
   },
@@ -613,7 +737,11 @@
         }
       },
       "messageControl": {
-        "words": "字"
+        "words": "字",
+        "readAloud": "朗读",
+        "playing": "播放中",
+        "loading": "准备中",
+        "stop": "停止播放"
       },
       "preview": {
         "close": "关闭",
@@ -639,7 +767,14 @@
         "rootDirectory": "根目录",
         "deleteTag": "删除当前标签、记录和笔记（回收站可恢复）",
         "warning": "转换后将跳转到写作页面。",
-        "convert_button": "转化"
+        "convert_button": "转化",
+        "organizeAs": "将记录整理成...",
+        "templateContent": "模板内容",
+        "recordRange": "记录选择范围",
+        "filterThinkingContent": "移除记录中的思考",
+        "startOrganize": "开始整理",
+        "manageTemplate": "管理模板",
+        "cancel": "取消"
       },
       "mark": {
         "recorded": "已记录",
@@ -679,7 +814,7 @@
     "record": "记录",
     "write": "写作",
     "search": "搜索",
-    "gallery": "图床",
+    "githubImageHosting": "Github 图床",
     "login": "登录",
     "loading": "加载中",
     "view": "查看",
@@ -739,8 +874,16 @@
         "deleteSyncFile": "删除同步文件",
         "deleteLocalFile": "删除本地文件",
         "delete": "删除",
+        "confirmDelete": "确定要删除文件夹 \"{name}\" 吗？此操作将删除文件夹及其所有内容。",
+        "deleteSuccess": "删除成功",
+        "deleteFailed": "删除失败",
         "newFile": "新建文件",
         "newFolder": "新建文件夹",
+        "syncFolder": "同步",
+        "syncFolderDesc": "同步当前文件夹下的所有 Markdown 文件",
+        "syncFolderSuccess": "文件夹同步成功",
+        "syncFolderError": "文件夹同步失败",
+        "syncFolderProgress": "正在同步文件夹...",
         "deleteSyncFileSuccess": "删除成功",
         "deleteSyncFileError": "删除失败"
       },
@@ -761,6 +904,13 @@
     "editor": {
       "copySuccess": "复制成功",
       "copySuccessDescription": "已复制到剪贴板",
+      "floatbar": {
+        "readAloud": {
+          "start": "朗读",
+          "stop": "停止朗读",
+          "loading": "正在加载..."
+        }
+      },
       "upload": {
         "error": "上传失败",
         "needToken": "上传图片需配置 accessToken",
@@ -777,27 +927,32 @@
         "question": {
           "tooltip": "问答",
           "selectContent": "请先选择一段内容",
-          "promptTemplate": "参考原文：{content}\n根据提问：{question}，直接返回回答内容。"
+          "promptTemplate": "参考原文：\n{content}\n根据提问：\n{question}\n，直接返回回答内容。"
         },
         "continue": {
           "tooltip": "续写",
-          "promptTemplate": "根据前文：\"{content}\" 内容，直接返回续写内容，不要超过100字。\n内容可以参考后文：\"{endContent}\"，不要与后文内容重复。"
+          "promptTemplate": "根据前文：\n{content}\n内容，直接返回续写内容，不要超过100字。\n内容可以参考后文：\n{endContent}\n，不要与后文内容重复。"
         },
         "polish": {
-          "tooltip": "优化",
+          "tooltip": "润色",
           "selectContent": "请先选择一段内容",
-          "promptTemplate": "润色这段文字：{content}，要求语言不变，修复错别字和病句，直接返回润色后的结果。"
+          "promptTemplate": "润色这段文字：\n{content}\n要求语言不变，修复错别字和病句，直接返回润色后的结果。"
         },
         "eraser": {
           "tooltip": "精简",
           "selectContent": "请先选择一段内容",
-          "promptTemplate": "精简这段文字：{content}，这段文字过于臃肿，字数要求缩减一半以上，要求语言不变，直接返回优化后的结果。"
+          "promptTemplate": "精简这段文字：\n{content}\n这段文字过于臃肿，字数要求缩减一半以上，要求语言不变，直接返回优化后的结果。"
+        },
+        "expansion": {
+          "tooltip": "扩写",
+          "selectContent": "请先选择一段内容",
+          "promptTemplate": "扩写这段文字：\n{content}\n这段文字过于简短，字数要求增加一倍以上，要求语言不变，直接返回扩写后的结果。"
         },
         "translation": {
           "tooltip": "翻译",
           "description": "将选中的文本进行翻译",
           "selectContent": "请先选择一段内容",
-          "promptTemplate": "将这段文字：{content}，翻译为{language}语言，直接返回翻译后的结果。"
+          "promptTemplate": "将这段文字：\n{content}\n翻译为{language}语言，直接返回翻译后的结果。"
         }
       }
     },
@@ -808,7 +963,7 @@
         "synced": "已同步",
         "syncing": "同步中",
         "syncFailed": "同步失败",
-        "checkNetworkOrToken": "请检查网络连接或 GitHub 令牌",
+        "checkNetworkOrToken": "请检查网络连接或令牌是否正确",
         "quickSync": "快速同步"
       },
       "history": {

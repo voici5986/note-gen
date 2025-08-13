@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useTranslations } from "next-intl"
 import { TooltipButton } from "@/components/tooltip-button"
+import useChatStore from "@/stores/chat"
 
 const languageOptions = [
   "English",
@@ -37,6 +38,7 @@ export function ChatLanguage() {
   const [open, setOpen] = React.useState(false)
   const t = useTranslations('record.chat.input')
   const [chatLanguage, setChatLanguage] = useState<string>('中文')
+  const { setLocale } = useChatStore()
   
   function getCurrentLanguageName() {
     const lang = languageOptions.find(l => l === chatLanguage)
@@ -49,9 +51,11 @@ export function ChatLanguage() {
       const savedLanguage = await store.get<string>('chatLanguage')
       if (savedLanguage) {
         setChatLanguage(savedLanguage)
+        setLocale(savedLanguage)
       } else {
         const appLocale = await store.get<string>('locale') || '中文'
         setChatLanguage(appLocale)
+        setLocale(appLocale)
         await store.set('chatLanguage', appLocale)
         await store.save()
       }
@@ -71,6 +75,7 @@ export function ChatLanguage() {
     } catch (error) {
       console.error('Failed to save chat language:', error)
     }
+    setLocale(langId)
   }
 
   useEffect(() => {

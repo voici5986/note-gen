@@ -6,32 +6,69 @@ mod webdav;
 mod fuzzy_search;
 mod keywords;
 use tauri::{
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
-use webdav::{webdav_backup, webdav_sync, webdav_test};
+use webdav::{webdav_backup, webdav_sync, webdav_test, webdav_create_dir};
 use fuzzy_search::{fuzzy_search, fuzzy_search_parallel};
 use keywords::{rank_keywords};
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let is_visible = window.is_visible().unwrap_or(false);
+                let is_minimized = window.is_minimized().unwrap_or(false);
+                if !is_visible {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    let _ = window.set_always_on_top(true);
+                    let _ = window.set_always_on_top(false);
+                } else if is_minimized {
+                    let _ = window.unminimize();
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    let _ = window.set_always_on_top(true);
+                    let _ = window.set_always_on_top(false);
+                } else {
+                    let _ = window.set_focus();
+                    let _ = window.set_always_on_top(true);
+                    let _ = window.set_always_on_top(false);
+                }
+            }
+        }))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
+                    TrayIconEvent::DoubleClick {
                         button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
                         ..
                     } => {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                        if let Some(window) = tray.app_handle().get_webview_window("main") {
+                            let is_visible = window.is_visible().unwrap_or(false);
+                            let is_minimized = window.is_minimized().unwrap_or(false);
+                            if !is_visible {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = window.set_always_on_top(true);
+                                let _ = window.set_always_on_top(false);
+                            } else if is_minimized {
+                                let _ = window.unminimize();
+                                std::thread::sleep(std::time::Duration::from_millis(100));
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = window.set_always_on_top(true);
+                                let _ = window.set_always_on_top(false);
+                            } else {
+                                let _ = window.hide();
+                            }
                         }
                     }
                     _ => {}
@@ -52,6 +89,7 @@ fn main() {
             fuzzy_search,
             fuzzy_search_parallel,
             rank_keywords,
+            webdav_create_dir,
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())

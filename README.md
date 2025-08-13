@@ -1,10 +1,11 @@
 # NoteGen
 
 ![](https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff)
+[![GitHub Repo stars](https://img.shields.io/github/stars/codexu/note-gen)](https://github.com/codexu/note-gen)
+[![](https://gitcode.com/codexu/note-gen/star/badge.svg)](https://gitcode.com/codexu/note-gen)
 ![](https://github.com/codexu/note-gen/actions/workflows/release.yml/badge.svg?branch=release)
-![](https://img.shields.io/github/v/release/codexu/note-gen)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/8f7518c3-b627-4277-bc2f-e477960f5dc4/deploy-status)](https://app.netlify.com/projects/note-gen-docs/deploys)
 ![](https://img.shields.io/github/downloads/codexu/note-gen/total)
-![](https://img.shields.io/github/commit-activity/m/codexu/note-gen)
 ![](https://img.shields.io/github/issues-closed/codexu/note-gen)
 
 <div>
@@ -15,9 +16,7 @@
 
 ## Guide
 
-English | [简体中文](.github/README.zh.md) | [日本語](.github/README.ja.md)
-
-🖥️ Official Document: [https://notegen.top](https://notegen.top)
+🖥️ Official Document: [English](https://notegen.top/en/) | [简体中文](https://notegen.top/cn/)
 
 💬 Join [WeChat/QQ Group](https://github.com/codexu/note-gen/discussions/110), [Discord](https://discord.gg/SXyVZGpbpk), [Telegram](https://t.me/notegen)
 
@@ -44,13 +43,15 @@ Currently supports Mac, Windows, and Linux. Thanks to Tauri2's cross-platform ca
 | Windows | MacOS | Linux | Android | iOS |
 | --- | --- | --- | --- | --- |
 | ✅ beta | ✅ beta | ✅ beta | 🛠️ alpha | 🛠️ alpha |
-| [Download](https://notegen.top/en/download.html) | [Download](https://notegen.top/en/download.html) | [Download](https://notegen.top/en/download.html) | [Download](https://notegen.top/en/download.html) | [Download](https://notegen.top/en/download.html) |
+| [Download](https://notegen.top/en/docs/download#desktop-beta) | [Download](https://notegen.top/en/docs/download#desktop-beta) | [Download](https://notegen.top/en/docs/download#desktop-beta) | [Download](https://notegen.top/en/docs/download#android) | Self-compiled |
 
 > [UpgradeLink offers application upgrade and download services](http://upgrade.toolsetlink.com/upgrade/example/tauri-example.html)
 
 ### Enhancement
 
 The note-taking application can be used directly without configuration. If you want a better experience, please open the settings page to configure AI and synchronization.
+
+[Read settings guide](https://notegen.top/en/settings/sync.html)
 
 ## From Recording to Writing
 
@@ -100,7 +101,7 @@ The writing section is divided into two parts: **File Manager** and **Markdown E
 
 ## Contribute
 
-- [Read contribution guide](.github/CONTRIBUTING.md)
+- [Read contribution guide](https://notegen.top/en/docs/contributing)
 - [Update plans](https://github.com/codexu/note-gen/issues/46)
 - [Submit bugs or improvement suggestions](https://github.com/codexu/note-gen/issues)
 - [Discussions](https://github.com/codexu/note-gen/discussions)

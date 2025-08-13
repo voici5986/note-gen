@@ -1,6 +1,6 @@
 import { SettingPanel } from "../components/setting-base";
 import { useTranslations } from 'next-intl';
-import { ModelSelect } from "./model-select";
+import { ModelSelect } from "../components/model-select";
 import { Bot, Highlighter, Languages, Lightbulb } from "lucide-react";
 
 export function Setting() {

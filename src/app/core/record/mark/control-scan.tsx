@@ -29,7 +29,7 @@ import useMarkStore from "@/stores/mark"
 import { v4 as uuid } from "uuid"
 import useSettingStore from "@/stores/setting"
 import ocr from "@/lib/ocr"
-import { fetchAiDesc } from "@/lib/ai"
+import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai"
 import { insertMark } from "@/db/marks"
 
 export function ControlScan() {
@@ -40,7 +40,7 @@ export function ControlScan() {
   const cropperRef = useRef<Cropper | null>(null);
   const { currentTagId, fetchTags, getCurrentTag } = useTagStore()
   const { fetchMarks, addQueue, removeQueue, setQueue } = useMarkStore()
-  const { primaryModel } = useSettingStore()
+  const { primaryModel, primaryImageMethod } = useSettingStore()
 
   function initCropper() {
     if (cropperRef.current) {
@@ -70,9 +70,11 @@ export function ControlScan() {
       }
     })
     setFiles(convertedFiles)
-    const image = new window.Image();
-    image.src = convertedFiles[0].path;
-    setImage(image)
+    if (convertedFiles.length > 0) {
+      const image = new window.Image();
+      image.src = convertedFiles[0].path;
+      setImage(image)
+    }
   }
 
   function selectImage(file: ScreenshotImage) {
@@ -93,14 +95,22 @@ export function ControlScan() {
       await writeFile(`screenshot/${queueId}.png`, uint8Array, {
         baseDir: BaseDirectory.AppData
       })
-      addQueue({ queueId, progress: t('record.mark.progress.ocr'), type: 'scan', startTime: Date.now() })
-      const content = await ocr(`screenshot/${queueId}.png`)
+      let content = ''
       let desc = ''
-      if (primaryModel) {
-        setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
-        desc = await fetchAiDesc(content).then(res => res ? res : content) || content
-      } else {
+      if (primaryImageMethod === 'vlm') {
+        addQueue({ queueId, progress: t('record.mark.progress.aiAnalysis'), type: 'scan', startTime: Date.now() })
+        const base64 = `data:image/png;base64,${Buffer.from(uint8Array).toString('base64')}`
+        content = await fetchAiDescByImage(base64) || 'VLM Error'
         desc = content
+      } else {
+        addQueue({ queueId, progress: t('record.mark.progress.ocr'), type: 'scan', startTime: Date.now() })
+        content = await ocr(`screenshot/${queueId}.png`) || 'OCR Error'
+        if (primaryModel) {
+          setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
+          desc = await fetchAiDesc(content).then(res => res ? res : content) || content
+        } else {
+          desc = content
+        }
       }
       setQueue(queueId, { progress: t('record.mark.progress.save') });
       await insertMark({ tagId: currentTagId, type: 'scan', content, url: `${queueId}.png`, desc })

@@ -35,7 +35,7 @@ export function ChatHeader() {
     const aiModelList = await store.get<AiConfig[]>('aiModelList');
     if (!aiModelList) return [];
     const filteredModels = aiModelList.filter(item => {
-      return item.apiKey && item.model && item.baseURL
+      return item.model && item.baseURL
     })
     setModels(filteredModels)
     return filteredModels;

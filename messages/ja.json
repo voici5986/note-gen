@@ -47,7 +47,23 @@
       "title": "Markdown エディタ",
       "desc": "ここでは、Markdown エディタをカスタマイズして、より適した書き込み体験を提供できます。",
       "typewriterMode": "打字機モード",
-      "typewriterModeDesc": "打字機モード下、エディタは打字機の効果を模倣し、より深く浸かる書き込み体験を提供します。"
+      "typewriterModeDesc": "打字機モード下、エディタは打字機の効果を模倣し、より深く浸かる書き込み体験を提供します。",
+      "outlineEnable": "アウトラインを有効にする",
+      "outlineEnableDesc": "アウトラインを有効にすると、アウトラインが表示されます。",
+      "outlinePosition": "アウトライン位置",
+      "outlinePositionDesc": "アウトライン位置を設定します。",
+      "outlinePositionOptions": {
+        "left": "左側",
+        "right": "右側"
+      },
+      "pageView": "ページビュー",
+      "pageViewDesc": "沉浸視图下、編集器の両側に大量の空白が残され、全景モード下、編集器の内容は編集領域を占めます。",
+      "pageViewOptions": {
+        "immersiveView": "沉浸視图",
+        "panoramaView": "全景視图"
+      },
+      "enableLineNumber": "コードブロック行番号",
+      "enableLineNumberDesc": "コードブロックに行番号を表示します。"
     },
     "uploadStore": {
       "uploadConfirm": "同期リポジトリをプライベートに設定してください。",
@@ -104,6 +120,21 @@
         }
       }
     },
+    "readAloud": {
+      "title": "音声読み上げ",
+      "desc": "ここでは、音声読み上げ関連の設定を構成し、チャットコンテンツに音声再生機能を提供できます。",
+      "noModel": "モデルを使用しない",
+      "options": {
+        "audioModel": {
+          "title": "音声モデル",
+          "desc": "テキストから音声への変換にAIモデルを選択し、様々な音声タイプとパラメータ設定をサポートします。"
+        },
+        "speed": {
+          "title": "読み上げ速度",
+          "desc": "音声の再生速度を調整します。0.25倍から4倍の範囲で設定でき、1倍が通常の速度です。"
+        }
+      }
+    },
     "about": {
       "title": "このアプリについて",
       "desc": "記録と執筆に特化したメモ取りアシスタント。",
@@ -117,21 +148,35 @@
       "updateInstalled": "Restart app",
       "noUpdate": "現在已是最新版本",
       "items": {
+        "home": {
+          "title": "公式サイト",
+          "buttonName": "表示",
+          "desc": "公式サイトを表示して、NoteGenの詳細を確認できます。"
+        },
+        "guide": {
+          "title": "ガイド",
+          "buttonName": "表示",
+          "desc": "配置ガイドを表示して、モデル、同期などの情報の設定方法を学ぶことができます。"
+        },
         "github": {
           "title": "GitHub",
-          "buttonName": "表示"
+          "buttonName": "表示",
+          "desc": "NoteGenが役立った場合は、鼓励するには、GitHubにスターを付けてください！"
         },
         "releases": {
-          "title": "更新履歴",
-          "buttonName": "表示"
+          "title": "更新日志",
+          "buttonName": "表示",
+          "desc": "更新日志を表示して、NoteGenの更新内容を確認できます。"
         },
         "issues": {
           "title": "問題報告",
-          "buttonName": "報告"
+          "buttonName": "報告",
+          "desc": "NoteGenにバグを見つけた場合は、ここに報告してください。"
         },
         "discussions": {
           "title": "ディスカッション",
-          "buttonName": "参加"
+          "buttonName": "参加",
+          "desc": "作者や他のユーザーとディスカッションを参加できます。"
         }
       }
     },
@@ -160,8 +205,16 @@
       "backupMethodDesc": "主要バックアップ方法として設定すると、文章作成中のすべての同期関連機能が現在のバックアップ方法を使用します（画像ホスティング機能を除く）",
       "isPrimaryBackup": "現在の {type} 主要バックアップ方法",
       "setPrimaryBackup": "主要バックアップ方法として設定",
+      "gitlabInstanceType": "GitLab インスタンスタイプ",
+      "gitlabInstanceTypeDesc": "接続する GitLab インスタンスタイプを選択してください",
+      "gitlabInstanceTypePlaceholder": "GitLab インスタンスタイプを選択してください",
+      "gitlabInstanceTypeOptions": {
+        "selfHosted": "自建インスタンス",
+        "selfHostedDesc": "自建 GitLab インスタンスの URL を入力してください（例：https://gitlab.example.com）"
+      },
+      "gitlabAccessTokenDesc": "{instanceDisplayName}でパーソナルアクセストークンを作成するには、api権限が必要です",
       "autoSyncOptions": {
-        "placeholder": "自動同步时间",
+        "placeholder": "自動同期時間",
         "disabled": "無効",
         "10s": "10 秒",
         "30s": "30 秒",
@@ -174,7 +227,36 @@
       "title": "画像ホスティング",
       "desc": "ここでは、画像ホスティングを設定できます。",
       "isPrimaryBackup": "現在の {type} 主要バックアップ方法",
-      "setPrimaryBackup": "主要バックアップ方法として設定"
+      "setPrimaryBackup": "主要バックアップ方法として設定",
+      "smms": {
+        "token": {
+          "desc": "SM.MS Token を入力してください。",
+          "createToken": "Token を作成"
+        },
+        "disk": "磁盘使用",
+        "error": "取得失敗、ネットワークや Token の正しさを確認してください。"
+      },
+      "picgo": {
+        "desc": "PicGo サーバー URL",
+        "ok": "サービスが起動しています。PicGo の設定を確認してください。",
+        "error": "サービスが起動していません。PicGo（v2.2.0+）を起動してください。"
+      }
+    },
+    "imageMethod": {
+      "title": "画像認識",
+      "desc": "ここでは、画像認識に関する設定を配置できます。OCR と VLM の二つの方法をサポートします。",
+      "setPrimary": "設定をデフォルト",
+      "isPrimary": "{type} がデフォルト設定",
+      "ocr": {
+        "title": "OCR",
+        "languagePacks": "言語パック",
+        "checkModels": "ここでは、すべてのモデルを検索できます。",
+        "modelInstruction": "逗号分隔、例如：eng,chi_sim"
+      },
+      "vlm": {
+        "title": "視覚的言語モデル",
+        "desc": "視覚的言語モデルを使用して画像内容を認識します。"
+      }
     },
     "backupSync": {
       "title": "備用方案",
@@ -189,7 +271,7 @@
         "backupTo": "WebDAVにバックアップ",
         "syncFrom": "WebDAVから同期",
         "serverUrl": "WebDAVサーバーURL",
-        "serverUrlDesc": "WebDAVサーバーのURLを入力してください、例：https://dav.example.com",
+        "serverUrlDesc": "WebDAVサーバーのURLを入力してくださいパスを含まない、例：https://dav.example.com http://192.8.8.88:9999 ",
         "serverUrlPlaceholder": "https://dav.example.com",
         "username": "ユーザー名",
         "usernameDesc": "WebDAVサーバーのユーザー名",
@@ -203,7 +285,19 @@
         "backupSuccess": "バックアップ成功",
         "backupSuccessDesc": "{count} 個のファイルをWebDAVにバックアップしました。",
         "syncSuccess": "同期成功",
-        "syncSuccessDesc": "WebDAVからローカルに {count} 個のファイルを同期しました。"
+        "syncSuccessDesc": "WebDAVからローカルに {count} 個のファイルを同期しました。",
+        "syncFailed": "同期失敗",
+        "backupFailed": "バックアップ失敗",
+        "directoryCreated": "ディレクトリが作成されました",
+        "directoryCreatedDesc": "ディレクトリ {path} が正常に作成されました。",
+        "createDir": "ディレクトリを作成",
+        "success": "成功",
+        "failed": "失敗",
+        "error": {
+          "pathNotFound": "パスが存在しないか、サーバーにアクセスできません。",
+          "createDirFailed": "ディレクトリの作成に失敗しました",
+          "connectionTimeOut": "接続タイムアウト、ネットワークまたはサーバーを確認してください。"
+        }
       }
     },
     "template": {
@@ -218,7 +312,15 @@
       "selectScope": "範囲を選択",
       "addTemplateDesc": "カスタムテンプレート名称と内容を入力し、AIがあなたのニーズをよりよく理解できるようにしてください。",
       "editTemplate": "編集カスタムテンプレート",
-      "noContent": "内容がありません"
+      "noContent": "内容がありません",
+      "range": {
+        "all": "すべて",
+        "today": "今日",
+        "week": "過去1週間",
+        "month": "過去1ヶ月",
+        "threeMonth": "過去3ヶ月",
+        "year": "過去1年"
+      }
     },
     "shortcut": {
       "title": "ショートカットキー",
@@ -280,7 +382,13 @@
       "modelBaseUrlDesc": "バージョン番号まで設定すればOKです（例：https://api.openai.com/v1）。サフィックスは自動で追加されます。",
       "modelDesc": "一部モデルはリスト取得に対応しています。未対応の場合は手動で設定してください。",
       "temperatureDesc": "サンプリング温度は0から2の間で設定します。高い値（例:0.8）は出力をよりランダムに、低い値（例:0.2）はより決定的にします。通常、この値かtop_pのみを調整してください。",
-      "topPDesc": "top_p（核サンプリング）は温度の代替手法です。top_p=0.1なら上位10%確率のトークンのみ考慮します。通常、この値かtemperatureのみを調整してください。"
+      "topPDesc": "top_p（核サンプリング）は温度の代替手法です。top_p=0.1なら上位10%確率のトークンのみ考慮します。通常、この値かtemperatureのみを調整してください。",
+      "customHeaders": "カスタムヘッダー",
+      "customHeadersDesc": "キーと値のペアでカスタムHTTPヘッダーを追加します。",
+      "connectionSuccess": "AI接続テストが成功しました",
+      "headerKey": "キー",
+      "headerValue": "値",
+      "addHeader": "ヘッダーを追加"
     },
     "ocr": {
       "title": "OCR",
@@ -318,6 +426,23 @@
         "title": "アセット",
         "desc": "執筆中のリソース（例：画像、ビデオ、ファイル等）の保存パスを設定します。現在編集中の markdown ファイルと同じレベルに保存されます。",
         "select": "執筆中のリソースの保存パスを設定してください"
+      }
+    },
+    "shortcuts": {
+      "title": "ショートカット",
+      "desc": "ここで、NoteGen をより効率的に使用するためのショートカットを設定できます。",
+      "resetDefaults": "リセットします",
+      "clear": "クリア",
+      "noShortcut": "未設定",
+      "shortcuts": {
+        "openWindow": {
+          "title": "ウィンドウを開く/隠す",
+          "desc": "主ウィンドウを開く/隠す。"
+        },
+        "quickRecordText": {
+          "title": "テキストを素早く記録します",
+          "desc": "主ウィンドウを開き、テキスト記録を表示します。"
+        }
       }
     }
   },
@@ -603,7 +728,11 @@
         }
       },
       "messageControl": {
-        "words": "字"
+        "words": "字",
+        "readAloud": "音声読み上げ",
+        "playing": "再生中",
+        "loading": "読み込み中",
+        "stop": "停止"
       },
       "preview": {
         "close": "关闭",
@@ -629,7 +758,14 @@
         "rootDirectory": "ルートディレクトリ",
         "deleteTag": "削除タグ、記録とノート（ゴミ箱で復元可能）",
         "warning": "変換後、執筆ページに移動します。",
-        "convert_button": "変換"
+        "convert_button": "変換",
+        "organizeAs": "記録を整理します...",
+        "templateContent": "テンプレート内容",
+        "recordRange": "記録範囲を選択",
+        "filterThinkingContent": "思考の記録を削除します",
+        "startOrganize": "開始整理",
+        "manageTemplate": "管理テンプレート",
+        "cancel": "キャンセル"
       },
       "mark": {
         "recorded": "記録済み",
@@ -669,7 +805,7 @@
     "record": "記録",
     "write": "執筆",
     "search": "検索",
-    "gallery": "图床",
+    "githubImageHosting": "Github イラストホスティング倉庫",
     "login": "ログイン",
     "loading": "読み込み中",
     "view": "表示",
@@ -729,8 +865,16 @@
         "deleteSyncFile": "同期ファイルを削除",
         "deleteLocalFile": "ローカルファイルを削除",
         "delete": "削除",
+        "confirmDelete": "フォルダ \"{name}\" を削除してもよろしいですか？この操作により、フォルダとその内容がすべて削除されます。",
+        "deleteSuccess": "削除しました",
+        "deleteFailed": "削除に失敗しました",
         "newFile": "新規ファイル",
         "newFolder": "新規フォルダ",
+        "syncFolder": "同期",
+        "syncFolderDesc": "同期するファイル夹下的所有 Markdown 文件",
+        "syncFolderSuccess": "ファイル夹同步成功",
+        "syncFolderError": "ファイル夹同步失败",
+        "syncFolderProgress": "正在同步文件夹...",
         "deleteSyncFileSuccess": "削除しました",
         "deleteSyncFileError": "削除に失敗しました"
       },
@@ -756,6 +900,13 @@
         "needToken": "画像のアップロードには accessToken の設定が必要です",
         "uploading": "画像をアップロードしています"
       },
+      "floatbar": {
+        "readAloud": {
+          "start": "朗读",
+          "stop": "停止",
+          "loading": "加载中..."
+        }
+      },
       "toolbar": {
         "mark": {
           "title": "使用記録",
@@ -767,27 +918,32 @@
         "question": {
           "tooltip": "質問応答",
           "selectContent": "先に内容を選択してください",
-          "promptTemplate": "参考文：{content}\n質問内容：{question}に基づいて、直接回答を返してください。"
+          "promptTemplate": "参考文：\n{content}\n質問内容：\n{question}\nに基づいて、直接回答を返してください。"
         },
         "continue": {
           "tooltip": "文章続き",
-          "promptTemplate": "前文：\"{content}\"に基づいて、100文字以内で続きを書いてください。\n後文：\"{endContent}\"を参考にしても良いですが、重複は避けてください。"
+          "promptTemplate": "前文：\n{content}\n内容に基づいて、100文字以内で続きを書いてください。\n後文：\n{endContent}\nを参考にしても良いですが、重複は避けてください。"
         },
         "polish": {
           "tooltip": "最適化",
           "selectContent": "先に内容を選択してください",
-          "promptTemplate": "この文章を校正してください：{content}。言語はそのままに、誤字脱字や不自然な表現を修正し、校正後の結果を直接返してください。"
+          "promptTemplate": "この文章を校正してください：\n{content}\n。言語はそのままに、誤字脱字や不自然な表現を修正し、校正後の結果を直接返してください。"
         },
         "eraser": {
           "tooltip": "簡潔化",
           "selectContent": "先に内容を選択してください",
-          "promptTemplate": "この文章を要約してください：{content}。文章があまりに冗長なので、文字数を半分以上に減らしてください。言語は変更しないで、要約した結果を直接返してください。"
+          "promptTemplate": "この文章を要約してください：\n{content}\n。文章があまりに冗長なので、文字数を半分以上に減らしてください。言語は変更しないで、要約した結果を直接返してください。"
+        },
+        "expansion": {
+          "tooltip": "拡張",
+          "selectContent": "先に内容を選択してください",
+          "promptTemplate": "この文章を拡張してください：\n{content}\n。文章があまりに短いので、文字数を半分以上に増やしてください。言語は変更しないで、拡張した結果を直接返してください。"
         },
         "translation": {
           "tooltip": "翻訳",
           "description": "選択したテキストを翻訳します",
           "selectContent": "まず内容を選択してください",
-          "promptTemplate": "このテキスト：{content} を{language}に翻訳してください。翻訳結果のみを返してください。"
+          "promptTemplate": "このテキスト：\n{content}\nを{language}に翻訳してください。翻訳結果のみを返してください。"
         }
       }
     },
@@ -798,7 +954,7 @@
         "synced": "同期済み",
         "syncing": "同期中",
         "syncFailed": "同期に失敗しました",
-        "checkNetworkOrToken": "ネットワーク接続またはGitHubトークンを確認してください",
+        "checkNetworkOrToken": "ネットワーク接続またはトークンを確認してください",
         "quickSync": "クイック同期"
       },
       "history": {

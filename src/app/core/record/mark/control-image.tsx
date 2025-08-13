@@ -1,7 +1,7 @@
 import { TooltipButton } from "@/components/tooltip-button"
 import { insertMark, Mark } from "@/db/marks"
 import { useTranslations } from 'next-intl'
-import { fetchAiDesc } from "@/lib/ai"
+import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai"
 import ocr from "@/lib/ocr"
 import useMarkStore from "@/stores/mark"
 import useTagStore from "@/stores/tag"
@@ -15,7 +15,7 @@ import { uploadImage } from "@/lib/imageHosting"
 export function ControlImage() {
   const t = useTranslations();
   const { currentTagId, fetchTags, getCurrentTag } = useTagStore()
-  const { primaryModel, githubUsername } = useSettingStore()
+  const { primaryModel, primaryImageMethod } = useSettingStore()
   const { fetchMarks, addQueue, setQueue, removeQueue } = useMarkStore()
 
   async function selectImages() {
@@ -44,15 +44,26 @@ export function ControlImage() {
     await copyFile(path, `image/${queueId}.${ext}`, { toPathBaseDir: BaseDirectory.AppData})
     const fileData = await readFile(path)
     const filename = `${queueId}.${ext}`
-    setQueue(queueId, { progress: t('record.mark.progress.ocr') });
-    const content = await ocr(`image/${filename}`)
-    setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
+    let content = ''
     let desc = ''
-    if (primaryModel) {
-      desc = await fetchAiDesc(content).then(res => res ? res : content) || content
-    } else {
+    if (primaryImageMethod === 'vlm') {
+      // 使用 VLM 识别图片
+      setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
+      const base64 = `data:image/${ext};base64,${Buffer.from(fileData).toString('base64')}`
+      content = await fetchAiDescByImage(base64) || 'VLM Error'
       desc = content
+    } else {
+      // 使用 OCR 识别图片
+      setQueue(queueId, { progress: t('record.mark.progress.ocr') });
+      content = await ocr(`image/${filename}`)
+      setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });
+      if (primaryModel) {
+        desc = await fetchAiDesc(content).then(res => res ? res : content) || content
+      } else {
+        desc = content
+      }
     }
+    
     const mark: Partial<Mark> = {
       tagId: currentTagId,
       type: 'image',
@@ -60,13 +71,12 @@ export function ControlImage() {
       url: filename,
       desc,
     }
-    if (githubUsername) {
-      setQueue(queueId, { progress: t('record.mark.progress.uploadImage') });
-      const file = new File([new Blob([fileData])], filename, { type: `image/${ext}` })
-      const url = await uploadImage(file)
-      if (url) {
-        mark.url = url
-      }
+    setQueue(queueId, { progress: t('record.mark.progress.uploadImage') });
+    // 上传图片
+    const file = new File([new Blob([fileData])], filename, { type: `image/${ext}` })
+    const url = await uploadImage(file)
+    if (url) {
+      mark.url = url
     }
     removeQueue(queueId)
     await insertMark(mark)

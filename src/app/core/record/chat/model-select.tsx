@@ -35,7 +35,7 @@ export function ModelSelect() {
     const models = await store.get<AiConfig[]>('aiModelList')
     if (!models) return
     const filteredModels = models.filter(item => {
-      return item.apiKey && item.model && item.baseURL
+      return item.model && item.baseURL
     })
     setList(filteredModels)
   }

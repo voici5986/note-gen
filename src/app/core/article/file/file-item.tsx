@@ -3,12 +3,12 @@ import { Input } from "@/components/ui/input";
 import useArticleStore, { DirTree } from "@/stores/article";
 import { BaseDirectory, exists, readTextFile, remove, rename, writeTextFile } from "@tauri-apps/plugin-fs";
 import { Cloud, CloudDownload, File, ImageIcon } from "lucide-react"
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ask } from '@tauri-apps/plugin-dialog';
 import { Store } from '@tauri-apps/plugin-store';
 import { RepoNames } from "@/lib/github.types";
 import { cloneDeep } from "lodash-es";
-import { open } from "@tauri-apps/plugin-shell";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { computedParentPath, getCurrentFolder } from "@/lib/path";
 import { toast } from "@/hooks/use-toast";
 import { useTranslations } from "next-intl";
@@ -16,6 +16,9 @@ import useClipboardStore from "@/stores/clipboard";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import { convertImageByWorkspace } from "@/lib/utils";
 import { appDataDir, join } from '@tauri-apps/api/path';
+import { deleteFile } from "@/lib/github";
+import { deleteFile as deleteGiteeFile } from "@/lib/gitee";
+import { deleteFile as deleteGitlabFile } from "@/lib/gitlab";
 
 export function FileItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -31,6 +34,31 @@ export function FileItem({ item }: { item: DirTree }) {
   const folderPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
   const cacheTree = cloneDeep(fileTree)
   const currentFolder = getCurrentFolder(folderPath, cacheTree)
+
+  // 防止输入框失去焦点，性能优化
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const value = input.value
+    const cursorPos = input.selectionStart || 0
+    
+    // 检查当前输入的字符是否为空格
+    const lastChar = value[cursorPos - 1]
+    if (lastChar === ' ') {
+      // 只在用户刚输入空格时进行替换
+      const newValue = value.replace(/\s+/g, '_')
+      setName(newValue)
+      
+      // 直接设置光标位置，无需 setTimeout
+      requestAnimationFrame(() => {
+        if (input.selectionStart !== null) {
+          input.setSelectionRange(cursorPos, cursorPos)
+        }
+      })
+    } else {
+      // 非空格字符直接更新
+      setName(value)
+    }
+  }, [])
 
   async function handleSelectFile() {
     if (item.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)) {
@@ -51,89 +79,89 @@ export function FileItem({ item }: { item: DirTree }) {
   async function handleDeleteFile() {
     // 添加确认弹窗
     const answer = await ask(t('deleteConfirm'), {
-      title: 'NoteGen',
+      title: item.name,
       kind: 'warning',
     });
-    
     // 如果用户确认删除，则继续执行
     if (answer) {
-      // 获取工作区路径信息
-      const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
-      const workspace = await getWorkspacePath()
-      
-      // 根据工作区类型正确删除文件
-      const pathOptions = await getFilePathOptions(path)
-      if (workspace.isCustom) {
-        // 自定义工作区
-        try {
+      try {
+        // 获取工作区路径信息
+        const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
+        const workspace = await getWorkspacePath()
+        
+        // 根据工作区类型正确删除文件
+        const pathOptions = await getFilePathOptions(path)
+        
+        if (workspace.isCustom) {
+          // 自定义工作区
           await remove(pathOptions.path)
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        // 默认工作区
-        try {
+        } else {
+          // 默认工作区
           await remove(pathOptions.path, { baseDir: pathOptions.baseDir })
-        } catch (e) {
-          console.error(e);
         }
-      }
-      
-      // 更新文件树
-      if (currentFolder) {
-        const index = currentFolder.children?.findIndex(file => file.name === item.name)
-        if (index !== undefined && index !== -1 && currentFolder.children) {
-          const current = currentFolder.children[index]
-          if (current.sha) {
-            current.isLocale = false
-          } else {
-            currentFolder.children.splice(index, 1)
+        
+        // 更新文件树
+        if (currentFolder) {
+          const index = currentFolder.children?.findIndex(file => file.name === item.name)
+          if (index !== undefined && index !== -1 && currentFolder.children) {
+            const current = currentFolder.children[index]
+            if (current.sha) {
+              current.isLocale = false
+            } else {
+              currentFolder.children.splice(index, 1)
+            }
+          }
+        } else {
+          const index = cacheTree.findIndex(file => file.name === item.name)
+          if (index !== undefined && index !== -1) {
+            const current = cacheTree[index]
+            if (current.sha) {
+              current.isLocale = false
+            } else {
+              cacheTree.splice(index, 1)
+            }
           }
         }
-      } else {
-        const index = cacheTree.findIndex(file => file.name === item.name)
-        if (index !== undefined && index !== -1) {
-          const current = cacheTree[index]
-          if (current.sha) {
-            current.isLocale = false
-          } else {
-            cacheTree.splice(index, 1)
-          }
-        }
+        setFileTree(cacheTree)
+        setActiveFilePath('')
+        setCurrentArticle('')
+      } catch (error) {
+        console.error('Delete file failed:', error)
+        toast({
+          title: t('context.deleteLocalFile'),
+          description: '删除文件失败: ' + error,
+          variant: 'destructive'
+        })
       }
-      setFileTree(cacheTree)
-      setActiveFilePath('')
-      setCurrentArticle('')
     }
   }
 
   async function handleDeleteSyncFile() {
     const answer = await ask(t('context.deleteSyncFile') + '?', {
-      title: 'NoteGen',
+      title: item.name,
       kind: 'warning',
     });
     if (answer) {
       try {
         // 获取当前主要备份方式
         const store = await Store.load('store.json');
-        const backupMethod = await store.get<'github' | 'gitee'>('primaryBackupMethod') || 'github';
+        const backupMethod = await store.get<'github' | 'gitee' | 'gitlab'>('primaryBackupMethod') || 'github';
         
-        if (backupMethod === 'github') {
-          // 使用GitHub API删除文件
-          const { deleteFile } = await import('@/lib/github');
-          await deleteFile({ path: activeFilePath, sha: item.sha as string, repo: RepoNames.sync });
-        } else {
-          // 使用Gitee API删除文件
-          const { deleteFile } = await import('@/lib/gitee');
-          await deleteFile({ path: activeFilePath, sha: item.sha as string, repo: RepoNames.sync });
+        switch (backupMethod) {
+          case 'github':
+            await deleteFile({ path: activeFilePath, sha: item.sha as string, repo: RepoNames.sync });
+            break;
+          case 'gitee':
+            await deleteGiteeFile({ path: activeFilePath, sha: item.sha as string, repo: RepoNames.sync });
+            break;
+          case 'gitlab':
+            await deleteGitlabFile({ path: activeFilePath, sha: item.sha as string, repo: RepoNames.sync });
+            break;
         }
         
-        const index = currentFolder?.children?.findIndex(file => file.name === item.name);
-        if (index !== undefined && index !== -1 && currentFolder?.children) {
-          currentFolder.children[index].sha = '';
-        }
-        setFileTree(cacheTree);
-        
+        // 更新文件树
+        await loadFileTree()
+
         toast({
           title: t('context.delete'),
           description: t('context.deleteSyncFileSuccess'),
@@ -155,15 +183,17 @@ export function FileItem({ item }: { item: DirTree }) {
   }
 
   async function handleRename() {
-    setName(name.replace(/ /g, '_')) // github 存储空格会报错，替换为下划线
+    // 统一处理：将空格替换为下划线，确保本地和远程文件名一致
+    const sanitizedName = name.replace(/\s+/g, '_')
+    setName(sanitizedName)
   
     // 获取工作区路径信息
     const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
     const workspace = await getWorkspacePath()
   
-    if (name && name.trim() !== '' && name !== item.name) {
+    if (sanitizedName && sanitizedName.trim() !== '' && sanitizedName !== item.name) {
       // 确保新文件名如果需要.md后缀则添加后缀
-      let displayName = name;
+      let displayName = sanitizedName;
       if (item.name === '' && !displayName.endsWith('.md')) {
         displayName += '.md';
       }
@@ -188,7 +218,7 @@ export function FileItem({ item }: { item: DirTree }) {
         // 重命名现有文件
         // 获取源路径和目标路径
         const oldPathOptions = await getFilePathOptions(path)
-        const newPathRelative = path.split('/').slice(0, -1).join('/') + '/' + name
+        const newPathRelative = path.split('/').slice(0, -1).join('/') + '/' + displayName
         const newPathOptions = await getFilePathOptions(newPathRelative)
         
         // 根据工作区类型执行重命名操作
@@ -202,7 +232,7 @@ export function FileItem({ item }: { item: DirTree }) {
         }
       } else {
         // 创建新文件
-        let newFilePath = name
+        let newFilePath = sanitizedName
         if (!newFilePath.endsWith('.md')) {
           newFilePath += '.md'
         }
@@ -254,7 +284,9 @@ export function FileItem({ item }: { item: DirTree }) {
           }
         } else {
           const index = cacheTree.findIndex(item => item.name === '')
-          cacheTree.splice(index, 1)
+          if (index !== -1) {
+            cacheTree.splice(index, 1)
+          }
         }
       } else {
         // 对于重命名现有文件，如果没有输入新名称，则保持原状态
@@ -288,11 +320,11 @@ export function FileItem({ item }: { item: DirTree }) {
     if (workspace.isCustom) {
       // 自定义工作区 - 直接使用工作区路径
       const pathOptions = await getFilePathOptions(folderPath)
-      open(pathOptions.path)
+      openPath(pathOptions.path)
     } else {
       // 默认工作区 - 使用 AppData 目录
       const appDir = await appDataDir()
-      open(await join(appDir, 'article', folderPath))
+      openPath(await join(appDir, 'article', folderPath))
     }
   }
 
@@ -343,7 +375,7 @@ export function FileItem({ item }: { item: DirTree }) {
       const fileExists = await exists(targetPath, { baseDir: BaseDirectory.AppData })
       if (fileExists) {
         const confirmOverwrite = await ask(t('clipboard.confirmOverwrite'), {
-          title: 'NoteGen',
+          title: item.name,
           kind: 'warning',
         })
         if (!confirmOverwrite) return
@@ -413,7 +445,7 @@ export function FileItem({ item }: { item: DirTree }) {
                   className="h-5 rounded-sm text-xs px-1 font-normal flex-1 mr-1"
                   value={name}
                   onBlur={handleRename}
-                  onChange={(e) => { setName(e.target.value) }}
+                  onChange={handleInputChange}
                   onKeyDown={(e) => {
                     if (e.code === 'Enter' && !e.nativeEvent.isComposing) {
                       handleRename()
@@ -480,7 +512,7 @@ export function FileItem({ item }: { item: DirTree }) {
           <ContextMenuItem disabled={!item.sha} inset className="text-red-900" onClick={handleDeleteSyncFile}>
             {t('context.deleteSyncFile')}
           </ContextMenuItem>
-          <ContextMenuItem disabled={!item.isLocale} inset className="text-red-900" onClick={handleDeleteFile}>
+          <ContextMenuItem disabled={!item.isLocale || item.name === ''} inset className="text-red-900" onClick={handleDeleteFile}>
             {t('context.deleteLocalFile')}
           </ContextMenuItem>
         </ContextMenuContent>
