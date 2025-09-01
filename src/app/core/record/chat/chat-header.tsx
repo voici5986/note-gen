@@ -38,7 +38,7 @@ export function ChatHeader() {
           primaryModel &&
           <>
             <BotMessageSquare className="!size-4" />
-            <span className="line-clamp-1 flex-1 lg:flex-none">
+            <span className="line-clamp-1 flex-1 md:flex-none">
               {models.find(model => model.key === primaryModel)?.model}
               ({models.find(model => model.key === primaryModel)?.title})
             </span>

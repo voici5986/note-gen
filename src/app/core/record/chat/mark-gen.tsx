@@ -1,5 +1,5 @@
 "use client"
-import { NotebookPen } from "lucide-react"
+import { Send, Square } from "lucide-react"
 import useSettingStore, { GenTemplate, GenTemplateRange } from "@/stores/setting"
 import useChatStore from "@/stores/chat"
 import useTagStore from "@/stores/tag"
@@ -229,10 +229,28 @@ export const MarkGen = forwardRef<{ openGen: () => void }, MarkGenProps>(({ inpu
     router.push('/core/setting/template');
   }
 
-  return (
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+  }
+
+  return loading ?
+    <TooltipButton
+      size="sm"
+      variant="destructive"
+      icon={<Square />}
+      tooltipText={t('cancel')}
+      onClick={handleStop}
+    /> : 
     <AlertDialog onOpenChange={openGen} open={open}>
       <AlertDialogTrigger className="relative" asChild>
-        <TooltipButton size="sm" variant={"default"} icon={<NotebookPen />} disabled={loading || !primaryModel} tooltipText="整理" />
+        <TooltipButton
+          size="sm"
+          variant="default"
+          icon={<Send />}
+          tooltipText={t('organize')}
+        />
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -269,9 +287,8 @@ export const MarkGen = forwardRef<{ openGen: () => void }, MarkGenProps>(({ inpu
           <Button variant={"outline"} onClick={() => setOpen(false)}>{t('cancel')}</Button>
           <Button onClick={handleGen}>{t('startOrganize')}</Button>
         </AlertDialogFooter>
-      </AlertDialogContent>
+      </AlertDialogContent> 
     </AlertDialog>
-  )
 })
 
 MarkGen.displayName = 'MarkGen';

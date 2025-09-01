@@ -24,7 +24,7 @@ export function ModeToggle() {
       <DropdownMenuTrigger asChild>
         {
           !isMobileDevice() ? 
-          <SidebarMenuButton asChild className="md:h-8 md:p-0"  
+          <SidebarMenuButton asChild className="md:h-8 p-0"  
             tooltip={{
               children: t('common.theme'),
               hidden: false,

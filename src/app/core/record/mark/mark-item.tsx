@@ -53,7 +53,7 @@ function DetailViewer({mark, content, path}: {mark: Mark, content: string, path?
           <SheetTitle>{t(mark.type)}</SheetTitle>
           <span className="mt-4 text-xs text-zinc-500">{markT('createdAt')}：{dayjs(mark.createdAt).format('YYYY-MM-DD HH:mm:ss')}</span>
         </SheetHeader>
-        <div className="h-[calc(100vh-88px)] overflow-y-auto lg:p-8 p-2">
+        <div className="h-[calc(100vh-88px)] overflow-y-auto md:p-8 p-2">
           {
             mark.url && (mark.type === 'image' || mark.type === 'scan') ?
             <LocalImage

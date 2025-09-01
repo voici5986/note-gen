@@ -13,72 +13,77 @@ import {
   FileCog,
   Book,
   KeyboardIcon,
-  Volume2
+  Volume2,
+  Settings
 } from "lucide-react"
 
 const baseConfig = [
   {
-    icon: <Store className="size-4 lg:size-6" />,
+    icon: <Store className="size-4 md:size-6" />,
     anchor: 'about',
+  },
+  {
+    icon: <Settings className="size-4 md:size-6" />,
+    anchor: 'general',
   },
   '-',
   {
-    icon: <DatabaseBackup className="size-4 lg:size-6" />,
+    icon: <DatabaseBackup className="size-4 md:size-6" />,
     anchor: 'sync',
   },
   {
-    icon: <ImageUp className="size-4 lg:size-6" />,
+    icon: <ImageUp className="size-4 md:size-6" />,
     anchor: 'imageHosting',
   },
   {
-    icon: <Database className="size-4 lg:size-6" />,
+    icon: <Database className="size-4 md:size-6" />,
     anchor: 'backupSync',
   },
   '-',
   {
-    icon: <BotMessageSquare className="size-4 lg:size-6" />,
+    icon: <BotMessageSquare className="size-4 md:size-6" />,
     anchor: 'ai',
   },
   {
-    icon: <Package className="size-4 lg:size-6" />,
+    icon: <Package className="size-4 md:size-6" />,
     anchor: 'defaultModel',
   },
   {
-    icon: <Book className="size-4 lg:size-6" />,
+    icon: <Book className="size-4 md:size-6" />,
     anchor: 'rag',
   },
   {
-    icon: <Drama className="size-4 lg:size-6" />,
+    icon: <Drama className="size-4 md:size-6" />,
     anchor: 'prompt',
   },
   {
-    icon: <LayoutTemplate className="size-4 lg:size-6" />,
+    icon: <LayoutTemplate className="size-4 md:size-6" />,
     anchor: 'template',
   },
   '-',
   {
-    icon: <FolderOpen className="size-4 lg:size-6" />,
+    icon: <FolderOpen className="size-4 md:size-6" />,
     anchor: 'file',
   },
   {
-    icon: <FileCog className="size-4 lg:size-6" />,
+    icon: <FileCog className="size-4 md:size-6" />,
     anchor: 'editor',
   },
   {
-    icon: <KeyboardIcon className="size-4 lg:size-6" />,
+    icon: <KeyboardIcon className="size-4 md:size-6" />,
     anchor: 'shortcuts',
   },
   {
-    icon: <ScanText className="size-4 lg:size-6" />,
+    icon: <ScanText className="size-4 md:size-6" />,
     anchor: 'imageMethod',
   },
   {
-    icon: <Volume2 className="size-4 lg:size-6" />,
+    icon: <Volume2 className="size-4 md:size-6" />,
     anchor: 'readAloud',
   },
   '-',
   {
-    icon: <UserRoundCog className="size-4 lg:size-6" />,
+    icon: <UserRoundCog className="size-4 md:size-6" />,
     anchor: 'dev',
   }
 ]

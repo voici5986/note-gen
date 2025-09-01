@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import { Chat } from '@/db/chats'
 import ChatPreview from './chat-preview'
 import './chat.scss'
-import { NoteOutput } from './note-output'
-import { MarkText } from './mark-text'
+import { NoteOutput } from './message-control/note-output'
+import { MarkText } from './message-control/mark-text'
 import { ChatClipboard } from './chat-clipboard'
 import MessageControl from './message-control'
 import ChatEmpty from './chat-empty'
@@ -70,11 +70,11 @@ function MessageWrapper({ chat, children }: { chat: Chat, children: React.ReactN
   }
 
   const index = chats.findIndex(item => item.id === chat.id)
-  return <div className="flex w-full lg:gap-4">
+  return <div className="flex w-full md:gap-4">
     {
       chat.role === 'user' ?  
       <div className="relative">
-        <Avatar className='rounded size-6 items-center justify-center hidden lg:flex'>
+        <Avatar className='rounded size-6 items-center justify-center hidden md:flex'>
           {
             userInfo?.avatar_url ?
             <AvatarImage src={userInfo?.avatar_url} /> : <UserRound />
@@ -84,7 +84,7 @@ function MessageWrapper({ chat, children }: { chat: Chat, children: React.ReactN
           <Undo2 />
         </Button>
       </div> :
-      <div className='hidden lg:flex'>
+      <div className='hidden md:flex'>
         {loading && index === chats.length - 1 && chat.type === 'chat' ?
           <LoaderPinwheel className="animate-spin" /> :
           chat.type === 'clipboard' ? <ClipboardCheck /> : <BotMessageSquare />

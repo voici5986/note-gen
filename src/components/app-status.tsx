@@ -176,7 +176,7 @@ export default function AppStatus() {
   }, [accessToken, giteeAccessToken, gitlabAccessToken, primaryBackupMethod])
 
   return (
-    <SidebarMenuButton size="lg" asChild className="md:size-8 md:p-0">
+    <SidebarMenuButton size="lg" asChild className="md:size-8 p-0">
       <div className="relative flex items-center gap-2 cursor-pointer" onClick={openUserHome} >
         <Avatar className="size-8 rounded overflow-hidden">
           {primaryBackupMethod === 'github' ? (

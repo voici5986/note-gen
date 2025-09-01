@@ -24,7 +24,7 @@ export function PinToggle() {
   }
 
   return (
-    <SidebarMenuButton asChild className="md:h-8 md:p-0"
+    <SidebarMenuButton asChild className="md:h-8 p-0"
       tooltip={{
         children: isPin ? t('common.unpin') : t('common.pin'),
         hidden: false,

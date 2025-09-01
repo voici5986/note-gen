@@ -91,7 +91,7 @@ export function ModelSelect({modelKey}: {modelKey: string}) {
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full lg:w-[280px] justify-between"
+              className="w-full md:w-[280px] justify-between"
             >
               {model
                 ? list.find((item) => item.key === model)?.model
@@ -108,7 +108,7 @@ export function ModelSelect({modelKey}: {modelKey: string}) {
           tooltipText={t('noModel')}
         />
       </div>
-      <PopoverContent align="end" className="w-full lg:w-[320px] p-0">
+      <PopoverContent align="end" className="w-full md:w-[320px] p-0">
         <Command>
           <CommandInput placeholder={t('placeholder')} className="h-9" />
           <CommandList>

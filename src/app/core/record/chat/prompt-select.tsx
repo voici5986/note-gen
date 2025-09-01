@@ -29,7 +29,7 @@ export function PromptSelect() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="hidden lg:block">
+        <div className="hidden md:block">
           <TooltipButton
             icon={<Drama />}
             tooltipText={t('tooltip')}

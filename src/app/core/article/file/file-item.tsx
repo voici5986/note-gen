@@ -23,6 +23,7 @@ import { deleteFile as deleteGitlabFile } from "@/lib/gitlab";
 export function FileItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
   const [name, setName] = useState(item.name)
+  const [isComposing, setIsComposing] = useState(false) // 追踪输入法合成状态
   const inputRef = useRef<HTMLInputElement>(null)
   const { activeFilePath, setActiveFilePath, readArticle, setCurrentArticle, fileTree, setFileTree, loadFileTree } = useArticleStore()
   const { setClipboardItem, clipboardItem, clipboardOperation } = useClipboardStore()
@@ -35,27 +36,58 @@ export function FileItem({ item }: { item: DirTree }) {
   const cacheTree = cloneDeep(fileTree)
   const currentFolder = getCurrentFolder(folderPath, cacheTree)
 
-  // 防止输入框失去焦点，性能优化
+  // 优化的输入处理，支持输入法
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target
     const value = input.value
-    const cursorPos = input.selectionStart || 0
+    const cursorPosition = input.selectionStart || 0
     
-    // 检查当前输入的字符是否为空格
-    const lastChar = value[cursorPos - 1]
-    if (lastChar === ' ') {
-      // 只在用户刚输入空格时进行替换
-      const newValue = value.replace(/\s+/g, '_')
-      setName(newValue)
+    // 如果正在使用输入法合成，不进行空格替换
+    if (isComposing) {
+      setName(value)
+      return
+    }
+    
+    // 检查是否包含空格，只有包含空格时才需要处理光标位置
+    if (value.includes(' ')) {
+      const sanitizedValue = value.replace(/\s+/g, '_')
+      setName(sanitizedValue)
       
-      // 直接设置光标位置，无需 setTimeout
+      // 保持光标位置
       requestAnimationFrame(() => {
         if (input.selectionStart !== null) {
-          input.setSelectionRange(cursorPos, cursorPos)
+          input.setSelectionRange(cursorPosition, cursorPosition)
         }
       })
     } else {
-      // 非空格字符直接更新
+      setName(value)
+    }
+  }, [isComposing])
+
+  // 输入法合成开始
+  const handleCompositionStart = useCallback(() => {
+    setIsComposing(true)
+  }, [])
+
+  // 输入法合成结束，进行空格替换
+  const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+    setIsComposing(false)
+    const input = e.currentTarget
+    const value = input.value
+    const cursorPosition = input.selectionStart || 0
+    
+    // 只有当值包含空格时才需要替换和恢复光标位置
+    if (value.includes(' ')) {
+      const sanitizedValue = value.replace(/\s+/g, '_')
+      setName(sanitizedValue)
+      
+      // 计算新的光标位置（空格变为下划线，长度不变，所以位置保持不变）
+      requestAnimationFrame(() => {
+        if (input.selectionStart !== null) {
+          input.setSelectionRange(cursorPosition, cursorPosition)
+        }
+      })
+    } else {
       setName(value)
     }
   }, [])
@@ -446,6 +478,8 @@ export function FileItem({ item }: { item: DirTree }) {
                   value={name}
                   onBlur={handleRename}
                   onChange={handleInputChange}
+                  onCompositionStart={handleCompositionStart}
+                  onCompositionEnd={handleCompositionEnd}
                   onKeyDown={(e) => {
                     if (e.code === 'Enter' && !e.nativeEvent.isComposing) {
                       handleRename()

@@ -5,21 +5,26 @@ import { Button } from '@/components/ui/button'
 import { CardContent, Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Trash, Pencil, Check, X } from 'lucide-react'
+import { Plus, Trash, Pencil, Check, X, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import usePromptStore, { Prompt } from '@/stores/prompt'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { OpenBroswer } from '@/components/open-broswer'
+import { fetchAi } from '@/lib/ai'
+import { toast } from '@/hooks/use-toast'
+import { useI18n } from '@/hooks/useI18n'
 
 export function SettingPrompt({id, icon}: {id: string, icon?: React.ReactNode}) {
   const t = useTranslations('settings')
+  const { currentLocale } = useI18n();
   const commonT = useTranslations('common')
   const { promptList, initPromptData, addPrompt, updatePrompt, deletePrompt } = usePromptStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [newContent, setNewContent] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [isOptimizing, setIsOptimizing] = useState(false)
 
   useEffect(() => {
     initPromptData()
@@ -69,6 +74,47 @@ export function SettingPrompt({id, icon}: {id: string, icon?: React.ReactNode}) 
     await deletePrompt(id)
   }
 
+  // 优化提示词
+  const handleOptimizePrompt = async () => {
+    if (!newContent.trim()) {
+      toast({
+        description: t('prompt.noContentToOptimize'),
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setIsOptimizing(true)
+    try {
+      const optimizationPrompt = `
+      Please optimize the following prompt, use ${currentLocale} language, making it clearer, more specific, and more effective. 
+      Maintain the original meaning while improving expression, adding necessary context, optimizing structure and logic. 
+      Please directly return the optimized prompt content, without adding any additional explanation:
+
+${newContent}`
+      
+      const optimizedContent = await fetchAi(optimizationPrompt)
+      if (optimizedContent) {
+        setNewContent(optimizedContent)
+        toast({
+          description: t('prompt.optimizeSuccess')
+        })
+      } else {
+        toast({
+          description: t('prompt.optimizeFailed'),
+          variant: 'destructive'
+        })
+      }
+    } catch {
+      toast({
+        description: t('prompt.optimizeFailed'),
+        variant: 'destructive'
+      })
+    } finally {
+      setIsOptimizing(false)
+    }
+  }
+
   // 打开新增对话框
   const handleOpenAddDialog = () => {
     setNewTitle('')
@@ -108,13 +154,26 @@ export function SettingPrompt({id, icon}: {id: string, icon?: React.ReactNode}) 
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="content">{t('prompt.promptContent')}</Label>
-                  <Textarea
-                    id="content"
-                    value={newContent}
-                    onChange={(e) => setNewContent(e.target.value)}
-                    placeholder={t('prompt.promptContentPlaceholder')}
-                    rows={5}
-                  />
+                  <div className="space-y-2">
+                    <Textarea
+                      id="content"
+                      value={newContent}
+                      onChange={(e) => setNewContent(e.target.value)}
+                      placeholder={t('prompt.promptContentPlaceholder')}
+                      rows={5}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOptimizePrompt}
+                      disabled={isOptimizing || !newContent.trim()}
+                      className="w-full"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {isOptimizing ? t('prompt.optimizing') : t('prompt.optimizePrompt')}
+                    </Button>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -136,13 +195,25 @@ export function SettingPrompt({id, icon}: {id: string, icon?: React.ReactNode}) 
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder={t('prompt.promptTitlePlaceholder')}
                     />
-                    <Textarea
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      placeholder={t('prompt.promptContentPlaceholder')}
-                      rows={5}
-                    />
+                    <div className="space-y-2">
+                      <Textarea
+                        value={newContent}
+                        onChange={(e) => setNewContent(e.target.value)}
+                        placeholder={t('prompt.promptContentPlaceholder')}
+                        rows={5}
+                      />
+                    </div>
                     <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOptimizePrompt}
+                        disabled={isOptimizing || !newContent.trim()}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {isOptimizing ? t('prompt.optimizing') : t('prompt.optimizePrompt')}
+                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 

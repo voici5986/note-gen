@@ -115,15 +115,15 @@ export default function UploadStore() {
 
   return (
     username ? (
-    <div className="flex gap-1 flex-col lg:border-t justify-center items-center">
+    <div className="flex gap-1 flex-col md:border-t justify-center items-center">
       <div className="flex gap-2">
         <Button variant={'ghost'} size={'sm'} onClick={upload} disabled={upLoading}>
           {upLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud />}
-          <span className="hidden lg:inline">{t('upload')}</span>
+          <span className="hidden md:inline">{t('upload')}</span>
         </Button>
         <Button variant={'ghost'} size={'sm'} onClick={download} disabled={downLoading}>
           {downLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud />}
-          <span className="hidden lg:inline">{t('download')}</span>
+          <span className="hidden md:inline">{t('download')}</span>
         </Button>
       </div>
     </div>

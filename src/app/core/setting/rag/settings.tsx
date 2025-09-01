@@ -91,7 +91,7 @@ export function Settings() {
             <FormItem title={setting.title} desc={setting.desc}>
               <div className="flex items-center gap-2">
               <Slider
-                className="w-full lg:w-96 my-2"
+                className="w-full md:w-96 my-2"
                 value={[setting.value]}
                 min={setting.min}
                 max={setting.max}
@@ -103,7 +103,7 @@ export function Settings() {
           </FormItem>
         </SettingRow>
         ))}
-        <div className="flex flex-col lg:flex-row gap-2">
+        <div className="flex flex-col md:flex-row gap-2">
           <Button variant="outline" onClick={resetToDefaults}>
             <RefreshCw className="size-4" /> {t('resetToDefaults')}
           </Button>

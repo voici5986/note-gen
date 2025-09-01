@@ -50,7 +50,7 @@ export function ControlText() {
       <DialogTrigger asChild>
         <TooltipButton icon={<CopySlash />} tooltipText={t('record.mark.type.text')} />
       </DialogTrigger>
-      <DialogContent className="min-w-full lg:min-w-[650px]">
+      <DialogContent className="min-w-full md:min-w-[650px]">
         <DialogHeader>
           <DialogTitle>{t('record.mark.text.title')}</DialogTitle>
           <DialogDescription>

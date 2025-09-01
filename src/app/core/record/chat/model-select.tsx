@@ -53,7 +53,7 @@ export function ModelSelect() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="hidden lg:block">
+        <div className="hidden md:block">
           <TooltipButton
             icon={list.length > 0 ? <BotMessageSquare className="size-4" /> : <BotOff className="size-4" />}
             tooltipText={t('tooltip')}

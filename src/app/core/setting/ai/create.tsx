@@ -70,7 +70,7 @@ export default function CreateConfig() {
               {t('createDesc')}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <div className="overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2">
             <ProviderItem item={customModel} onClick={() => addCustomModelHandler(customModel)}/>
             {
               baseAiConfig.map((item, index) => (

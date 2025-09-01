@@ -161,10 +161,9 @@ export default function WebdavSync() {
                 </CardTitle>
                 <CardDescription>{t("description")}</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col lg:flex-row gap-4">
+              <CardContent className="flex flex-col md:flex-row gap-4">
                 <Button 
                   onClick={handleBackupToWebDAV} 
-                  variant="outline" 
                   className="mt-2"
                   disabled={backupState || syncState}
                 >
@@ -173,7 +172,6 @@ export default function WebdavSync() {
                 </Button>
                 <Button 
                   onClick={handleSyncFromWebDAV} 
-                  variant="outline" 
                   className="mt-2"
                   disabled={syncState || backupState}
                 >

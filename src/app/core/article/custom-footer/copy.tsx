@@ -30,7 +30,7 @@ export default function CopyFormatSelector({editor}: {editor?: Vditor}) {
   };
 
   return (
-    <div className="items-center gap-1 hidden lg:flex">
+    <div className="items-center gap-1 hidden md:flex">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 

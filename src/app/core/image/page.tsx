@@ -153,7 +153,7 @@ export default function Page() {
           {
             accessToken ? 
             (
-              <div className="p-2 grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2">
+              <div className="p-2 grid md:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2">
                 {
                   images.map((file: GithubFile) => (
                     file.type === 'dir' ? 

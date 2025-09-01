@@ -20,7 +20,7 @@ export function LanguageSwitch() {
       <DropdownMenuTrigger asChild>
         {
           !isMobileDevice() ? 
-          <SidebarMenuButton asChild className="md:h-8 md:p-0"
+          <SidebarMenuButton asChild className="md:h-8 p-0"
             tooltip={{
               children: t('language'),
               hidden: false,

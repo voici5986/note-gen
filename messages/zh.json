@@ -23,6 +23,26 @@
     "error": "失败"
   },
   "settings": {
+    "general": {
+      "title": "常规设置",
+      "desc": "在这里，你可以配置应用的基本设置，包括界面主题、语言等选项。",
+      "interface": {
+        "title": "界面设置",
+        "theme": {
+          "title": "主题",
+          "desc": "选择应用的外观主题",
+          "options": {
+            "light": "亮色",
+            "dark": "暗色",
+            "system": "跟随系统"
+          }
+        },
+        "language": {
+          "title": "语言",
+          "desc": "选择应用的显示语言"
+        }
+      }
+    },
     "rag": {
       "title": "知识库",
       "desc": "在这里，你可以配置知识库相关设置，知识库基于 RAG 技术，通过嵌入模型将文本转换为向量，然后通过向量搜索来实现智能搜索和智能回答。",
@@ -90,7 +110,12 @@
       "addPromptDesc": "请输入 Prompt 名称和内容，帮助AI更好地理解你的需求。",
       "promptTitlePlaceholder": "请输入 Prompt 名称",
       "promptContentPlaceholder": "请输入 Prompt 内容",
-      "promptContent": "Prompt 内容"
+      "promptContent": "Prompt 内容",
+      "optimizePrompt": "优化提示词",
+      "optimizing": "优化中...",
+      "optimizeSuccess": "提示词优化成功",
+      "optimizeFailed": "提示词优化失败，请稍后重试",
+      "noContentToOptimize": "请先输入提示词内容"
     },
     "defaultModel": {
       "title": "默认模型",
@@ -292,6 +317,33 @@
           "createDirFailed": "创建目录失败",
           "connectionTimeOut": "连接超时，请检查网络或服务器。"
         }
+      },
+      "localBackup": {
+        "tabTitle": "本地备份",
+        "export": {
+          "title": "导出备份",
+          "desc": "将应用数据打包为 .zip 文件，保存到指定位置。",
+          "button": "选择位置并导出",
+          "exporting": "导出中..."
+        },
+        "import": {
+          "title": "导入备份",
+          "desc": "从 .zip 文件恢复应用数据，将覆盖当前所有数据。",
+          "button": "选择文件并导入",
+          "importing": "导入中...",
+          "warning": "导入操作将覆盖所有当前数据，请确保已备份重要内容！"
+        },
+        "exportDialog": {
+          "title": "选择备份文件保存位置"
+        },
+        "importDialog": {
+          "title": "选择要导入的备份文件"
+        },
+        "exportSuccess": "备份导出成功！",
+        "exportError": "备份导出失败",
+        "importSuccess": "备份导入成功！应用将重启以应用更改。",
+        "importError": "备份导入失败",
+        "restartConfirm": "导入完成！是否立即重启应用以应用更改？"
       }
     },
     "template": {
@@ -410,10 +462,17 @@
         "title": "工作区设置",
         "desc": "设置应用程序的工作区目录，文件将保存在该目录中。",
         "current": "工作区路径",
+        "defaultPath": "默认工作区",
         "default": "当前使用默认工作区路径。",
         "custom": "当前使用自定义工作区路径。",
         "select": "选择工作区目录",
-        "reset": "重置为默认路径"
+        "reset": "重置为默认路径",
+        "history": "历史路径",
+        "selectFromHistory": "从历史记录中选择工作区",
+        "clearHistory": "清空历史记录",
+        "actions": "操作",
+        "searchPlaceholder": "搜索工作区路径...",
+        "noResults": "未找到结果"
       },
       "info": {
         "title": "工作区说明", 
@@ -483,6 +542,15 @@
         "link": "链接",
         "upload": "上传记录",
         "download": "下载记录"
+      },
+      "note": {
+        "organizeAs": "整理为",
+        "template": "模板",
+        "setting": "设置",
+        "confirm": "确认",
+        "cancel": "取消",
+        "removeThinking": "移除思考过程",
+        "stop": "停止"
       },
       "uploadSuccess": "记录上传成功",
       "downloadSuccess": "记录下载成功",
@@ -690,6 +758,7 @@
           "disable": "剪贴板监听(关闭)"
         },
         "send": "发送",
+        "stop": "停止",
         "terminate": "终止",
         "tagLink": {
           "on": "已关联标签",
@@ -715,6 +784,12 @@
           "notSupported": "向量模型不可用",
           "enabled": "知识库检索（开启）",
           "disabled": "知识库检索（关闭）"
+        },
+        "modeSelect": {
+          "tooltip": "选择输入模式",
+          "chat": "对话模式",
+          "gen": "整理模式",
+          "translate": "翻译模式"
         }
       },
       "header": {
@@ -741,7 +816,9 @@
         "readAloud": "朗读",
         "playing": "播放中",
         "loading": "准备中",
-        "stop": "停止播放"
+        "stop": "停止播放",
+        "copy": "复制",
+        "copied": "已复制"
       },
       "preview": {
         "close": "关闭",
@@ -759,6 +836,7 @@
         "organize": "将你的记录整理为文章："
       },
       "note": {
+        "organize": "整理",
         "writing": "写作",
         "convert": "转化文章",
         "description": "当前的笔记是由 AI 生成且无法编辑，将当前笔记转化为文章（生成本地文件），可在写作页面中进行二次创作。",
@@ -774,7 +852,8 @@
         "filterThinkingContent": "移除记录中的思考",
         "startOrganize": "开始整理",
         "manageTemplate": "管理模板",
-        "cancel": "取消"
+        "cancel": "取消",
+        "stop": "停止"
       },
       "mark": {
         "recorded": "已记录",

@@ -14,7 +14,7 @@ export function SettingType(
   </div>
 }
 export function SettingRow({border = false, children, className}: { border?: boolean, children: React.ReactNode, className?: string}) {
-  return <div className={`${border ? "border-b py-4" : ""} flex justify-between text-sm items-start lg:items-center ${className}`}>
+  return <div className={`${border ? "border-b py-4" : ""} flex justify-between text-sm items-start md:items-center ${className}`}>
     {children}
   </div>
 }
@@ -28,8 +28,8 @@ export function FormItem({title, desc, children}: { title: string, desc?: string
 }
 
 export function SettingPanel({children, title, desc, icon}: {children: React.ReactNode, title?: string, desc?: string, icon?: React.ReactNode}) {
-  return <div className="flex flex-col lg:flex-row lg:items-center justify-between rounded-lg border p-3 shadow-sm mb-4 lg:gap-6">
-    <div className="mb-2 lg:mb-0">
+  return <div className="flex flex-col md:flex-row md:items-center justify-between rounded-lg border p-3 shadow-sm mb-4 md:gap-6">
+    <div className="mb-2 md:mb-0">
       <div className="flex items-center gap-2 mb-2">
         {icon}
         {title && <div className="text-sm font-bold">{title}</div>}

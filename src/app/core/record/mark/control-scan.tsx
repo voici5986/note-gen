@@ -128,7 +128,7 @@ export function ControlScan() {
   }, [image, open])
 
   return (
-    <div className="hidden lg:block">
+    <div className="hidden md:block">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <TooltipButton icon={<ScanText />} tooltipText={t('record.mark.type.screenshot')} onClick={createScreenShot} />

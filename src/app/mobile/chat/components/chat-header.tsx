@@ -102,7 +102,7 @@ export function ChatHeader() {
         <PopoverTrigger asChild>
           <div className="flex items-center justify-center gap-1 cursor-pointer hover:opacity-80">
             {models.length > 0 ? <BotMessageSquare className="!size-4" /> : <BotOff className="size-4" />}
-            <span className="line-clamp-1 flex-1 lg:flex-none">
+            <span className="line-clamp-1 flex-1 md:flex-none">
               {models.find(model => model.key === primaryModel)?.model}
             </span>
           </div>

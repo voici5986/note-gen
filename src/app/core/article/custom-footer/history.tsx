@@ -186,7 +186,7 @@ export default function History({editor}: {editor?: Vditor}) {
             null
         }
       </SheetTrigger>
-      <SheetContent className="p-0 w-full lg:min-w-[500px]">
+      <SheetContent className="p-0 w-full md:min-w-[500px]">
         <SheetHeader className="p-4 border-b">
           <SheetTitle>{t('historyRecords')}</SheetTitle>
           <SheetDescription className="flex items-center justify-between">
