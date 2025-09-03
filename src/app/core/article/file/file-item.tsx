@@ -19,6 +19,7 @@ import { appDataDir, join } from '@tauri-apps/api/path';
 import { deleteFile } from "@/lib/github";
 import { deleteFile as deleteGiteeFile } from "@/lib/gitee";
 import { deleteFile as deleteGitlabFile } from "@/lib/gitlab";
+import { generateUniqueFilename } from "@/lib/default-filename";
 
 export function FileItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -215,17 +216,26 @@ export function FileItem({ item }: { item: DirTree }) {
   }
 
   async function handleRename() {
-    // 统一处理：将空格替换为下划线，确保本地和远程文件名一致
-    const sanitizedName = name.replace(/\s+/g, '_')
-    setName(sanitizedName)
-  
     // 获取工作区路径信息
     const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
     const workspace = await getWorkspacePath()
+    
+    let finalName = name
+    
+    // 如果输入为空字符串，生成默认文件名
+    if (!name || name.trim() === '') {
+      const parentPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
+      finalName = await generateUniqueFilename(parentPath, 'Untitled')
+      setName(finalName)
+    } else {
+      // 统一处理：将空格替换为下划线，确保本地和远程文件名一致
+      finalName = name.replace(/\s+/g, '_')
+      setName(finalName)
+    }
   
-    if (sanitizedName && sanitizedName.trim() !== '' && sanitizedName !== item.name) {
+    if (finalName && finalName.trim() !== '' && finalName !== item.name) {
       // 确保新文件名如果需要.md后缀则添加后缀
-      let displayName = sanitizedName;
+      let displayName = finalName;
       if (item.name === '' && !displayName.endsWith('.md')) {
         displayName += '.md';
       }
@@ -264,7 +274,7 @@ export function FileItem({ item }: { item: DirTree }) {
         }
       } else {
         // 创建新文件
-        let newFilePath = sanitizedName
+        let newFilePath = finalName
         if (!newFilePath.endsWith('.md')) {
           newFilePath += '.md'
         }

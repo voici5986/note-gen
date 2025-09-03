@@ -20,7 +20,8 @@
     "sync": "同期",
     "language": "言語",
     "success": "成功",
-    "error": "失敗"
+    "error": "失敗",
+    "defaultFileName": "無題のドキュメント"
   },
   "settings": {
     "general": {
@@ -40,6 +41,11 @@
         "language": {
           "title": "言語",
           "desc": "アプリケーションの表示言語を選択"
+        },
+        "scale": {
+          "title": "インターフェーススケール",
+          "desc": "アプリケーションインターフェースの全体的なスケールを調整",
+          "placeholder": "スケール比率を選択"
         }
       }
     },

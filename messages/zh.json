@@ -20,7 +20,8 @@
     "sync": "同步",
     "language": "语言",
     "success": "成功",
-    "error": "失败"
+    "error": "失败",
+    "defaultFileName": "未命名文档"
   },
   "settings": {
     "general": {
@@ -40,6 +41,11 @@
         "language": {
           "title": "语言",
           "desc": "选择应用的显示语言"
+        },
+        "scale": {
+          "title": "界面缩放",
+          "desc": "调整应用界面的整体缩放比例",
+          "placeholder": "选择缩放比例"
         }
       }
     },

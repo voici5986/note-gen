@@ -22,7 +22,8 @@
     "selectPrompt": "Select Prompt",
     "prompt": "Prompt",
     "success": "Success",
-    "error": "Failed"
+    "error": "Failed",
+    "defaultFileName": "Untitled"
   },
   "settings": {
     "general": {
@@ -42,6 +43,11 @@
         "language": {
           "title": "Language",
           "desc": "Choose the application's display language"
+        },
+        "scale": {
+          "title": "Interface Scale",
+          "desc": "Adjust the overall scale of the application interface",
+          "placeholder": "Select scale ratio"
         }
       }
     },
