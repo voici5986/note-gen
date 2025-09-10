@@ -271,6 +271,43 @@
         "desc": "PicGo サーバー URL",
         "ok": "サービスが起動しています。PicGo の設定を確認してください。",
         "error": "サービスが起動していません。PicGo（v2.2.0+）を起動してください。"
+      },
+      "s3": {
+        "title": "S3 オブジェクトストレージ",
+        "description": "AWS S3 または S3 互換のオブジェクトストレージサービスを画像ホスティングとして設定",
+        "status": "接続状態",
+        "connected": "接続済み",
+        "connecting": "接続中",
+        "disconnected": "未接続",
+        "accessKeyId": "Access Key ID",
+        "accessKeyIdPlaceholder": "Access Key ID を入力",
+        "secretAccessKey": "Secret Access Key",
+        "secretAccessKeyPlaceholder": "Secret Access Key を入力",
+        "region": "リージョン",
+        "bucket": "バケット",
+        "bucketPlaceholder": "バケット名を入力",
+        "advancedSettings": "詳細設定",
+        "endpoint": "カスタムエンドポイント",
+        "endpointDesc": "AWS S3 の場合は空白、S3 互換サービスのエンドポイントを入力",
+        "customDomain": "カスタムドメイン",
+        "customDomainDesc": "オプション、画像アクセス用のカスタムドメイン",
+        "pathPrefix": "パスプレフィックス",
+        "pathPrefixDesc": "オプション、画像保存のパスプレフィックス",
+        "save": "設定を保存",
+        "test": "接続テスト",
+        "setAsPrimary": "メインに設定",
+        "error": "設定エラー",
+        "requiredFields": "必須フィールドを入力してください：Access Key ID、Secret Access Key、リージョン、バケット",
+        "saveSuccess": "設定保存成功",
+        "saveSuccessDesc": "S3 設定が保存されました",
+        "saveError": "設定保存失敗",
+        "testSuccess": "接続テスト成功",
+        "testSuccessDesc": "S3 接続正常、画像アップロード可能",
+        "testFailed": "接続テスト失敗",
+        "testFailedDesc": "設定情報とネットワーク接続を確認してください",
+        "testFirstDesc": "メイン画像ホスティングに設定する前に接続テストを成功させてください",
+        "setPrimarySuccess": "設定成功",
+        "setPrimarySuccessDesc": "S3 がメイン画像ホスティングに設定されました"
       }
     },
     "imageMethod": {
@@ -409,6 +446,10 @@
       "modelConfigDesc": "それぞれの構成はAIモデルに対応しており、テンプレートやカスタムで新しい構成を作成することができます。",
       "create": "作成",
       "createDesc": "空の設定を選択するか、供給元のテンプレートを使用して新しい設定を作成します。",
+      "createSection": {
+        "title": "カスタムモデル設定",
+        "descWithoutModels": "カスタムAIモデル設定を追加して、より強力なモデルサービスを使用しましょう。"
+      },
       "config": "配置单",
       "custom": "自定義",
       "addCustomModel": "自定義",
@@ -446,7 +487,30 @@
       "connectionSuccess": "AI接続テストが成功しました",
       "headerKey": "キー",
       "headerValue": "値",
-      "addHeader": "ヘッダーを追加"
+      "addHeader": "ヘッダーを追加",
+      "voice": "音声タイプ",
+      "voiceDesc": "音声モデルで使用する音声タイプを指定します（例：'alloy'、'echo'、'fable'など）。",
+      "voicePlaceholder": "音声タイプを入力してください（例：alloy）",
+      "defaultModels": {
+        "title": "デフォルト無料モデル",
+        "desc": "NoteGenはユーザーに無料のAIモデルサービスを提供し、設定なしで基本機能を使用できます。",
+        "chatModel": {
+          "name": "Qwen/Qwen3-8B",
+          "type": "チャットモデル",
+          "desc": "日常会話やテキスト生成に適用"
+        },
+        "embeddingModel": {
+          "name": "BAAI/bge-m3",
+          "type": "埋め込みモデル",
+          "desc": "テキストベクトル化や意味検索に使用"
+        },
+        "visionModel": {
+          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "type": "ビジョンモデル",
+          "desc": "画像理解やOCR認識などの視覚タスクをサポート"
+        },
+        "poweredBy": "SiliconFlowによる技術サポート"
+      }
     },
     "ocr": {
       "title": "OCR",
@@ -778,6 +842,14 @@
           "chat": "チャットモード",
           "gen": "整理モード",
           "translate": "翻訳モード"
+        },
+        "fileLink": {
+          "tooltip": "ファイルをリンク",
+          "selectFile": "ファイルを選択",
+          "linkedFile": "リンクされたファイル",
+          "searchPlaceholder": "ファイルを検索...",
+          "noFiles": "ファイルが見つかりません",
+          "loading": "読み込み中..."
         }
       },
       "header": {

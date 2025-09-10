@@ -273,6 +273,43 @@
         "desc": "PicGo server URL",
         "ok": "Service is running, please ensure PicGo image hosting is configured.",
         "error": "Service is not running, please ensure PicGo (v2.2.0+) is running, otherwise image upload will fail."
+      },
+      "s3": {
+        "title": "S3 Object Storage",
+        "description": "Configure AWS S3 or S3-compatible object storage service as image hosting",
+        "status": "Connection Status",
+        "connected": "Connected",
+        "connecting": "Connecting",
+        "disconnected": "Disconnected",
+        "accessKeyId": "Access Key ID",
+        "accessKeyIdPlaceholder": "Enter Access Key ID",
+        "secretAccessKey": "Secret Access Key",
+        "secretAccessKeyPlaceholder": "Enter Secret Access Key",
+        "region": "Region",
+        "bucket": "Bucket",
+        "bucketPlaceholder": "Enter bucket name",
+        "advancedSettings": "Advanced Settings",
+        "endpoint": "Custom Endpoint",
+        "endpointDesc": "Leave empty for AWS S3, or enter S3-compatible service endpoint",
+        "customDomain": "Custom Domain",
+        "customDomainDesc": "Optional, custom domain for accessing images",
+        "pathPrefix": "Path Prefix",
+        "pathPrefixDesc": "Optional, path prefix for image storage",
+        "save": "Save Configuration",
+        "test": "Test Connection",
+        "setAsPrimary": "Set as Primary",
+        "error": "Configuration Error",
+        "requiredFields": "Please fill in required fields: Access Key ID, Secret Access Key, Region and Bucket",
+        "saveSuccess": "Configuration Saved",
+        "saveSuccessDesc": "S3 configuration has been saved",
+        "saveError": "Failed to Save Configuration",
+        "testSuccess": "Connection Test Successful",
+        "testSuccessDesc": "S3 connection is working, ready to upload images",
+        "testFailed": "Connection Test Failed",
+        "testFailedDesc": "Please check configuration and network connection",
+        "testFirstDesc": "Please test connection successfully before setting as primary",
+        "setPrimarySuccess": "Set Successfully",
+        "setPrimarySuccessDesc": "S3 has been set as primary image hosting"
       }
     },
     "imageMethod": {
@@ -411,6 +448,10 @@
       "modelConfigDesc": "Every configuration corresponds to an AI model, you can create new configurations through templates or custom.",
       "create": "Create",
       "createDesc": "Select an empty configuration or create a new configuration using the supplier template.",
+      "createSection": {
+        "title": "Custom Model Configuration",
+        "descWithoutModels": "Add custom AI model configurations to use more powerful model services."
+      },
       "config": "Config",
       "custom": "Custom",
       "addCustomModel": "Custom",
@@ -445,10 +486,33 @@
       "topPDesc": "A nucleus sampling method, where the model considers the results of tokens with top_p probability mass. So 0.1 means only consider the top 10% probability mass. Usually we suggest to change this or temperature but not both.",
       "customHeaders": "Custom Headers",
       "customHeadersDesc": "Add custom HTTP headers with key-value pairs.",
-      "connectionSuccess": "AI connection test passed",
       "headerKey": "Key",
       "headerValue": "Value",
-      "addHeader": "Add Header"
+      "addHeader": "Add Header",
+      "connectionSuccess": "AI connection test passed",
+      "voice": "Voice Type",
+      "voiceDesc": "Specify the voice type for audio models, such as 'alloy', 'echo', 'fable', etc.",
+      "voicePlaceholder": "Enter voice type, e.g.: alloy",
+      "defaultModels": {
+        "title": "Default Free Models",
+        "desc": "NoteGen provides free AI model services for users, enabling basic functionality without configuration.",
+        "chatModel": {
+          "name": "Qwen/Qwen3-8B",
+          "type": "Chat Model",
+          "desc": "Suitable for daily conversations and text generation"
+        },
+        "embeddingModel": {
+          "name": "BAAI/bge-m3",
+          "type": "Embedding Model",
+          "desc": "Used for text vectorization and semantic search"
+        },
+        "visionModel": {
+          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "type": "Vision Model",
+          "desc": "Supports image understanding and OCR recognition"
+        },
+        "poweredBy": "Powered by SiliconFlow"
+      }
     },
     "ocr": {
       "title": "OCR",
@@ -625,10 +689,10 @@
                 "chat": "Chat with AI bot"
               },
               {
-                "linked": "Linked with your records"
+                "linked": "Linked with your records or notes"
               },
               {
-                "clipboard": "Recognize clipboard records"
+                "clipboard": "Recognize clipboard records or images"
               },
               {
                 "organize": "Organize your records into notes"
@@ -721,10 +785,10 @@
             "chat": "Chat with AI bot"
           },
           {
-            "linked": "Linked with your records"
+            "linked": "Linked with your records or notes"
           },
           {
-            "clipboard": "Recognize clipboard records"
+            "clipboard": "Recognize clipboard records or images"
           },
           {
             "organize": "Organize your records into notes"
@@ -816,6 +880,14 @@
           "chat": "Chat Mode",
           "gen": "Organize Mode",
           "translate": "Translate Mode"
+        },
+        "fileLink": {
+          "tooltip": "Link File",
+          "selectFile": "Select File",
+          "linkedFile": "Linked File",
+          "searchPlaceholder": "Search files...",
+          "noFiles": "No files found",
+          "loading": "Loading..."
         }
       },
       "header": {

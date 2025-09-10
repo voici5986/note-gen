@@ -96,7 +96,7 @@ interface EmbeddingResponse {
  */
 async function getEmbeddingModelInfo() {
   const store = await Store.load('store.json');
-  const embeddingModel = await store.get<string>('embeddingPrimaryModel');
+  const embeddingModel = await store.get<string>('embeddingModel');
   if (!embeddingModel) return null;
   
   const aiModelList = await store.get<AiConfig[]>('aiModelList');
@@ -470,7 +470,6 @@ export async function fetchAiStreamToken(text: string, onUpdate: (content: strin
   try {
     // 获取AI设置
     const aiConfig = await getAISettings()
-    console.log(aiConfig);
     
     // 验证AI服务
     if (await validateAIService(aiConfig?.baseURL) === null) return ''
@@ -479,8 +478,6 @@ export async function fetchAiStreamToken(text: string, onUpdate: (content: strin
     const { messages } = await prepareMessages(text, true)
   
     const openai = await createOpenAIClient(aiConfig)
-    console.log(openai);
-    console.log(abortSignal);
 
     const stream = await openai.chat.completions.create({
       model: aiConfig?.model || '',
@@ -491,7 +488,6 @@ export async function fetchAiStreamToken(text: string, onUpdate: (content: strin
     }, {
       signal: abortSignal
     })
-    console.log(stream);
     
     for await (const chunk of stream) {
       if (abortSignal?.aborted) {
@@ -539,7 +535,7 @@ export async function fetchAiDesc(text: string) {
 export async function fetchAiDescByImage(base64: string) {
   try {
     // 获取AI设置
-    const aiConfig = await getAISettings('imageMethodPrimaryModel')
+    const aiConfig = await getAISettings('imageMethodModel')
 
     const descContent = `根据截图的内容，返回一条描述。`
     

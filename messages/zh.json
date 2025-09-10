@@ -281,6 +281,43 @@
         "desc": "PicGo 服务器地址",
         "ok": "检测到服务正在运行，请确保 PicGo 图床已配置。",
         "error": "服务未运行，请确保 PicGo（需要 v2.2.0+） 应用正在运行，否则无法上传图片。"
+      },
+      "s3": {
+        "title": "S3 对象存储",
+        "description": "配置 AWS S3 或兼容 S3 协议的对象存储服务作为图床",
+        "status": "连接状态",
+        "connected": "已连接",
+        "connecting": "连接中",
+        "disconnected": "未连接",
+        "accessKeyId": "Access Key ID",
+        "accessKeyIdPlaceholder": "输入 Access Key ID",
+        "secretAccessKey": "Secret Access Key",
+        "secretAccessKeyPlaceholder": "输入 Secret Access Key",
+        "region": "区域",
+        "bucket": "存储桶",
+        "bucketPlaceholder": "输入存储桶名称",
+        "advancedSettings": "高级设置",
+        "endpoint": "自定义端点",
+        "endpointDesc": "留空使用 AWS S3，或输入兼容 S3 的服务端点",
+        "customDomain": "自定义域名",
+        "customDomainDesc": "可选，用于访问图片的自定义域名",
+        "pathPrefix": "路径前缀",
+        "pathPrefixDesc": "可选，图片存储的路径前缀",
+        "save": "保存配置",
+        "test": "测试连接",
+        "setAsPrimary": "设为主要图床",
+        "error": "配置错误",
+        "requiredFields": "请填写必填字段：Access Key ID、Secret Access Key、区域和存储桶",
+        "saveSuccess": "配置保存成功",
+        "saveSuccessDesc": "S3 配置已保存",
+        "saveError": "配置保存失败",
+        "testSuccess": "连接测试成功",
+        "testSuccessDesc": "S3 连接正常，可以上传图片",
+        "testFailed": "连接测试失败",
+        "testFailedDesc": "请检查配置信息和网络连接",
+        "testFirstDesc": "请先测试连接成功后再设为主要图床",
+        "setPrimarySuccess": "设置成功",
+        "setPrimarySuccessDesc": "S3 已设为主要图床"
       }
     },
     "backupSync": {
@@ -403,8 +440,12 @@
       "modelConfigDesc": "每一个配置对应一个 AI 模型，你可以通过模板或自定义创建新的配置。",
       "create": "创建新配置",
       "createDesc": "选择空配置或使用供应商模板创建新的配置。",
+      "createSection": {
+        "title": "自定义模型配置",
+        "descWithoutModels": "添加自定义 AI 模型配置来使用更强大的模型服务。"
+      },
       "config": "配置单",
-      "custom": "自定义",
+      "custom": "自定义模型配置",
       "addCustomModel": "自定义",
       "deleteCustomModel": "删除",
       "deleteCustomModelConfirm": "确认删除此自定义模型配置吗?",
@@ -443,7 +484,27 @@
       "connectionSuccess": "AI 连接测试通过",
       "voice": "语音类型",
       "voiceDesc": "指定音频模型使用的语音类型，如 'alloy'、'echo'、'fable' 等。",
-      "voicePlaceholder": "请输入语音类型，如：alloy"
+      "voicePlaceholder": "请输入语音类型，如：alloy",
+      "defaultModels": {
+        "title": "默认免费模型",
+        "desc": "NoteGen 为用户提供免费的 AI 模型服务，由硅基流动提供支持，无需配置即可使用基础功能。",
+        "chatModel": {
+          "name": "Qwen/Qwen3-8B",
+          "type": "对话模型",
+          "desc": "适用于日常对话、文本生成等场景"
+        },
+        "embeddingModel": {
+          "name": "BAAI/bge-m3",
+          "type": "嵌入模型",
+          "desc": "用于文本向量化、语义搜索等功能"
+        },
+        "visionModel": {
+          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "type": "视觉模型",
+          "desc": "支持图像理解、OCR识别等视觉任务"
+        },
+        "poweredBy": "由 SiliconFlow 提供技术支持"
+      }
     },
     "imageMethod": {
       "title": "图像识别",
@@ -640,10 +701,10 @@
                 "chat": "与 AI 机器人进行聊天"
               },
               {
-                "linked": "已与你的记录关联"
+                "linked": "与你的记录或笔记关联"
               },
               {
-                "clipboard": "识别剪贴板记录"
+                "clipboard": "识别剪贴板中的文字和图片"
               },
               {
                 "organize": "将你的记录整理为笔记"
@@ -727,10 +788,10 @@
             "chat": "与 AI 机器人进行聊天"
           },
           {
-            "linked": "已与你的记录关联"
+            "linked": "已与你的记录或笔记关联"
           },
           {
-            "clipboard": "识别剪贴板记录"
+            "clipboard": "识别剪贴板中的文字和图片"
           },
           {
             "organize": "将你的记录整理为笔记"
@@ -796,6 +857,14 @@
           "chat": "对话模式",
           "gen": "整理模式",
           "translate": "翻译模式"
+        },
+        "fileLink": {
+          "tooltip": "关联文件",
+          "selectFile": "选择文件",
+          "linkedFile": "关联文件",
+          "searchPlaceholder": "搜索文件...",
+          "noFiles": "未找到文件",
+          "loading": "加载中..."
         }
       },
       "header": {
