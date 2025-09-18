@@ -231,11 +231,20 @@
       "jsdelivrSetting": "jsDelivr",
       "jsdelivrSettingDesc": "jsdelivrを利用して画像アクセスを高速化します。",
       "autoSync": "自動同期",
-      "giteeAutoSyncDesc": "有効にすると、入力停止から10秒後にエディタがGiteeに自動的に同期されます",
+      "autoSyncDesc": "有効にすると、エディターは入力停止から10秒後にGitHubに自動同期します",
+      "giteeAutoSyncDesc": "有効にすると、エディターは入力停止から10秒後にGiteeに自動同期します",
+      "customSyncRepo": "カスタム同期リポジトリ名",
+      "customSyncRepoDesc": "空白の場合はデフォルトのリポジトリ名を使用",
+      "customImageRepo": "カスタム画像リポジトリ名",
+      "customImageRepoDesc": "空白の場合はデフォルトのリポジトリ名を使用",
       "backupMethod": "バックアップ方法",
       "backupMethodDesc": "主要バックアップ方法として設定すると、文章作成中のすべての同期関連機能が現在のバックアップ方法を使用します（画像ホスティング機能を除く）",
       "isPrimaryBackup": "現在の {type} 主要バックアップ方法",
       "setPrimaryBackup": "主要バックアップ方法として設定",
+      "createRepo": "リポジトリを作成",
+      "creating": "作成中",
+      "checkRepo": "リポジトリを確認",
+      "checking": "確認中",
       "gitlabInstanceType": "GitLab インスタンスタイプ",
       "gitlabInstanceTypeDesc": "接続する GitLab インスタンスタイプを選択してください",
       "gitlabInstanceTypePlaceholder": "GitLab インスタンスタイプを選択してください",
@@ -256,7 +265,9 @@
     },
     "imageHosting": {
       "title": "画像ホスティング",
-      "desc": "ここでは、画像ホスティングを設定できます。",
+      "desc": "ここでは、画像の保存と管理のための画像ホスティングサービスを設定できます。",
+      "customRepoName": "カスタムリポジトリ名",
+      "customRepoNameDesc": "空白の場合はデフォルトのリポジトリ名を使用",
       "isPrimaryBackup": "現在の {type} 主要バックアップ方法",
       "setPrimaryBackup": "主要バックアップ方法として設定",
       "smms": {
@@ -272,9 +283,33 @@
         "ok": "サービスが起動しています。PicGo の設定を確認してください。",
         "error": "サービスが起動していません。PicGo（v2.2.0+）を起動してください。"
       },
+      "github": {
+        "title": "GitHub画像ホスティング",
+        "description": "GitHubリポジトリを画像ストレージサービスとして使用",
+        "repoStatus": "リポジトリステータス",
+        "repoExists": "リポジトリが存在します",
+        "repoNotExists": "リポジトリが見つかりません",
+        "checking": "確認中",
+        "creating": "作成中",
+        "manualCreateTitle": "手動でリポジトリ作成が必要",
+        "manualCreateDesc": "以下の手順で画像ホスティングリポジトリを作成してください：",
+        "createSteps": {
+          "step1": "GitHubにアクセスしてアカウントにログイン",
+          "step2": "右上の「+」ボタンをクリックし、「New repository」を選択",
+          "step3": "リポジトリ名を設定：",
+          "step4": "プライベートリポジトリに設定することも可能（推奨）",
+          "step5": "「Create repository」をクリックして作成完了",
+          "step6": "作成後、下の「再確認」ボタンをクリック"
+        },
+        "createNewRepo": "新しいリポジトリを作成",
+        "recheckRepo": "再確認",
+        "recheckingRepo": "確認中...",
+        "createRepo": "リポジトリを作成",
+        "creatingRepo": "作成中..."
+      },
       "s3": {
-        "title": "S3 オブジェクトストレージ",
-        "description": "AWS S3 または S3 互換のオブジェクトストレージサービスを画像ホスティングとして設定",
+        "title": "S3オブジェクトストレージ",
+        "description": "AWS S3またはS3互換オブジェクトストレージサービスを画像ホスティングとして設定",
         "status": "接続状態",
         "connected": "接続済み",
         "connecting": "接続中",
@@ -763,7 +798,15 @@
         "regenerateDesc": "説明を再生成",
         "viewFolder": "フォルダで表示",
         "viewFile": "元ファイルを表示",
-        "deleteForever": "完全に削除"
+        "deleteForever": "完全に削除",
+        "multiSelect": "複数選択",
+        "exitMultiSelect": "複数選択を終了",
+        "selectAll": "すべて選択",
+        "deselectAll": "すべて選択解除",
+        "selectedCount": "{count}項目を選択中",
+        "moveSelectedTags": "選択した{count}項目を移動",
+        "deleteSelected": "選択した{count}項目を削除",
+        "deleteSelectedForever": "選択した{count}項目を完全削除"
       }
     },
     "chat": {
@@ -856,7 +899,8 @@
         "configApiKey": "API KEY の設定",
         "clearChat": "チャットをクリア",
         "configPrompt": "マスクの設定",
-        "selectPrompt": "マスクを選択"
+        "selectPrompt": "マスクを選択",
+        "noModel": "AI モデルが選択されていません"
       },
       "clipboard": {
         "image": {

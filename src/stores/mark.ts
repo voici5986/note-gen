@@ -2,7 +2,7 @@ import { deleteAllMarks, getAllMarks, getMarks, insertMarks, Mark, updateMark } 
 import { uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase64ToString } from '@/lib/github';
 import { uploadFile as uploadGiteeFile, getFiles as giteeGetFiles } from '@/lib/gitee';
 import { uploadFile as uploadGitlabFile, getFiles as gitlabGetFiles, getFileContent as gitlabGetFileContent } from '@/lib/gitlab';
-import { RepoNames } from '@/lib/github.types';
+import { getSyncRepoName } from '@/lib/repo-utils';
 import { Store } from '@tauri-apps/plugin-store';
 import { create } from 'zustand'
 
@@ -31,6 +31,15 @@ interface MarkState {
   setQueue: (queueId: string, mark: Partial<MarkQueue>) => void
   removeQueue: (queueId: string) => void
 
+  // 多选状态
+  selectedMarkIds: Set<number>
+  setSelectedMarkIds: (ids: Set<number>) => void
+  toggleMarkSelection: (id: number) => void
+  clearSelection: () => void
+  selectAll: () => void
+  isMultiSelectMode: boolean
+  setMultiSelectMode: (mode: boolean) => void
+
   // 同步
   syncState: boolean
   setSyncState: (syncState: boolean) => void
@@ -40,7 +49,7 @@ interface MarkState {
   downloadMarks: () => Promise<Mark[]>
 }
 
-const useMarkStore = create<MarkState>((set) => ({
+const useMarkStore = create<MarkState>((set, get) => ({
   trashState: false,
   setTrashState: (flag) => {
     set({ trashState: flag })
@@ -134,6 +143,39 @@ const useMarkStore = create<MarkState>((set) => ({
       }
     })
   },
+
+  // 多选状态
+  selectedMarkIds: new Set<number>(),
+  setSelectedMarkIds: (ids) => {
+    set({ selectedMarkIds: ids })
+  },
+  toggleMarkSelection: (id) => {
+    set((state) => {
+      const newSelectedIds = new Set(state.selectedMarkIds)
+      if (newSelectedIds.has(id)) {
+        newSelectedIds.delete(id)
+      } else {
+        newSelectedIds.add(id)
+      }
+      return { selectedMarkIds: newSelectedIds }
+    })
+  },
+  clearSelection: () => {
+    set({ selectedMarkIds: new Set<number>(), isMultiSelectMode: false })
+  },
+  selectAll: () => {
+    const { marks } = get()
+    const allIds = new Set(marks.map(mark => mark.id))
+    set({ selectedMarkIds: allIds, isMultiSelectMode: true })
+  },
+  isMultiSelectMode: false,
+  setMultiSelectMode: (mode) => {
+    set({ isMultiSelectMode: mode })
+    if (!mode) {
+      set({ selectedMarkIds: new Set<number>() })
+    }
+  },
+
   // 同步
   syncState: false,
   setSyncState: (syncState) => {
@@ -158,22 +200,24 @@ const useMarkStore = create<MarkState>((set) => ({
     let res;
     switch (primaryBackupMethod) {
       case 'github':
-        files = await githubGetFiles({ path: `${path}/${filename}`, repo: RepoNames.sync })
+        const githubRepoName = await getSyncRepoName('github')
+        files = await githubGetFiles({ path: `${path}/${filename}`, repo: githubRepoName })
         res = await uploadGithubFile({
           ext: 'json',
         file: jsonToBase64(marks),
-        repo: RepoNames.sync,
+        repo: githubRepoName,
         path,
         filename,
         sha: files?.sha,
       })
       break;
     case 'gitee':
-      files = await giteeGetFiles({ path: `${path}/${filename}`, repo: RepoNames.sync })
+      const giteeRepoName = await getSyncRepoName('gitee')
+      files = await giteeGetFiles({ path: `${path}/${filename}`, repo: giteeRepoName })
       res = await uploadGiteeFile({
         ext: 'json',
         file: jsonToBase64(marks),
-        repo: RepoNames.sync,
+        repo: giteeRepoName,
         path,
         filename,
         sha: files?.sha,
@@ -183,12 +227,13 @@ const useMarkStore = create<MarkState>((set) => ({
       }
       break;
     case 'gitlab':
-      files = await gitlabGetFiles({ path, repo: RepoNames.sync })
+      const gitlabRepoName = await getSyncRepoName('gitlab')
+      files = await gitlabGetFiles({ path, repo: gitlabRepoName })
       const markFile = files?.find(file => file.name === filename)
       res = await uploadGitlabFile({
         ext: 'json',
         file: jsonToBase64(marks),
-        repo: RepoNames.sync,
+        repo: gitlabRepoName,
         path,
         filename,
         sha: markFile?.sha || '',
@@ -210,13 +255,16 @@ const useMarkStore = create<MarkState>((set) => ({
     let files;
     switch (primaryBackupMethod) {
       case 'github':
-        files = await githubGetFiles({ path: `${path}/${filename}`, repo: RepoNames.sync })
+        const githubRepoName = await getSyncRepoName('github')
+        files = await githubGetFiles({ path: `${path}/${filename}`, repo: githubRepoName })
         break;
       case 'gitee':
-        files = await giteeGetFiles({ path: `${path}/${filename}`, repo: RepoNames.sync })
+        const giteeRepoName = await getSyncRepoName('gitee')
+        files = await giteeGetFiles({ path: `${path}/${filename}`, repo: giteeRepoName })
         break;
       case 'gitlab':
-        files = await gitlabGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: RepoNames.sync })
+        const gitlabRepoName = await getSyncRepoName('gitlab')
+        files = await gitlabGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: gitlabRepoName })
         break;
     }
     if (files) {

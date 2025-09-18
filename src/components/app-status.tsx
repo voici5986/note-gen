@@ -1,11 +1,11 @@
 import { SidebarMenuButton } from "./ui/sidebar";
-import { createSyncRepo, checkSyncRepoState, getUserInfo } from "@/lib/github";
+import { checkSyncRepoState, getUserInfo } from "@/lib/github";
 import { useEffect } from "react";
 import useSettingStore from "@/stores/setting";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { SyncStateEnum, UserInfo } from "@/lib/github.types";
-import { RepoNames } from "@/lib/github.types";
 import useSyncStore from "@/stores/sync";
+import { getSyncRepoName } from "@/lib/repo-utils";
 import { open } from '@tauri-apps/plugin-shell'
 import Image from "next/image";
 
@@ -77,23 +77,18 @@ export default function AppStatus() {
     }
   }
 
-  // 检查 GitHub 仓库状态
+  // 检查 GitHub 仓库状态（仅检查，不创建）
   async function checkGithubRepos() {
     try {
       // 检查同步仓库状态
-      const syncRepo = await checkSyncRepoState(RepoNames.sync)
+      const githubRepo = await getSyncRepoName('github')
+      const syncRepo = await checkSyncRepoState(githubRepo)
       if (syncRepo) {
         setSyncRepoInfo(syncRepo)
         setSyncRepoState(SyncStateEnum.success)
       } else {
-        setSyncRepoState(SyncStateEnum.creating)
-        const info = await createSyncRepo(RepoNames.sync, true)
-        if (info) {
-          setSyncRepoInfo(info)
-          setSyncRepoState(SyncStateEnum.success)
-        } else {
-          setSyncRepoState(SyncStateEnum.fail)
-        }
+        setSyncRepoInfo(undefined)
+        setSyncRepoState(SyncStateEnum.fail)
       }
     } catch (err) {
       console.error('Failed to check GitHub repos:', err)
@@ -101,26 +96,20 @@ export default function AppStatus() {
     }
   }
   
-  // 检查 Gitlab 项目状态
+  // 检查 Gitlab 项目状态（仅检查，不创建）
   async function checkGitlabProjects() {
     try {
-      const { checkSyncProjectState, createSyncProject } = await import('@/lib/gitlab')
+      const { checkSyncProjectState } = await import('@/lib/gitlab')
       
       // 检查同步项目状态
-      const syncProject = await checkSyncProjectState(RepoNames.sync)
+      const gitlabRepo = await getSyncRepoName('gitlab')
+      const syncProject = await checkSyncProjectState(gitlabRepo)
       if (syncProject) {
         setGitlabSyncProjectInfo(syncProject)
         setGitlabSyncProjectState(SyncStateEnum.success)
       } else {
-        // 项目不存在，尝试创建
-        setGitlabSyncProjectState(SyncStateEnum.creating)
-        const info = await createSyncProject(RepoNames.sync, true) // 默认创建私有项目
-        if (info) {
-          setGitlabSyncProjectInfo(info)
-          setGitlabSyncProjectState(SyncStateEnum.success)
-        } else {
-          setGitlabSyncProjectState(SyncStateEnum.fail)
-        }
+        setGitlabSyncProjectInfo(undefined)
+        setGitlabSyncProjectState(SyncStateEnum.fail)
       }
     } catch (err) {
       console.error('Failed to check Gitlab projects:', err)
@@ -128,26 +117,20 @@ export default function AppStatus() {
     }
   }
   
-  // 检查 Gitee 仓库状态
+  // 检查 Gitee 仓库状态（仅检查，不创建）
   async function checkGiteeRepos() {
     try {
-      const { checkSyncRepoState, createSyncRepo } = await import('@/lib/gitee')
+      const { checkSyncRepoState } = await import('@/lib/gitee')
       
       // 检查同步仓库状态
-      const syncRepo = await checkSyncRepoState(RepoNames.sync)
+      const giteeRepo = await getSyncRepoName('gitee')
+      const syncRepo = await checkSyncRepoState(giteeRepo)
       if (syncRepo) {
         setGiteeSyncRepoInfo(syncRepo)
         setGiteeSyncRepoState(SyncStateEnum.success)
       } else {
-        // 仓库不存在，尝试创建
-        setGiteeSyncRepoState(SyncStateEnum.creating)
-        const info = await createSyncRepo(RepoNames.sync, true) // 默认创建私有仓库
-        if (info) {
-          setGiteeSyncRepoInfo(info)
-          setGiteeSyncRepoState(SyncStateEnum.success)
-        } else {
-          setGiteeSyncRepoState(SyncStateEnum.fail)
-        }
+        setGiteeSyncRepoInfo(undefined)
+        setGiteeSyncRepoState(SyncStateEnum.fail)
       }
     } catch (err) {
       console.error('Failed to check Gitee repos:', err)

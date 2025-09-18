@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { checkSyncProjectState, createSyncProject, getUserInfo } from "@/lib/gitlab";
 import { RepoNames, SyncStateEnum } from "@/lib/github.types";
 import { GitlabInstanceType, GITLAB_INSTANCES } from "@/lib/gitlab.types";
-import { DatabaseBackup, Eye, EyeOff, Globe, Server } from "lucide-react";
+import { DatabaseBackup, Eye, EyeOff, Globe, Server, Plus, RefreshCcw } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 dayjs.extend(relativeTime)
@@ -33,7 +33,9 @@ export function GitlabSync() {
     gitlabAutoSync,
     setGitlabAutoSync,
     primaryBackupMethod,
-    setPrimaryBackupMethod
+    setPrimaryBackupMethod,
+    gitlabCustomSyncRepo,
+    setGitlabCustomSyncRepo
   } = useSettingStore()
   
   const {
@@ -46,28 +48,52 @@ export function GitlabSync() {
 
   const [gitlabAccessTokenVisible, setGitlabAccessTokenVisible] = useState<boolean>(false)
 
-  // 检查 Gitlab 项目状态
-  async function checkGitlabProjects() {
+  // 获取实际使用的仓库名称
+  const getRepoName = () => {
+    return gitlabCustomSyncRepo.trim() || RepoNames.sync
+  }
+
+
+  // 检查 Gitlab 项目状态（仅检查，不创建）
+  async function checkProjectState() {
     try {
       setGitlabSyncProjectState(SyncStateEnum.checking)
+      // 先清空之前的项目信息
+      setGitlabSyncProjectInfo(undefined)
+      
       await getUserInfo();
       // 检查同步项目状态
-      const syncProject = await checkSyncProjectState(RepoNames.sync)
+      const repoName = getRepoName()
+      const syncProject = await checkSyncProjectState(repoName)
+      
       if (syncProject) {
         setGitlabSyncProjectInfo(syncProject)
         setGitlabSyncProjectState(SyncStateEnum.success)
       } else {
-        setGitlabSyncProjectState(SyncStateEnum.creating)
-        const info = await createSyncProject(RepoNames.sync, true)
-        if (info) {
-          setGitlabSyncProjectInfo(info)
-          setGitlabSyncProjectState(SyncStateEnum.success)
-        } else {
-          setGitlabSyncProjectState(SyncStateEnum.fail)
-        }
+        setGitlabSyncProjectInfo(undefined)
+        setGitlabSyncProjectState(SyncStateEnum.fail)
       }
     } catch (err) {
-      console.error('Failed to check Gitlab projects:', err)
+      console.error('Failed to check GitLab projects:', err)
+      setGitlabSyncProjectInfo(undefined)
+      setGitlabSyncProjectState(SyncStateEnum.fail)
+    }
+  }
+
+  // 手动创建项目
+  async function createGitlabProject() {
+    try {
+      setGitlabSyncProjectState(SyncStateEnum.creating)
+      const repoName = getRepoName()
+      const info = await createSyncProject(repoName, true)
+      if (info) {
+        setGitlabSyncProjectInfo(info)
+        setGitlabSyncProjectState(SyncStateEnum.success)
+      } else {
+        setGitlabSyncProjectState(SyncStateEnum.fail)
+      }
+    } catch (err) {
+      console.error('Failed to create Gitlab project:', err)
       setGitlabSyncProjectState(SyncStateEnum.fail)
     }
   }
@@ -83,28 +109,17 @@ export function GitlabSync() {
     const store = await Store.load('store.json');
     await store.set('gitlabAccessToken', value)
     await store.save()
-    if (value) {
-      checkGitlabProjects()
-    }
   }
 
   // 实例类型变化处理
   async function instanceTypeChangeHandler(value: GitlabInstanceType) {
     await setGitlabInstanceType(value)
-    // 如果有 token，重新检查项目状态
-    if (gitlabAccessToken) {
-      checkGitlabProjects()
-    }
   }
 
   // 自定义 URL 变化处理
   async function customUrlChangeHandler(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
     await setGitlabCustomUrl(value)
-    // 如果有 token，重新检查项目状态
-    if (gitlabAccessToken) {
-      checkGitlabProjects()
-    }
   }
 
   // 获取当前实例的 Token 创建 URL
@@ -151,11 +166,7 @@ export function GitlabSync() {
     init()
   }, [])
 
-  useEffect(() => {
-    if (gitlabAccessToken) {
-      checkGitlabProjects()
-    }
-  }, [gitlabAccessToken])
+
 
   return (
     <div className="mt-4">
@@ -231,6 +242,19 @@ export function GitlabSync() {
         </FormItem>
       </SettingRow>
 
+      {/* 自定义仓库名输入 */}
+      <SettingRow>
+        <FormItem title={t('settings.sync.customSyncRepo')} desc={t('settings.sync.customSyncRepoDesc')}>
+          <Input 
+            value={gitlabCustomSyncRepo} 
+            onChange={(e) => {
+              setGitlabCustomSyncRepo(e.target.value)
+            }}
+            placeholder={RepoNames.sync}
+          />
+        </FormItem>
+      </SettingRow>
+
       {/* 项目状态显示 */}
       <SettingRow>
         <FormItem title={t('settings.sync.repoStatus')}>
@@ -239,13 +263,39 @@ export function GitlabSync() {
               <CardTitle className="flex justify-between items-center">
                 <div className="flex gap-2 items-center">
                   <DatabaseBackup className="size-4" />
-                  {t('settings.sync.syncRepo')}（{gitlabSyncProjectInfo?.visibility === 'public' ? t('settings.sync.public') : t('settings.sync.private')}）
+                  {getRepoName()}（{gitlabSyncProjectInfo?.visibility === 'public' ? t('settings.sync.public') : t('settings.sync.private')}）
                 </div>
                 <Badge className={`${gitlabSyncProjectState === SyncStateEnum.success ? 'bg-green-800' : 'bg-red-800'}`}>
                   {gitlabSyncProjectState}
                 </Badge>
               </CardTitle>
-              <CardDescription>{t('settings.sync.syncRepoDesc')}</CardDescription>
+              <CardDescription>
+                <span>{t('settings.sync.syncRepoDesc')}</span>
+              </CardDescription>
+              {/* 手动检测和创建按钮 */}
+              {gitlabAccessToken && (
+                <div className="mt-3 flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={checkProjectState}
+                    disabled={gitlabSyncProjectState === SyncStateEnum.checking}
+                  >
+                    <RefreshCcw className="size-4 mr-1" />
+                    {gitlabSyncProjectState === SyncStateEnum.checking ? t('settings.sync.checking') : t('settings.sync.checkRepo')}
+                  </Button>
+                  {gitlabSyncProjectState === SyncStateEnum.fail && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={createGitlabProject}
+                    >
+                      <Plus className="size-4 mr-1" />
+                      {t('settings.sync.createRepo')}
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardHeader>
             {
               gitlabSyncProjectInfo &&
@@ -272,7 +322,7 @@ export function GitlabSync() {
       {
         gitlabSyncProjectInfo &&
         <>
-          <SettingPanel title="自动同步" desc="选择编辑器在输入停止后自动同步的时间间隔">
+          <SettingPanel title={t('settings.sync.autoSync')} desc={t('settings.sync.autoSyncDesc')}>
             <Select
               value={gitlabAutoSync}
               onValueChange={(value) => setGitlabAutoSync(value)}

@@ -26,14 +26,20 @@ import { TooltipButton } from "@/components/tooltip-button"
 
 export function ModelSelect() {
   const [list, setList] = useState<AiConfig[]>([])
-  const { primaryModel, setPrimaryModel, aiModelList } = useSettingStore()
+  const { primaryModel, setPrimaryModel, aiModelList, initSettingData } = useSettingStore()
   const [open, setOpen] = React.useState(false)
   const t = useTranslations('record.chat.input.modelSelect')
+
 
   async function modelSelectChangeHandler(key: string) {
     setPrimaryModel(key)
     const store = await Store.load('store.json');
     store.set('primaryModel', key)
+  }
+
+  function handleSetOpen(isOpen: boolean) {
+    setOpen(isOpen)
+    initSettingData()
   }
 
   // 监听 aiModelList 变化，实时更新本地列表
@@ -47,7 +53,7 @@ export function ModelSelect() {
   }, [aiModelList])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleSetOpen}>
       <PopoverTrigger asChild>
         <div className="hidden md:block">
           <TooltipButton

@@ -240,12 +240,21 @@
       "imageRepoSettingDesc": "你已经配置了图床仓库，开启此项将使用图床仓库，否则将使用本地存储。",
       "jsdelivrSetting": "jsDelivr",
       "jsdelivrSettingDesc": "使用 jsdelivr 加速图片访问。",
-      "autoSync": "自动同步",
-      "giteeAutoSyncDesc": "启用后，编辑器在输入停止10秒后将自动同步到Gitee",
+      "autoSyncDesc": "启用后，编辑器会在输入停止 10 秒后自动同步到 GitHub",
+      "giteeAutoSyncDesc": "启用后，编辑器会在输入停止 10 秒后自动同步到 Gitee",
+      "customSyncRepo": "自定义同步仓库名",
+      "customSyncRepoDesc": "留空则使用默认仓库名",
+      "customImageRepo": "自定义图床仓库名",
+      "customImageRepoDesc": "留空则使用默认仓库名",
       "backupMethod": "备份方式",
       "backupMethodDesc": "设置为主要备份方式后，写作中的所有同步相关功能将使用当前备份方式（图床功能除外）",
       "isPrimaryBackup": "当前 {type} 为主要备份方式",
       "setPrimaryBackup": "设为主要备份方式",
+      "createRepo": "创建仓库",
+      "creating": "创建中",
+      "checkRepo": "检查仓库",
+      "checking": "检查中",
+      "defaultRepoName": "默认: {name}",
       "gitlabInstanceType": "GitLab 实例类型",
       "gitlabInstanceTypeDesc": "选择要连接的 GitLab 实例类型",
       "gitlabInstanceTypePlaceholder": "选择 GitLab 实例类型",
@@ -254,6 +263,7 @@
         "selfHostedDesc": "输入您的自建 GitLab 服务器地址（如：https://gitlab.example.com）"
       },
       "gitlabAccessTokenDesc": "在 {instanceDisplayName} 创建个人访问令牌，需要 api 权限",
+      "autoSync": "自动同步",
       "autoSyncOptions": {
         "placeholder": "选择自动同步时间",
         "disabled": "关闭",
@@ -265,8 +275,10 @@
       }
     },
     "imageHosting": {
-      "title": "图床",
-      "desc": "在这里，你可以配置图床，将图片上传到图床。",
+      "title": "图床设置",
+      "desc": "在这里，你可以配置图床服务，用于存储和管理你的图片。",
+      "customRepoName": "自定义仓库名",
+      "customRepoNameDesc": "留空则使用默认仓库名",
       "isPrimaryBackup": "当前 {type} 为主要图床",
       "setPrimaryBackup": "设为主要图床",
       "smms": {
@@ -281,6 +293,28 @@
         "desc": "PicGo 服务器地址",
         "ok": "检测到服务正在运行，请确保 PicGo 图床已配置。",
         "error": "服务未运行，请确保 PicGo（需要 v2.2.0+） 应用正在运行，否则无法上传图片。"
+      },
+      "github": {
+        "title": "GitHub 图床",
+        "description": "使用 GitHub 仓库作为图片存储服务",
+        "repoStatus": "仓库状态",
+        "repoExists": "仓库已存在",
+        "repoNotExists": "仓库不存在",
+        "checking": "检测中",
+        "creating": "创建中",
+        "manualCreateTitle": "需要手动创建图床仓库",
+        "manualCreateDesc": "请按以下步骤创建图床仓库：",
+        "createSteps": {
+          "step1": "访问 GitHub 并登录您的账户",
+          "step2": "点击右上角的 \"+\" 按钮，选择 \"New repository\"",
+          "step3": "仓库名称设置为：",
+          "step4": "可以选择设置为私有仓库（推荐）",
+          "step5": "点击 \"Create repository\" 完成创建",
+          "step6": "创建完成后，点击下方的\"重新检测\"按钮"
+        },
+        "createNewRepo": "创建新仓库",
+        "recheckRepo": "重新检测",
+        "recheckingRepo": "检测中..."
       },
       "s3": {
         "title": "S3 对象存储",
@@ -778,7 +812,15 @@
         "regenerateDesc": "重新生成描述",
         "viewFolder": "查看目录",
         "viewFile": "查看原文件",
-        "deleteForever": "彻底删除"
+        "deleteForever": "彻底删除",
+        "multiSelect": "多选",
+        "exitMultiSelect": "退出多选",
+        "selectAll": "全选",
+        "deselectAll": "取消全选",
+        "selectedCount": "已选择 {count} 项",
+        "moveSelectedTags": "转移选中的 {count} 项",
+        "deleteSelected": "删除选中的 {count} 项",
+        "deleteSelectedForever": "彻底删除选中的 {count} 项"
       }
     },
     "chat": {
@@ -871,7 +913,8 @@
         "configApiKey": "配置 API KEY",
         "clearChat": "清空聊天",
         "configPrompt": "配置 Prompt",
-        "selectPrompt": "选择 Prompt"
+        "selectPrompt": "选择 Prompt",
+        "noModel": "未选择 AI 模型"
       },
       "clipboard": {
         "image": {

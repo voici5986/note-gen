@@ -14,6 +14,7 @@ import { getUserInfo } from "@/lib/github";
 import { RepoNames, SyncStateEnum } from "@/lib/github.types";
 import useImageStore from "@/stores/imageHosting";
 import { createImageRepo, checkImageRepoState } from "@/lib/imageHosting/github";
+import { getImageRepoName } from "@/lib/repo-utils";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -31,6 +32,8 @@ export function GithubImageHosting() {
     useImageRepo,
     jsdelivr,
     setJsdelivr,
+    githubCustomImageRepo,
+    setGithubCustomImageRepo,
   } = useSettingStore()
   const {
     imageRepoState,
@@ -39,6 +42,28 @@ export function GithubImageHosting() {
     setImageRepoInfo,
   } = useImageStore()
 
+  // 检查按钮是否禁用
+  const isChecking = imageRepoState === SyncStateEnum.checking;
+  const isCreating = imageRepoState === SyncStateEnum.creating;
+
+  // 创建 GitHub 仓库
+  async function createGithubRepo() {
+    try {
+      setImageRepoState(SyncStateEnum.creating)
+      const actualRepoName = await getImageRepoName()
+      const info = await createImageRepo(actualRepoName)
+      if (info) {
+        setImageRepoInfo(info)
+        setImageRepoState(SyncStateEnum.success)
+      } else {
+        setImageRepoState(SyncStateEnum.fail)
+      }
+    } catch (err) {
+      console.error('Failed to create GitHub repo:', err)
+      setImageRepoState(SyncStateEnum.fail)
+    }
+  }
+
   // 检查 GitHub 仓库状态
   async function checkGithubRepos() {
     try {
@@ -46,22 +71,21 @@ export function GithubImageHosting() {
       const store = await Store.load('store.json');
       const accessToken = await store.get<string>('githubImageAccessToken')
       const userInfo = await getUserInfo(accessToken);
-      if (!userInfo) return;
+      if (!userInfo) {
+        setImageRepoState(SyncStateEnum.fail)
+        return;
+      }
       setImageRepoUserInfo(userInfo)
+      // 获取实际使用的仓库名（自定义或默认）
+      const actualRepoName = await getImageRepoName()
       // 检查图床仓库状态
-      const imageRepo = await checkImageRepoState(RepoNames.image)
+      const imageRepo = await checkImageRepoState(actualRepoName)
       if (imageRepo) {
         setImageRepoInfo(imageRepo)
         setImageRepoState(SyncStateEnum.success)
       } else {
-        setImageRepoState(SyncStateEnum.creating)
-        const info = await createImageRepo(RepoNames.image)
-        if (info) {
-          setImageRepoInfo(info)
-          setImageRepoState(SyncStateEnum.success)
-        } else {
-          setImageRepoState(SyncStateEnum.fail)
-        }
+        setImageRepoInfo(undefined)
+        setImageRepoState(SyncStateEnum.fail)
       }
     } catch (err) {
       console.error('Failed to check GitHub repos:', err)
@@ -77,6 +101,15 @@ export function GithubImageHosting() {
     }
     await setGithubImageAccessToken(value)
     if (value) {
+      checkGithubRepos()
+    }
+  }
+
+  async function customRepoChangeHandler(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+    await setGithubCustomImageRepo(value)
+    // 如果有token，重新检查仓库状态
+    if (githubImageAccessToken) {
       checkGithubRepos()
     }
   }
@@ -112,14 +145,14 @@ export function GithubImageHosting() {
   const getStatusText = () => {
     switch (imageRepoState) {
       case SyncStateEnum.success:
-        return '已连接';
+        return t('settings.imageHosting.github.repoExists');
       case SyncStateEnum.checking:
-        return '检测中';
+        return t('settings.imageHosting.github.checking');
       case SyncStateEnum.creating:
-        return '创建中';
+        return t('settings.imageHosting.github.creating');
       case SyncStateEnum.fail:
       default:
-        return '未连接';
+        return t('settings.imageHosting.github.repoNotExists');
     }
   };
 
@@ -150,11 +183,43 @@ export function GithubImageHosting() {
       <CardContent className="space-y-4">
         {/* 状态显示 */}
         <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-          <span className="text-sm font-medium">连接状态</span>
+          <span className="text-sm font-medium">{t('settings.imageHosting.github.repoStatus')}</span>
           <div className="flex items-center gap-2">
             {getStatusIcon()}
             <span className="text-sm">{getStatusText()}</span>
           </div>
+        </div>
+
+        {/* 仓库操作按钮 */}
+        {githubImageAccessToken && imageRepoState === SyncStateEnum.fail && (
+          <div className="flex gap-2">
+            <Button 
+              onClick={createGithubRepo}
+              size="sm"
+              disabled={isCreating || isChecking}
+            >
+              {isCreating ? '创建中...' : '创建仓库'}
+            </Button>
+            <Button 
+              onClick={checkGithubRepos}
+              size="sm"
+              variant="outline"
+              disabled={isChecking || isCreating}
+            >
+              {isChecking ? '检测中...' : '重新检测'}
+            </Button>
+          </div>
+        )}
+
+        {/* 自定义仓库名 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">自定义图床仓库名</label>
+          <p className="text-xs text-muted-foreground">留空则使用默认仓库名 &quot;{RepoNames.image}&quot;</p>
+          <Input 
+            value={githubCustomImageRepo} 
+            onChange={customRepoChangeHandler}
+            placeholder={`默认: ${RepoNames.image}`}
+          />
         </div>
 
         {/* Access Token 配置 */}

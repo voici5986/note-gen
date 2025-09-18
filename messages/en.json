@@ -231,19 +231,27 @@
       "imageRepoSetting": "Local/Cloud Storage",
       "imageRepoSettingDesc": "You have already configured an image repository, you can choose to use the image repository or use local storage.",
       "jsdelivrSetting": "jsDelivr",
-      "jsdelivrSettingDesc": "Use jsdelivr to speed up image access.",
-      "autoSync": "Auto Sync",
+      "autoSyncDesc": "When enabled, the editor will automatically sync to GitHub 10 seconds after input stops",
       "giteeAutoSyncDesc": "When enabled, the editor will automatically sync to Gitee 10 seconds after input stops",
+      "customSyncRepo": "Custom Sync Repository Name",
+      "customSyncRepoDesc": "Leave empty to use default repository name",
+      "customImageRepo": "Custom Image Repository Name",
+      "customImageRepoDesc": "Leave empty to use default repository name",
       "backupMethod": "Backup Method",
       "backupMethodDesc": "After setting as the primary backup method, all sync-related functions in writing will use the current backup method (except for image hosting)",
       "isPrimaryBackup": "{type} is current primary backup",
       "setPrimaryBackup": "Set as Primary Backup",
+      "createRepo": "Create Repository",
+      "creating": "Creating",
+      "checkRepo": "Check Repository",
+      "checking": "Checking",
+      "defaultRepoName": "Default: {name}",
       "gitlabInstanceType": "GitLab Instance Type",
-      "gitlabInstanceTypeDesc": "Select the GitLab instance type to connect to",
-      "gitlabInstanceTypePlaceholder": "Select GitLab instance type",
+      "gitlabInstanceTypeDesc": "Select the type of GitLab instance to connect to",
+      "gitlabInstanceTypePlaceholder": "Select GitLab Instance Type",
       "gitlabInstanceTypeOptions": {
-        "selfHosted": "Self-hosted instance",
-        "selfHostedDesc": "Enter your self-hosted GitLab server address (e.g. https://gitlab.example.com)"
+        "selfHosted": "Self-hosted Instance",
+        "selfHostedDesc": "Enter your self-hosted GitLab server address (e.g., https://gitlab.example.com)"
       },
       "gitlabAccessTokenDesc": "Create a personal access token in {instanceDisplayName}, requires api permission",
       "autoSyncOptions": {
@@ -258,7 +266,9 @@
     },
     "imageHosting": {
       "title": "Image Hosting",
-      "desc": "Here, you can configure image hosting, uploading images to the image hosting service.",
+      "desc": "Here, you can configure image hosting services for storing and managing your images.",
+      "customRepoName": "Custom Repository Name",
+      "customRepoNameDesc": "Leave empty to use default repository name",
       "isPrimaryBackup": "Current {type} primary image hosting method",
       "setPrimaryBackup": "Set as Primary Image Hosting",
       "smms": {
@@ -273,6 +283,30 @@
         "desc": "PicGo server URL",
         "ok": "Service is running, please ensure PicGo image hosting is configured.",
         "error": "Service is not running, please ensure PicGo (v2.2.0+) is running, otherwise image upload will fail."
+      },
+      "github": {
+        "title": "GitHub Image Hosting",
+        "description": "Use GitHub repository as image storage service",
+        "repoStatus": "Repository Status",
+        "repoExists": "Repository Exists",
+        "repoNotExists": "Repository Not Found",
+        "checking": "Checking",
+        "creating": "Creating",
+        "manualCreateTitle": "Manual Repository Creation Required",
+        "manualCreateDesc": "Please follow these steps to create the image hosting repository:",
+        "createSteps": {
+          "step1": "Visit GitHub and log in to your account",
+          "step2": "Click the \"+\" button in the top right corner, select \"New repository\"",
+          "step3": "Set repository name to:",
+          "step4": "Optionally set as private repository (recommended)",
+          "step5": "Click \"Create repository\" to complete creation",
+          "step6": "After creation, click the \"Recheck\" button below"
+        },
+        "createNewRepo": "Create New Repository",
+        "recheckRepo": "Recheck",
+        "recheckingRepo": "Checking...",
+        "createRepo": "Create Repository",
+        "creatingRepo": "Creating..."
       },
       "s3": {
         "title": "S3 Object Storage",
@@ -775,7 +809,15 @@
         "sort": "Sort",
         "processingVectors": "Processing Vector Data",
         "calculateVectors": "Calculate Document Vectors",
-        "enableVectorDb": "Enable Vector Database"
+        "enableVectorDb": "Enable Vector Database",
+        "multiSelect": "Multi Select",
+        "exitMultiSelect": "Exit Multi Select",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All",
+        "selectedCount": "Selected {count} items",
+        "moveSelectedTags": "Move selected {count} items",
+        "deleteSelected": "Delete selected {count} items",
+        "deleteSelectedForever": "Delete selected {count} items forever"
       }
     },
     "chat": {
@@ -893,7 +935,8 @@
       "header": {
         "configApiKey": "Configure API KEY",
         "clearChat": "Clear Chat",
-        "selectPrompt": "Select Prompt"
+        "selectPrompt": "Select Prompt",
+        "noModel": "AI model not selected"
       },
       "clipboard": {
         "image": {

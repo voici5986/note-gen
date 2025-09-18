@@ -4,6 +4,8 @@ import { getVersion } from '@tauri-apps/api/app'
 import { AiConfig } from '@/app/core/setting/config'
 import { GitlabInstanceType } from '@/lib/gitlab.types'
 import { noteGenDefaultModels, noteGenModelKeys } from '@/app/model-config'
+import { fetch } from '@tauri-apps/plugin-http'
+import { v4 as uuid } from 'uuid';
 
 export enum GenTemplateRange {
   All = 'all',
@@ -142,6 +144,19 @@ interface SettingState {
   githubImageAccessToken: string
   setGithubImageAccessToken: (githubImageAccessToken: string) => Promise<void>
 
+  // 自定义仓库名称设置
+  githubCustomSyncRepo: string
+  setGithubCustomSyncRepo: (repo: string) => Promise<void>
+
+  giteeCustomSyncRepo: string
+  setGiteeCustomSyncRepo: (repo: string) => Promise<void>
+
+  gitlabCustomSyncRepo: string
+  setGitlabCustomSyncRepo: (repo: string) => Promise<void>
+
+  githubCustomImageRepo: string
+  setGithubCustomImageRepo: (repo: string) => Promise<void>
+
   // 图片识别设置
   primaryImageMethod: 'ocr' | 'vlm'
   setPrimaryImageMethod: (method: 'ocr' | 'vlm') => Promise<void>
@@ -195,6 +210,38 @@ const useSettingStore = create<SettingState>((set, get) => ({
     if (!currentImageMethodModel && hasNoteGenVlm) {
       await store.set('imageMethodModel', 'note-gen-vlm')
       set({ imageMethodModel: 'note-gen-vlm' })
+    }
+
+    // 获取 NoteGen 限时免费模型
+    const apiKey = noteGenDefaultModels[0].apiKey
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    }
+    const res = await fetch('http://api.notegen.top/v1/models', {
+      method: 'GET',
+      headers
+    })
+
+    const resModels = await res.json()
+
+    if (resModels.data && resModels.data.length > 0) {
+      finalAiModelList = finalAiModelList.filter(model => model.title !== 'NoteGen Limited')
+      const limitFreeModels = resModels.data.filter((model: any) => {
+        return noteGenDefaultModels.every(item => item.model !== model.id)
+      }).map((model: any) => ({
+        apiKey,
+        baseURL: "http://api.notegen.top/v1",
+        "key": uuid(),
+        "model": model.id,
+        "modelType": "chat",
+        "temperature": 0.7,
+        "title": "NoteGen Limited",
+        "topP": 1
+      }))
+      finalAiModelList.unshift(...limitFreeModels)
+      await store.set('aiModelList', finalAiModelList)
+      set({ aiModelList: finalAiModelList })
     }
 
     Object.entries(get()).forEach(async ([key, value]) => {
@@ -505,6 +552,39 @@ const useSettingStore = create<SettingState>((set, get) => ({
     
     // 使用fontSize实现基于rem的缩放
     document.documentElement.style.fontSize = `${scale}%`
+  },
+
+  // 自定义仓库名称设置
+  githubCustomSyncRepo: '',
+  setGithubCustomSyncRepo: async (repo: string) => {
+    set({ githubCustomSyncRepo: repo })
+    const store = await Store.load('store.json');
+    await store.set('githubCustomSyncRepo', repo)
+    await store.save()
+  },
+
+  giteeCustomSyncRepo: '',
+  setGiteeCustomSyncRepo: async (repo: string) => {
+    set({ giteeCustomSyncRepo: repo })
+    const store = await Store.load('store.json');
+    await store.set('giteeCustomSyncRepo', repo)
+    await store.save()
+  },
+
+  gitlabCustomSyncRepo: '',
+  setGitlabCustomSyncRepo: async (repo: string) => {
+    set({ gitlabCustomSyncRepo: repo })
+    const store = await Store.load('store.json');
+    await store.set('gitlabCustomSyncRepo', repo)
+    await store.save()
+  },
+
+  githubCustomImageRepo: '',
+  setGithubCustomImageRepo: async (repo: string) => {
+    set({ githubCustomImageRepo: repo })
+    const store = await Store.load('store.json');
+    await store.set('githubCustomImageRepo', repo)
+    await store.save()
   },
 }))
 

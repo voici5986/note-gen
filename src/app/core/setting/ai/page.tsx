@@ -40,7 +40,7 @@ export default function AiPage() {
   } = useSettingStore()
 
   // 过滤掉默认模型，只显示用户自定义模型
-  const userCustomModels = aiModelList.filter(model => !noteGenModelKeys.includes(model.key))
+  const userCustomModels = aiModelList.filter(model => !noteGenModelKeys.includes(model.key) && model.title !== 'NoteGen Limited')
   const [apiKey, setApiKey] = useState<string>('')
   const [baseURL, setBaseURL] = useState<string>('')
   const [model, setModel] = useState<string>('')

@@ -171,6 +171,34 @@ const baseAiConfig: AiConfig[] = [
     icon: 'https://s2.loli.net/2025/06/25/CTjSDHLl4XdvxM5.png',
     apiKeyUrl: 'https://openrouter.ai/api-keys'
   },
+  {
+    key: 'qiniu',
+    title: '七牛云',
+    baseURL: 'https://openai.qiniu.com/v1',
+    icon: 'https://s2.loli.net/2025/09/15/ALjNPveWrtmsfOY.png',
+    apiKeyUrl: 'https://s.qiniu.com/Znm6je'
+  },
+  {
+    key: '302',
+    title: '302.AI',
+    baseURL: 'https://api.302.ai/v1',
+    icon: 'https://s2.loli.net/2025/06/26/4CJOQ2U9ibvoGpR.png',
+    apiKeyUrl: 'https://share.302.ai/jfFrIP'
+  },
+  {
+    key: 'shengsuanyun',
+    title: '胜算云',
+    baseURL: 'https://router.shengsuanyun.com/api/v1',
+    icon: 'https://s2.loli.net/2025/09/15/4qjswKyaRfZ8OxW.png',
+    apiKeyUrl: 'https://www.shengsuanyun.com/?from=CH_KAFLGC9O'
+  },
+  {
+    key: 'gitee',
+    title: 'Gitee AI',
+    baseURL: 'https://ai.gitee.com/v1',
+    icon: 'https://s2.loli.net/2025/09/15/ih7aTnGPvELFsVc.png',
+    apiKeyUrl: 'https://ai.gitee.com/'
+  },
 ]
 
 export { baseAiConfig }
