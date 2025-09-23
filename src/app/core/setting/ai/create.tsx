@@ -18,15 +18,18 @@ import { v4 } from 'uuid';
 import { AvatarImage } from "@/components/ui/avatar";
 import { Avatar } from "@radix-ui/react-avatar";
 import useSettingStore from "@/stores/setting";
+import { useLocalStorage } from "react-use";
 
 interface CreateConfigProps {
   hasCustomModels?: boolean;
+  onConfigCreated?: (configId: string) => void;
 }
 
 // 独立的创建配置对话框组件
-function CreateConfigDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+function CreateConfigDialog({ open, setOpen, onConfigCreated }: { open: boolean; setOpen: (open: boolean) => void; onConfigCreated?: (configId: string) => void }) {
   const t = useTranslations('settings.ai');
-  const { setCurrentAi, setAiModelList } = useSettingStore()
+  const { setAiModelList } = useSettingStore()
+  const [, setSelectedAiConfig] = useLocalStorage<string>('ai-config-selected', '')
 
   const customModel: AiConfig = {
     key: '',
@@ -50,11 +53,20 @@ function CreateConfigDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
       key: id,
       modelType: 'chat'
     }
-    const updatedList = [...aiModelList, newModel]
+    const updatedList = [newModel, ...aiModelList]
     setAiModelList(updatedList)
-    setCurrentAi(id)
+    
+    // 设置新建的配置为当前选中的配置
+    setSelectedAiConfig(id)
+    
     await store.set('aiModelList', updatedList)
     await store.save()
+    
+    // 通知父组件配置已创建
+    if (onConfigCreated) {
+      onConfigCreated(id)
+    }
+    
     setOpen(false)
   }
 
@@ -81,7 +93,7 @@ function CreateConfigDialog({ open, setOpen }: { open: boolean; setOpen: (open: 
   )
 }
 
-export default function CreateConfig({ hasCustomModels = false }: CreateConfigProps) {
+export default function CreateConfig({ hasCustomModels = false, onConfigCreated }: CreateConfigProps) {
   const t = useTranslations('settings.ai');
   const [open, setOpen] = useState(false)
 
@@ -93,7 +105,7 @@ export default function CreateConfig({ hasCustomModels = false }: CreateConfigPr
         <Button onClick={() => setOpen(true)}>
           <Plus />{t('create')}
         </Button>
-        <CreateConfigDialog open={open} setOpen={setOpen} />
+        <CreateConfigDialog open={open} setOpen={setOpen} onConfigCreated={onConfigCreated} />
       </div>
     )
   }
@@ -114,7 +126,7 @@ export default function CreateConfig({ hasCustomModels = false }: CreateConfigPr
         <Button onClick={() => setOpen(true)}>
           <Plus />{t('create')}
         </Button>
-        <CreateConfigDialog open={open} setOpen={setOpen} />
+        <CreateConfigDialog open={open} setOpen={setOpen} onConfigCreated={onConfigCreated} />
       </CardContent>
     </Card>
   )
