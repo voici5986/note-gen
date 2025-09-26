@@ -22,6 +22,7 @@ import ChatPlaceholder from "./chat-placeholder"
 import { ClipboardMonitor } from "./clipboard-monitor"
 import { RagSwitch } from "./rag-switch"
 import { FileLink, LinkedFileDisplay } from "./file-link"
+import { FileSelector } from "./file-selector"
 import { MarkdownFile } from "@/lib/files"
 import emitter from "@/lib/emitter"
 
@@ -38,6 +39,7 @@ export function ChatInput() {
   const [inputHistory, setInputHistory] = useLocalStorage<string[]>('chat-input-history', [])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [linkedFile, setLinkedFile] = useState<MarkdownFile | null>(null)
+  const [showFileSelector, setShowFileSelector] = useState(false)
   const markGenRef = useRef<any>(null)
   const chatSendRef = useRef<any>(null)
   const translateSendRef = useRef<any>(null)
@@ -82,11 +84,17 @@ export function ChatInput() {
   // 处理文件选择
   function handleFileSelect(file: MarkdownFile) {
     setLinkedFile(file)
+    setShowFileSelector(false)
   }
 
   // 移除关联文件
   function removeLinkedFile() {
     setLinkedFile(null)
+  }
+
+  // 打开文件选择器
+  function openFileSelector() {
+    setShowFileSelector(true)
   }
 
   // 处理发送后的清理工作
@@ -236,22 +244,29 @@ export function ChatInput() {
       />
       
       <div className="flex justify-between items-center w-full">
-        <div className="flex">
-          <ModelSelect />
-          <PromptSelect />
-          <ChatLanguage />
-          <ChatLink inputType={inputType} />
-          <FileLink
-            linkedFile={linkedFile}
-            onFileSelect={handleFileSelect}
-            onFileRemove={removeLinkedFile}
-            disabled={!primaryModel || loading}
-          />
-          <RagSwitch />
-          <ChatPlaceholder />
-          <ClipboardMonitor />
-          <ClearContext />
-          <ClearChat />
+        <div className="relative flex-1 overflow-x-auto mr-6 px-2 -translate-x-2">
+          {/* 左侧渐变遮罩 */}
+          <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none md:hidden" />
+          
+          {/* 右侧渐变遮罩 */}
+          <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none md:hidden" />
+          
+          {/* 可滑动的按钮容器 */}
+          <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
+            <ModelSelect />
+            <PromptSelect />
+            <ChatLanguage />
+            <ChatLink inputType={inputType} />
+            <FileLink
+              onFileLinkClick={openFileSelector}
+              disabled={!primaryModel || loading}
+            />
+            <RagSwitch />
+            <ChatPlaceholder />
+            <ClipboardMonitor />
+            <ClearContext />
+            <ClearChat />
+          </div>
         </div>
         <div className="flex items-center justify-end gap-2 pr-1">
           <InputModeSelect value={inputType || 'chat'} onChange={inputTypeChangeHandler} />
@@ -266,6 +281,13 @@ export function ChatInput() {
           }
         </div>
       </div>
+
+      {/* 文件选择器 - 独立于容器，避免 overflow 问题 */}
+      <FileSelector
+        isOpen={showFileSelector}
+        onFileSelect={handleFileSelect}
+        onClose={() => setShowFileSelector(false)}
+      />
     </footer>
   )
 }

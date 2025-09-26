@@ -34,4 +34,4 @@ export const noteGenDefaultModels: AiConfig[] = [
   }
 ]
 
-export const noteGenModelKeys = ['note-gen-free', 'note-gen-limited']
+export const noteGenModelKeys = ['note-gen-free', 'note-gen-limited', 'note-gen-chat', 'note-gen-embedding', 'note-gen-vlm']

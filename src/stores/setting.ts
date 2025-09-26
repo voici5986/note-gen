@@ -195,8 +195,8 @@ const useSettingStore = create<SettingState>((set, get) => ({
     if (!currentPrimaryModel && hasNoteGenChat) {
       const noteGenFreeConfig = finalAiModelList.find(config => config.key === 'note-gen-free')
       if (noteGenFreeConfig?.models?.some(model => model.id === 'note-gen-chat')) {
-        await store.set('primaryModel', 'note-gen-free-note-gen-chat')
-        set({ primaryModel: 'note-gen-free-note-gen-chat' })
+        await store.set('primaryModel', 'note-gen-chat')
+        set({ primaryModel: 'note-gen-chat' })
       } else {
         await store.set('primaryModel', 'note-gen-chat')
         set({ primaryModel: 'note-gen-chat' })
@@ -212,8 +212,8 @@ const useSettingStore = create<SettingState>((set, get) => ({
     if (!currentEmbeddingModel && hasNoteGenEmbedding) {
       const noteGenFreeConfig = finalAiModelList.find(config => config.key === 'note-gen-free')
       if (noteGenFreeConfig?.models?.some(model => model.id === 'note-gen-embedding')) {
-        await store.set('embeddingModel', 'note-gen-free-note-gen-embedding')
-        set({ embeddingModel: 'note-gen-free-note-gen-embedding' })
+        await store.set('embeddingModel', 'note-gen-embedding')
+        set({ embeddingModel: 'note-gen-embedding' })
       } else {
         await store.set('embeddingModel', 'note-gen-embedding')
         set({ embeddingModel: 'note-gen-embedding' })
@@ -229,8 +229,8 @@ const useSettingStore = create<SettingState>((set, get) => ({
     if (!currentImageMethodModel && hasNoteGenVlm) {
       const noteGenFreeConfig = finalAiModelList.find(config => config.key === 'note-gen-free')
       if (noteGenFreeConfig?.models?.some(model => model.id === 'note-gen-vlm')) {
-        await store.set('imageMethodModel', 'note-gen-free-note-gen-vlm')
-        set({ imageMethodModel: 'note-gen-free-note-gen-vlm' })
+        await store.set('imageMethodModel', 'note-gen-vlm')
+        set({ imageMethodModel: 'note-gen-vlm' })
       } else {
         await store.set('imageMethodModel', 'note-gen-vlm')
         set({ imageMethodModel: 'note-gen-vlm' })
@@ -274,8 +274,8 @@ const useSettingStore = create<SettingState>((set, get) => ({
         // 查找第一个可用的聊天模型作为默认值
         const noteGenFreeConfig = finalAiModelList.find(config => config.key === 'note-gen-free')
         if (noteGenFreeConfig?.models?.some(model => model.id === 'note-gen-chat' && model.modelType === modelType)) {
-          await store.set(storeKey, 'note-gen-free-note-gen-chat')
-          set({ [storeKey.replace('Model', '')]: 'note-gen-free-note-gen-chat' })
+          await store.set(storeKey, 'note-gen-chat')
+          set({ [storeKey.replace('Model', '')]: 'note-gen-chat' })
         } else {
           // 查找其他可用的聊天模型
           for (const config of finalAiModelList) {

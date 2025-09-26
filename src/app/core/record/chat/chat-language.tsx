@@ -85,7 +85,7 @@ export function ChatLanguage() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="hidden md:block">
+        <div>
           <TooltipButton
             icon={<Globe className={`size-4 ${chatLanguage ? "text-primary" : ""}`} />}
             tooltipText={`${t('chatLanguage.tooltip') || "Select chat language"} (${getCurrentLanguageName()})`}

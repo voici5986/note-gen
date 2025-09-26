@@ -1,45 +1,27 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { AtSign, X } from "lucide-react"
-import { FileSelector } from "./file-selector"
 import { MarkdownFile } from "@/lib/files"
 import { TooltipButton } from "@/components/tooltip-button"
 import { useTranslations } from 'next-intl'
 
 interface FileLinkProps {
-  linkedFile: MarkdownFile | null
-  onFileSelect: (file: MarkdownFile) => void
-  onFileRemove: () => void
+  onFileLinkClick: () => void
   disabled?: boolean
 }
 
-export function FileLink({ onFileSelect, disabled = false }: FileLinkProps) {
-  const [showFileSelector, setShowFileSelector] = useState(false)
+export function FileLink({ onFileLinkClick, disabled = false }: FileLinkProps) {
   const t = useTranslations('record.chat.input.fileLink')
 
-  const handleFileSelect = (file: MarkdownFile) => {
-    onFileSelect(file)
-    setShowFileSelector(false)
-  }
-
   return (
-    <div className="flex flex-col">
-      {/* @ 按钮 */}
+    <div>
       <TooltipButton
         icon={<AtSign className="size-4" />}
         tooltipText={t('tooltip')}
         size="icon"
-        onClick={() => setShowFileSelector(true)}
+        onClick={onFileLinkClick}
         disabled={disabled}
-      />
-
-      {/* 文件选择器 */}
-      <FileSelector
-        isOpen={showFileSelector}
-        onFileSelect={handleFileSelect}
-        onClose={() => setShowFileSelector(false)}
       />
     </div>
   )

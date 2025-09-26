@@ -25,12 +25,14 @@ export function ClearContext() {
   }
 
   return (
-    <TooltipButton
-      variant="ghost"
-      size="icon"
-      icon={<AlignVerticalJustifyCenter className="size-4" />}
-      tooltipText={t('tooltip')}
-      onClick={handleClearContext}
-    />
+    <div>
+      <TooltipButton
+        variant="ghost"
+        size="icon"
+        icon={<AlignVerticalJustifyCenter className="size-4" />}
+        tooltipText={t('tooltip')}
+        onClick={handleClearContext}
+      />
+    </div>
   )
 }

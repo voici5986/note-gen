@@ -16,6 +16,8 @@ export function ClearChat() {
   }
 
   return (
-    <TooltipButton icon={<Eraser />} tooltipText={t('record.chat.input.clearChat')} onClick={clearHandler}/>
+    <div>
+      <TooltipButton icon={<Eraser />} tooltipText={t('record.chat.input.clearChat')} onClick={clearHandler}/>
+    </div>
   )
 }

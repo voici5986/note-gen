@@ -37,12 +37,14 @@ export function ClipboardMonitor() {
   }
 
   return (
-    <TooltipButton
-      variant={"ghost"}
-      size="icon"
-      icon={isEnabled ? <Clipboard className="size-4" /> : <ClipboardX className="size-4" />}
-      tooltipText={isEnabled ? t('enable') : t('disable')}
-      onClick={toggleClipboardMonitor}
-    />
+    <div>
+      <TooltipButton
+        variant={"ghost"}
+        size="icon"
+        icon={isEnabled ? <Clipboard className="size-4" /> : <ClipboardX className="size-4" />}
+        tooltipText={isEnabled ? t('enable') : t('disable')}
+        onClick={toggleClipboardMonitor}
+      />
+    </div>
   )
 }

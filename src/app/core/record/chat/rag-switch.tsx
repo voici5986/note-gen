@@ -43,7 +43,7 @@ export function RagSwitch() {
   }
 
   return (
-    <div className="hidden md:block">
+    <div>
       <TooltipButton
         variant="ghost"
         size="icon"

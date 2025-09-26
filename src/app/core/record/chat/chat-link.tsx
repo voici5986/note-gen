@@ -12,12 +12,14 @@ export function ChatLink({ inputType }: { inputType?: string }) {
   const t = useTranslations('record.chat.input.tagLink')
 
   return (
-    <TooltipButton
-      icon={isLinkMark ? <Link /> : <Unlink />}
-      tooltipText={isLinkMark ? `${t('on')} ${currentTag?.name}(${marks.length})` : t('off')}
-      size="icon"
-      disabled={marks.length === 0 || inputType === 'gen'}
-      onClick={() => setIsLinkMark(!isLinkMark)}
-    />  
+    <div>
+      <TooltipButton
+        icon={isLinkMark ? <Link /> : <Unlink />}
+        tooltipText={isLinkMark ? `${t('on')} ${currentTag?.name}(${marks.length})` : t('off')}
+        size="icon"
+        disabled={marks.length === 0 || inputType === 'gen'}
+        onClick={() => setIsLinkMark(!isLinkMark)}
+      />
+    </div>
   )
 }
