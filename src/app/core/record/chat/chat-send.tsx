@@ -57,6 +57,7 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
       type: 'chat',
       inserted: false,
       image: undefined,
+      ragSources: undefined,
     })
     if (!message) return
 
@@ -71,6 +72,7 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
     
     // 准备请求内容
     let ragContext = ''
+    let ragSources: string[] = []
     let linkedFileContent = ''
     
     // 如果有关联文件，读取文件内容
@@ -101,7 +103,9 @@ ${linkedFileContent}
         // 基于TextRank算法提取前3个关键词
         const keywords = await invoke<{text: string, weight: number}[]>('rank_keywords', { text: inputValue, topK: 5 })
         // 获取相关文档内容
-        ragContext = await getContextForQuery(keywords)
+        const ragResult = await getContextForQuery(keywords)
+        ragContext = ragResult.context
+        ragSources = ragResult.sources
         
         if (ragContext) {
           // 如果获取到了相关内容，将其作为独立部分添加到请求中
@@ -144,6 +148,7 @@ ${ragContext}
     await saveChat({
       ...message,
       content: '',
+      ragSources: ragSources.length > 0 ? JSON.stringify(ragSources) : undefined,
     }, true)
     
     // 创建新的 AbortController 用于终止请求
@@ -171,7 +176,8 @@ ${ragContext}
       setLoading(false)
       await saveChat({
         ...message,
-        content: cache_content
+        content: cache_content,
+        ragSources: ragSources.length > 0 ? JSON.stringify(ragSources) : undefined,
       }, true)
     }
   }

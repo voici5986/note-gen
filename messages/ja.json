@@ -927,6 +927,9 @@
         "copy": "コピー",
         "copied": "コピーしました"
       },
+      "ragSources": {
+        "label": "参照ファイル"
+      },
       "preview": {
         "close": "关闭",
         "copy": "复制",
@@ -1048,7 +1051,12 @@
         "sort": "並べ替え",
         "processingVectors": "ベクトルデータ処理中",
         "calculateVectors": "知識庫計算（全量）",
-        "enableVectorDb": "ベクトルデータベースを有効化"
+        "enableVectorDb": "ベクトルデータベースを有効化",
+        "importMarkdown": "をインポート",
+        "importing": "インポート中...",
+        "importSuccess": "インポート成功",
+        "importSuccessDesc": "{count} 個のファイルをインポートしました",
+        "importError": "インポート失敗"
       },
       "context": {
         "viewDirectory": "ディレクトリを表示",
@@ -1161,6 +1169,12 @@
         "committedAt": "コミット日時",
         "pull": "プル",
         "quickSync": "クイック同期"
+      },
+      "vectorCalc": {
+        "tooltip": "ベクトル計算：編集完了30秒後に自動計算、またはクリックして即座に計算",
+        "calculating": "計算中",
+        "pending": "計算待ち {progress}%",
+        "synced": "同期済み"
       }
     }
   }

@@ -963,6 +963,9 @@
         "copy": "Copy",
         "copied": "Copied"
       },
+      "ragSources": {
+        "label": "Referenced Files"
+      },
       "preview": {
         "close": "Close",
         "copy": "Copy",
@@ -1058,7 +1061,12 @@
         "sort": "Sort",
         "processingVectors": "Processing Vector Data",
         "calculateVectors": "Knowledge Base Calculation (Full)",
-        "enableVectorDb": "Enable Vector Database"
+        "enableVectorDb": "Enable Vector Database",
+        "importMarkdown": "Import",
+        "importing": "Importing...",
+        "importSuccess": "Import Successful",
+        "importSuccessDesc": "Successfully imported {count} files",
+        "importError": "Import Failed"
       },
       "context": {
         "viewDirectory": "View Directory",
@@ -1206,6 +1214,12 @@
         "committedAt": "committed at",
         "pull": "Pull",
         "quickSync": "Quick Sync"
+      },
+      "vectorCalc": {
+        "tooltip": "Vector Calculation: Auto-calculate 30s after editing, or click to calculate now",
+        "calculating": "Calculating",
+        "pending": "Pending {progress}%",
+        "synced": "Synced"
       }
     }
   }

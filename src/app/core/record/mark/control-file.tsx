@@ -45,8 +45,20 @@ export function ControlFile() {
     const ext = path.substring(path.lastIndexOf('.') + 1)
     if ([...textFileExtensions, ...codeExtensions].includes(ext)) {
       const content = await readTextFile(path)
+      // 提取文件名（不含路径）
+      const fileName = path.split('/').pop() || path.split('\\').pop() || path
+      // 构建描述：文件名
+      const desc = fileName
+      // 内容保持原样，不添加文件名
       const resetText = content.replace(/'/g, '')
-      await insertMark({ tagId: currentTagId, type: 'file', desc: resetText, content: resetText })
+      // 将完整路径存储在 url 字段，用于点击时打开文件夹
+      await insertMark({ 
+        tagId: currentTagId, 
+        type: 'file', 
+        desc: desc, 
+        content: resetText,
+        url: path 
+      })
       await fetchMarks()
       await fetchTags()
       getCurrentTag()

@@ -18,6 +18,9 @@ import { CopyFolder } from './copy-folder'
 import { PasteInFolder } from './paste-in-folder'
 import { RenameFolder } from './rename-folder'
 import { DeleteFolder } from './delete-folder'
+import { MobileActionMenu, MobileMenuItem, MobileSeparator } from "../mobile-action-menu"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { useTranslations } from "next-intl"
 
 export function FolderItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -27,6 +30,8 @@ export function FolderItem({ item }: { item: DirTree }) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const { assetsPath } = useSettingStore()
+  const isMobile = useIsMobile()
+  const t = useTranslations('article.file')
 
   const { 
     activeFilePath,
@@ -42,6 +47,71 @@ export function FolderItem({ item }: { item: DirTree }) {
   const cacheTree = cloneDeep(fileTree)
   const currentFolder = getCurrentFolder(path, cacheTree)
   const parentFolder = currentFolder?.parent
+
+  // 移动端处理函数
+  function handleNewFile() {
+    // 创建临时文件节点，并将其设为编辑状态
+    const cacheTree = cloneDeep(fileTree);
+    const currentFolder = getCurrentFolder(path, cacheTree);
+    
+    // 如果文件夹中已经有一个空名称的文件，不再创建新的
+    if (currentFolder?.children?.find(item => item.name === '' && item.isFile)) {
+      return;
+    }
+    
+    // 确保文件夹是展开状态
+    if (!collapsibleList.includes(path)) {
+      setCollapsibleList(path, true);
+    }
+    
+    if (currentFolder) {
+      const newFile: DirTree = {
+        name: '',
+        isFile: true,
+        isSymlink: false,
+        parent: currentFolder,
+        isEditing: true,
+        isDirectory: false,
+        isLocale: true,
+        sha: '',
+        children: []
+      };
+      currentFolder.children?.unshift(newFile);
+      setFileTree(cacheTree);
+    }
+  }
+
+  function handleNewFolder() {
+    // 创建临时文件夹节点
+    const cacheTree = cloneDeep(fileTree);
+    const currentFolder = getCurrentFolder(path, cacheTree);
+    
+    // 如果文件夹中已经有一个空名称的文件夹，不再创建新的
+    if (currentFolder?.children?.find(item => item.name === '' && item.isDirectory)) {
+      return;
+    }
+    
+    // 确保文件夹是展开状态
+    if (!collapsibleList.includes(path)) {
+      setCollapsibleList(path, true);
+    }
+    
+    if (currentFolder) {
+      const newFolder: DirTree = {
+        name: '',
+        isFile: false,
+        isSymlink: false,
+        parent: currentFolder,
+        isEditing: true,
+        isDirectory: true,
+        isLocale: true,
+        sha: '',
+        children: []
+      };
+      currentFolder.children?.unshift(newFolder);
+      setFileTree(cacheTree);
+    }
+  }
 
   function handleStartRename() {
     setIsEditing(true)
@@ -319,6 +389,40 @@ export function FolderItem({ item }: { item: DirTree }) {
                     </div>
                     <span className="text-xs line-clamp-1">{item.name}</span>
                   </div>
+                  {isMobile && (
+                    <MobileActionMenu className="ml-1">
+                      <MobileMenuItem onClick={handleNewFile} disabled={!!item.sha && !item.isLocale}>
+                        {t('context.newFile')}
+                      </MobileMenuItem>
+                      <MobileMenuItem onClick={handleNewFolder} disabled={!!item.sha && !item.isLocale}>
+                        {t('context.newFolder')}
+                      </MobileMenuItem>
+                      <MobileMenuItem onClick={() => {}}>
+                        {t('context.viewDirectory')}
+                      </MobileMenuItem>
+                      <MobileSeparator />
+                      <MobileMenuItem disabled>
+                        {t('context.cut')}
+                      </MobileMenuItem>
+                      <MobileMenuItem disabled>
+                        {t('context.copy')}
+                      </MobileMenuItem>
+                      <MobileMenuItem disabled>
+                        {t('context.paste')}
+                      </MobileMenuItem>
+                      <MobileSeparator />
+                      <MobileMenuItem disabled>
+                        同步
+                      </MobileMenuItem>
+                      <MobileSeparator />
+                      <MobileMenuItem onClick={handleStartRename} disabled={!!item.sha && !item.isLocale}>
+                        {t('context.rename')}
+                      </MobileMenuItem>
+                      <MobileMenuItem disabled className="text-red-600">
+                        {t('context.delete')}
+                      </MobileMenuItem>
+                    </MobileActionMenu>
+                  )}
                 </div>
             }
           </div>

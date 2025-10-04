@@ -5,6 +5,7 @@ import TextNumber from "./text-number";
 import PrimarySync from "./primary-sync";
 import Copy from "./copy";
 import Export from "./export";
+import VectorCalc from "./vector-calc";
 import useArticleStore from "@/stores/article";
 
 export default function CustomFooter({editor}: {editor?: Vditor}) {
@@ -16,6 +17,7 @@ export default function CustomFooter({editor}: {editor?: Vditor}) {
       <Export editor={editor} />
     </div>
     <div className="flex items-center gap-1">
+      <VectorCalc />
       <PrimarySync />
       <History editor={editor} />
       <Sync editor={editor} />

@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { scrollToBottom } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import emitter from '@/lib/emitter'
+import { RagSources } from './rag-sources'
 
 export default function ChatContent() {
   const { chats, init } = useChatStore()
@@ -106,6 +107,15 @@ function Message({ chat }: { chat: Chat }) {
     deleteChat(chat.id)
   }
 
+  // 解析 RAG 引用的文件名
+  const ragSources = chat.ragSources ? (() => {
+    try {
+      return JSON.parse(chat.ragSources) as string[]
+    } catch {
+      return []
+    }
+  })() : []
+
   switch (chat.type) {
     case 'clear':
       return <div className="w-full flex justify-center items-center gap-4 px-10">
@@ -146,6 +156,7 @@ function Message({ chat }: { chat: Chat }) {
       return <MessageWrapper chat={chat}>
         <ChatThinking chat={chat} />
         <ChatPreview text={content || ''} />
+        {chat.role === 'system' && <RagSources sources={ragSources} />}
         <MessageControl chat={chat}>
           {chat.role !== 'user' && <MarkText chat={chat} />}
         </MessageControl>

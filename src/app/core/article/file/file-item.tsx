@@ -20,6 +20,8 @@ import { deleteFile } from "@/lib/github";
 import { deleteFile as deleteGiteeFile } from "@/lib/gitee";
 import { deleteFile as deleteGitlabFile } from "@/lib/gitlab";
 import { generateUniqueFilename } from "@/lib/default-filename";
+import { MobileActionMenu, MobileMenuItem, MobileSeparator } from "./mobile-action-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function FileItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -30,6 +32,7 @@ export function FileItem({ item }: { item: DirTree }) {
   const { setClipboardItem, clipboardItem, clipboardOperation } = useClipboardStore()
   const t = useTranslations('article.file')
   const [imageUrl, setImageUrl] = useState('')
+  const isMobile = useIsMobile()
   
   const path = computedParentPath(item)
   const isRoot = path.split('/').length === 1
@@ -514,7 +517,34 @@ export function FileItem({ item }: { item: DirTree }) {
                         { item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" /> }
                       </div>
                       <span className="text-xs flex-1 line-clamp-1">{item.name}</span>
-                    </div> 
+                    </div>
+                    {isMobile && (
+                      <MobileActionMenu className="ml-1">
+                        <MobileMenuItem onClick={handleShowFileManager}>
+                          {t('context.viewDirectory')}
+                        </MobileMenuItem>
+                        <MobileSeparator />
+                        <MobileMenuItem disabled={!item.isLocale} onClick={handleCutFile}>
+                          {t('context.cut')}
+                        </MobileMenuItem>
+                        <MobileMenuItem onClick={handleCopyFile}>
+                          {t('context.copy')}
+                        </MobileMenuItem>
+                        <MobileMenuItem disabled={!clipboardItem} onClick={handlePasteFile}>
+                          {t('context.paste')}
+                        </MobileMenuItem>
+                        <MobileSeparator />
+                        <MobileMenuItem disabled={!item.isLocale} onClick={handleStartRename}>
+                          {t('context.rename')}
+                        </MobileMenuItem>
+                        <MobileMenuItem disabled={!item.sha} className="text-red-600" onClick={handleDeleteSyncFile}>
+                          {t('context.deleteSyncFile')}
+                        </MobileMenuItem>
+                        <MobileMenuItem disabled={!item.isLocale || item.name === ''} className="text-red-600" onClick={handleDeleteFile}>
+                          {t('context.deleteLocalFile')}
+                        </MobileMenuItem>
+                      </MobileActionMenu>
+                    )}
                   </span>
                 </PhotoView>
               </PhotoProvider> :
@@ -530,7 +560,34 @@ export function FileItem({ item }: { item: DirTree }) {
                     { item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" /> }
                   </div>
                   <span className="text-xs flex-1 line-clamp-1">{item.name}</span>
-                </div> 
+                </div>
+                {isMobile && (
+                  <MobileActionMenu className="ml-1">
+                    <MobileMenuItem onClick={handleShowFileManager}>
+                      {t('context.viewDirectory')}
+                    </MobileMenuItem>
+                    <MobileSeparator />
+                    <MobileMenuItem disabled={!item.isLocale} onClick={handleCutFile}>
+                      {t('context.cut')}
+                    </MobileMenuItem>
+                    <MobileMenuItem onClick={handleCopyFile}>
+                      {t('context.copy')}
+                    </MobileMenuItem>
+                    <MobileMenuItem disabled={!clipboardItem} onClick={handlePasteFile}>
+                      {t('context.paste')}
+                    </MobileMenuItem>
+                    <MobileSeparator />
+                    <MobileMenuItem disabled={!item.isLocale} onClick={handleStartRename}>
+                      {t('context.rename')}
+                    </MobileMenuItem>
+                    <MobileMenuItem disabled={!item.sha} className="text-red-600" onClick={handleDeleteSyncFile}>
+                      {t('context.deleteSyncFile')}
+                    </MobileMenuItem>
+                    <MobileMenuItem disabled={!item.isLocale || item.name === ''} className="text-red-600" onClick={handleDeleteFile}>
+                      {t('context.deleteLocalFile')}
+                    </MobileMenuItem>
+                  </MobileActionMenu>
+                )}
               </span>
             }
           </div>

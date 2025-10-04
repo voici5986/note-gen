@@ -378,8 +378,9 @@ export interface Keyword {
 /**
  * 根据关键词数组获取相关上下文
  * @param keywords 关键词数组，每个元素包含关键词文本和权重
+ * @returns 包含上下文文本和引用文件名的对象
  */
-export async function getContextForQuery(keywords: Keyword[]): Promise<string> {
+export async function getContextForQuery(keywords: Keyword[]): Promise<{ context: string; sources: string[] }> {
   try {
     const store = await Store.load('store.json');
     const resultCount = await store.get<number>('ragResultCount') || 5;
@@ -389,7 +390,7 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<string> {
     
     // 如果没有关键词，返回空结果
     if (!keywords || keywords.length === 0) {
-      return '';
+      return { context: '', sources: [] };
     }
     
     // 将关键词按权重排序，优先考虑权重高的关键词
@@ -484,9 +485,9 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<string> {
       console.error('向量搜索失败:', error);
     }
 
-    // 如果没有找到任何相关上下文，返回空字符串
+    // 如果没有找到任何相关上下文，返回空结果
     if (allContexts.length === 0) {
-      return '';
+      return { context: '', sources: [] };
     }
     
     // 对结果进行去重（同一文件的同一段落可能被多个关键词匹配）
@@ -508,15 +509,20 @@ export async function getContextForQuery(keywords: Keyword[]): Promise<string> {
     // 限制结果数量
     const finalContexts = uniqueContexts.slice(0, resultCount);
 
+    // 提取唯一的文件名
+    const sources = Array.from(new Set(finalContexts.map(ctx => ctx.filename)));
+
     // 构建最终的上下文字符串
-    return finalContexts.map(ctx => {
+    const context = finalContexts.map(ctx => {
       return `文件：${ctx.filename}
 ${ctx.content}
 `;
     }).join('\n---\n\n');
+
+    return { context, sources };
   } catch (error) {
     console.error('获取查询上下文失败:', error);
-    return '';
+    return { context: '', sources: [] };
   }
 }
 

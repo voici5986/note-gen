@@ -302,7 +302,7 @@ const useSettingStore = create<SettingState>((set, get) => ({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     }
-    const res = await fetch('http://api.notegen.top/v1/models', {
+    const res = await fetch('https://api.notegen.top/v1/models', {
       method: 'GET',
       headers
     })
@@ -325,7 +325,7 @@ const useSettingStore = create<SettingState>((set, get) => ({
       if (limitedModels.length > 0) {
         const noteGenLimitedConfig = {
           apiKey,
-          baseURL: "http://api.notegen.top/v1",
+          baseURL: "https://api.notegen.top/v1",
           key: "note-gen-limited",
           title: "NoteGen Limited",
           models: limitedModels.map((model: any) => ({

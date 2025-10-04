@@ -3,7 +3,7 @@ import { AiConfig } from '@/app/core/setting/config'
 export const noteGenDefaultModels: AiConfig[] = [
   {
     "apiKey": "sk-1eaNsBvrfrF4hpwdo6AiQlFzcEtZK7GUpBlOcg03Dm3xunbQ",
-    "baseURL": "http://api.notegen.top/v1",
+    "baseURL": "https://api.notegen.top/v1",
     "key": "note-gen-free",
     "title": "NoteGen Free",
     "models": [

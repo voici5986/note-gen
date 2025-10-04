@@ -946,6 +946,9 @@
         "copy": "复制",
         "copied": "已复制"
       },
+      "ragSources": {
+        "label": "引用文件"
+      },
       "preview": {
         "close": "关闭",
         "copy": "复制",
@@ -1068,7 +1071,12 @@
         "sort": "排序",
         "processingVectors": "正在处理向量数据",
         "calculateVectors": "知识库计算（全量）",
-        "enableVectorDb": "启用向量数据库"
+        "enableVectorDb": "启用向量数据库",
+        "importMarkdown": "导入",
+        "importing": "正在导入...",
+        "importSuccess": "导入成功",
+        "importSuccessDesc": "成功导入 {count} 个文件",
+        "importError": "导入失败"
       },
       "context": {
         "viewDirectory": "查看目录",
@@ -1181,6 +1189,12 @@
         "committedAt": "提交于",
         "pull": "拉取",
         "quickSync": "快速同步"
+      },
+      "vectorCalc": {
+        "tooltip": "向量计算：编辑完成30秒后自动计算，或点击立即计算",
+        "calculating": "计算中",
+        "pending": "待计算 {progress}%",
+        "synced": "已同步"
       }
     }
   }

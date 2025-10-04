@@ -169,6 +169,13 @@ export function MarkWrapper({mark}: {mark: Mark}) {
               <span className="ml-auto text-xs">{dayjs(mark.createdAt).fromNow()}</span>
             </div>
             <DetailViewer mark={mark} content={mark.content || ''} />
+            {mark.url && (
+              <div className="mt-1">
+                <span className="text-xs">
+                  {mark.desc}
+                </span>
+              </div>
+            )}
           </div>
       )
     default:
