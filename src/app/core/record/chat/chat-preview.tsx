@@ -19,7 +19,7 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
   const previewRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme()
   const [mdTheme, setMdTheme] = useState<ThemeType>('light')
-  const { codeTheme } = useSettingStore()
+  const { codeTheme, contentTextScale } = useSettingStore()
   const [htmlContent, setHtmlContent] = useState<string>('');
 
   const md = useRef<MarkdownIt | null>(null);
@@ -126,6 +126,13 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
     }
   }, [theme])
   
+  // 应用正文文字大小缩放
+  useEffect(() => {
+    if (previewRef.current) {
+      previewRef.current.style.fontSize = `${contentTextScale + 15}%`
+    }
+  }, [contentTextScale])
+
   // 根据主题选择样式
   const getThemeClass = () => {
     if (mdTheme === 'dark') {

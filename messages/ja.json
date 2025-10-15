@@ -46,6 +46,10 @@
           "title": "インターフェーススケール",
           "desc": "アプリケーションインターフェースの全体的なスケールを調整",
           "placeholder": "スケール比率を選択"
+        },
+        "contentTextScale": {
+          "title": "本文スケール",
+          "desc": "エディターとチャットの Markdown コンテンツのテキストサイズを調整"
         }
       }
     },
@@ -68,6 +72,61 @@
       "similarityThresholdDesc": "ドキュメントとクエリの最小類似度閾値。この閾値を超えるドキュメントのみが返されます。値の範囲は 0.0-1.0、高いほど厳格です。",
       "resetToDefaults": "デフォルト値に戻す",
       "deleteVector": "知識庫を空にする"
+    },
+    "mcp": {
+      "title": "MCP",
+      "desc": "Model Context Protocol により、AI は外部ツールを呼び出してリソースにアクセスでき、AI の能力を拡張します。",
+      "enableTitle": "MCP を有効にする",
+      "enableDesc": "有効にすると、AI は設定された MCP サーバーが提供するツールを呼び出すことができます。",
+      "servers": "サーバーリスト",
+      "serversDesc": "MCP サーバー設定を管理します。各サーバーは異なるツールとリソースを提供できます。",
+      "addServer": "サーバーを追加",
+      "addFirstServer": "最初のサーバーを追加",
+      "editServer": "サーバーを編集",
+      "serverName": "サーバー名",
+      "serverNamePlaceholder": "例：ファイルシステムサーバー",
+      "serverEnabled": "サーバーを有効にする",
+      "serverEnabledDesc": "有効にすると、このサーバーは自動的に接続してツールを提供します。",
+      "serverType": "サーバータイプ",
+      "stdio": "ローカルコマンド",
+      "http": "HTTP サービス",
+      "command": "コマンド",
+      "args": "引数",
+      "argsDesc": "コマンドライン引数、スペースで区切る",
+      "env": "環境変数",
+      "envDesc": "JSON 形式の環境変数設定",
+      "url": "サービス URL",
+      "headers": "リクエストヘッダー",
+      "headersDesc": "JSON 形式の HTTP リクエストヘッダー",
+      "testConnection": "接続テスト",
+      "test": "テスト",
+      "testSuccess": "接続テスト成功",
+      "testFailed": "接続テスト失敗",
+      "connected": "接続済み",
+      "connecting": "接続中",
+      "disconnected": "未接続",
+      "error": "エラー",
+      "tools": "ツール",
+      "noServers": "MCP サービスが有効になっていません",
+      "noServersFound": "一致するサーバーが見つかりません",
+      "serverAdded": "サーバーを追加しました",
+      "serverUpdated": "サーバーを更新しました",
+      "serverDeleted": "サーバーを削除しました",
+      "deleteServerTitle": "サーバーを削除",
+      "deleteServerDesc": "このサーバーを削除してもよろしいですか？この操作は元に戻せません。",
+      "nameRequired": "サーバー名を入力してください",
+      "commandRequired": "コマンドを入力してください",
+      "urlRequired": "サービス URL を入力してください",
+      "toolBrowser": "ツールブラウザ",
+      "searchTools": "ツールを検索...",
+      "noToolsFound": "ツールが見つかりません",
+      "parameters": "パラメータ",
+      "testAll": "すべての接続をテスト",
+      "testAllCompleted": "すべての接続テストが完了しました",
+      "testAllFailed": "接続テストに失敗しました",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "削除"
     },
     "editor": {
       "title": "Markdown エディタ",
@@ -717,6 +776,18 @@
           "messageControl": {
             "words": "文字"
           },
+          "mcp": {
+            "maxIterationsReached": "最大ツール呼び出し回数に達しました",
+            "toolCall": "MCP サーバー",
+            "params": "パラメータ",
+            "result": "結果",
+            "copy": "コピー",
+            "paramsCopied": "パラメータをコピーしました",
+            "resultCopied": "結果をコピーしました",
+            "calling": "呼び出し中",
+            "success": "完了",
+            "error": "失敗"
+          },
           "empty": {
             "features": [
               {
@@ -1177,5 +1248,19 @@
         "synced": "同期済み"
       }
     }
+  },
+  "mcp": {
+    "selectServers": "MCP Servers",
+    "searchServers": "サーバーを検索...",
+    "noServers": "MCPサービスが有効になっていません",
+    "noServersFound": "一致するサーバーが見つかりません",
+    "addServer": "サーバーを追加...",
+    "goToSettings": "設定へ移動",
+    "close": "閉じる",
+    "navigate": "選択",
+    "confirm": "確認",
+    "tools": "個のツール",
+    "connecting": "接続中",
+    "disconnected": "未接続"
   }
 }

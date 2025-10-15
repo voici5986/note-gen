@@ -28,7 +28,7 @@ import { createToolbarConfig } from './toolbar.config'
 export function MdEditor() {
   const [editor, setEditor] = useState<Vditor>();
   const { currentArticle, saveCurrentArticle, loading, activeFilePath, matchPosition, setMatchPosition } = useArticleStore()
-  const { assetsPath } = useSettingStore()
+  const { assetsPath, contentTextScale } = useSettingStore()
   const [floatBarPosition, setFloatBarPosition] = useState<{left: number, top: number} | null>(null)
   const [selectedText, setSelectedText] = useState<string>('')
   const { theme } = useTheme()
@@ -64,6 +64,9 @@ export function MdEditor() {
       theme: theme === 'dark' ? 'dark' : 'classic',
       toolbar: toolbarConfig,
       typewriterMode,
+      customWysiwygToolbar: (type: TWYSISYGToolbar, element: HTMLElement) => {
+        console.log(type, element)
+      },
       outline: {
         enable: enableOutline,
         position: outlinePosition,
@@ -430,6 +433,24 @@ export function MdEditor() {
       })
     }
   }, [editor])
+
+  // 应用正文文字大小缩放
+  useEffect(() => {
+    if (editor) {
+      const vditorElement = editor.vditor.element
+      if (vditorElement) {
+        // 应用到 vditor-reset 元素（实际的编辑内容区域）
+        const resetElements = vditorElement.querySelectorAll('.vditor-reset') as NodeListOf<HTMLElement>
+        resetElements.forEach(element => {
+          element.style.fontSize = `${contentTextScale}%`
+        })
+        
+        // 同时应用到预览区域
+        const preview = vditorElement.querySelector('.vditor-preview') as HTMLElement
+        if (preview) preview.style.fontSize = `${contentTextScale}%`
+      }
+    }
+  }, [contentTextScale, editor])
 
   return <div className='flex-1 relative w-full h-full md:h-screen flex flex-col overflow-hidden dark:bg-zinc-950'>
     <CustomToolbar editor={editor} />

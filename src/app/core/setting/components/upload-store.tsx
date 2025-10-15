@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { DownloadCloud, Loader2, UploadCloud } from "lucide-react";
-import { readFile } from "@tauri-apps/plugin-fs";
-import { BaseDirectory } from "@tauri-apps/api/path";
 import { Store } from "@tauri-apps/plugin-store";
 import { uint8ArrayToBase64, uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase64ToString } from "@/lib/github";
 import { getFiles as giteeGetFiles, uploadFile as uploadGiteeFile } from "@/lib/gitee";
@@ -14,6 +12,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { useTranslations } from "next-intl";
 import useUsername from "@/hooks/use-username";
+import { filterSyncData, mergeSyncData } from "@/config/sync-exclusions";
 
 export default function UploadStore() {
   const [upLoading, setUploading] = useState(false)
@@ -27,8 +26,20 @@ export default function UploadStore() {
     setUploading(true)
     const path = '.settings'
     const filename = 'store.json'
-    const file = await readFile('store.json', { baseDir: BaseDirectory.AppData });
+    
+    // 读取并过滤配置
     const store = await Store.load('store.json');
+    const allSettings: Record<string, any> = {}
+    const entries = await store.entries()
+    for (const [key, value] of entries) {
+      allSettings[key] = value
+    }
+    
+    // 过滤掉不应同步的字段（如工作区路径等）
+    const syncableSettings = filterSyncData(allSettings)
+    const filteredContent = JSON.stringify(syncableSettings, null, 2)
+    const file = new TextEncoder().encode(filteredContent)
+    
     const primaryBackupMethod = await store.get('primaryBackupMethod')
     let files;
     let res;
@@ -86,6 +97,14 @@ export default function UploadStore() {
     const path = '.settings'
     const filename = 'store.json'
     const store = await Store.load('store.json');
+    
+    // 获取本地配置（用于保留排除字段）
+    const localSettings: Record<string, any> = {}
+    const entries = await store.entries()
+    for (const [key, value] of entries) {
+      localSettings[key] = value
+    }
+    
     const primaryBackupMethod = await store.get('primaryBackupMethod')
     let file;
     switch (primaryBackupMethod) {
@@ -104,10 +123,16 @@ export default function UploadStore() {
     }
     if (file) {
       const configJson = decodeBase64ToString(file.content)
-      const store = await Store.load('store.json');
-      const keys = Object.keys(JSON.parse(configJson))
-      await Promise.allSettled(keys.map(async key => await store.set(key, JSON.parse(configJson)[key])))
+      const remoteSettings = JSON.parse(configJson)
+      
+      // 合并配置：使用远程配置，但保留本地的排除字段（如工作区路径等）
+      const mergedSettings = mergeSyncData(localSettings, remoteSettings)
+      
+      // 保存合并后的配置
+      const keys = Object.keys(mergedSettings)
+      await Promise.allSettled(keys.map(async key => await store.set(key, mergedSettings[key])))
       await store.save()
+      
       if (isMobileDevice()) {
         toast({
           description: t('downloadSuccess'),

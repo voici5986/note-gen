@@ -14,6 +14,8 @@ import { invoke } from "@tauri-apps/api/core"
 import { MarkdownFile } from "@/lib/files"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { getFilePathOptions, getWorkspacePath } from "@/lib/workspace"
+import { useMcpStore } from "@/stores/mcp"
+import { getOpenAIFunctions } from "@/lib/mcp/tools"
 
 interface ChatSendProps {
   inputValue: string;
@@ -28,6 +30,7 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
   const { fetchMarks, marks } = useMarkStore()
   const { isLinkMark } = useChatStore()
   const { isRagEnabled } = useVectorStore()
+  const { selectedServerIds } = useMcpStore()
   const abortControllerRef = useRef<AbortController | null>(null)
   const t = useTranslations()
 
@@ -155,6 +158,12 @@ ${ragContext}
     abortControllerRef.current = new AbortController()
     const signal = abortControllerRef.current.signal
     
+    // 准备 MCP 工具（如果有选中的服务器）
+    let mcpTools: any[] | undefined
+    if (selectedServerIds.length > 0) {
+      mcpTools = getOpenAIFunctions(selectedServerIds)
+    }
+    
     // 使用流式方式获取AI结果
     let cache_content = '';
     try {
@@ -165,7 +174,7 @@ ${ragContext}
           ...message,
           content
         }, false)
-      }, signal)
+      }, signal, mcpTools, t, message.id)
     } catch (error: any) {
       // 如果不是中止错误，则记录错误信息
       if (error.name !== 'AbortError') {

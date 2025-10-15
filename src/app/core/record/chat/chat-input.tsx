@@ -25,6 +25,7 @@ import { FileLink, LinkedFileDisplay } from "./file-link"
 import { FileSelector } from "./file-selector"
 import { MarkdownFile } from "@/lib/files"
 import emitter from "@/lib/emitter"
+import { McpButton } from "./mcp-button"
 
 
 export function ChatInput() {
@@ -261,6 +262,7 @@ export function ChatInput() {
               onFileLinkClick={openFileSelector}
               disabled={!primaryModel || loading}
             />
+            <McpButton />
             <RagSwitch />
             <ChatPlaceholder />
             <ClipboardMonitor />

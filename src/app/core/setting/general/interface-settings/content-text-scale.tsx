@@ -1,39 +1,32 @@
 'use client'
-
 import { useTranslations } from 'next-intl'
 import { SettingPanel } from '../../components/setting-base'
-import { ZoomIn } from 'lucide-react'
+import { Type } from 'lucide-react'
 import { Slider } from "@/components/ui/slider"
 import useSettingStore from '@/stores/setting'
-import { useEffect } from 'react'
 
-export function ScaleSettings() {
+export function ContentTextScaleSettings() {
   const t = useTranslations('settings.general.interface')
-  const { uiScale, setUiScale } = useSettingStore()
-
-  // 初始化时应用缩放
-  useEffect(() => {
-    document.documentElement.style.fontSize = `${uiScale}%`
-  }, [])
+  const { contentTextScale, setContentTextScale } = useSettingStore()
 
   const handleScaleChange = (value: number[]) => {
-    setUiScale(value[0])
+    setContentTextScale(value[0])
   }
 
   return (
     <SettingPanel
-      title={t('scale.title')}
-      desc={t('scale.desc')}
-      icon={<ZoomIn className="size-4" />}
+      title={t('contentTextScale.title')}
+      desc={t('contentTextScale.desc')}
+      icon={<Type className="size-4" />}
     >
       <div className="space-y-3 w-[180px]">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">75%</span>
-          <span className="text-xs font-medium">{uiScale}%</span>
+          <span className="text-xs font-medium">{contentTextScale}%</span>
           <span className="text-xs text-muted-foreground">150%</span>
         </div>
         <Slider
-          value={[uiScale]}
+          value={[contentTextScale]}
           onValueChange={handleScaleChange}
           min={75}
           max={150}

@@ -36,6 +36,12 @@ function DetailViewer({mark, content, path}: {mark: Mark, content: string, path?
   const { updateMark } = useMarkStore()
   const t = useTranslations('record.mark.type');
   const markT = useTranslations('record.mark');
+  const messageControlT = useTranslations('record.mark.mark.chat.messageControl');
+
+  const getWordCount = (text: string) => {
+    if (!text) return 0;
+    return text.replace(/\s/g, '').length;
+  };
 
   async function textDescChangeHandler(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setDescValue(e.target.value)
@@ -59,7 +65,12 @@ function DetailViewer({mark, content, path}: {mark: Mark, content: string, path?
       <SheetContent className="lg:min-w-[800px] w-full mt-[env(safe-area-inset-top)] p-0">
         <SheetHeader className="p-4 border-b">
           <SheetTitle>{t(mark.type)}</SheetTitle>
-          <span className="mt-4 text-xs text-zinc-500">{markT('createdAt')}：{dayjs(mark.createdAt).format('YYYY-MM-DD HH:mm:ss')}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-500">{markT('createdAt')}：{dayjs(mark.createdAt).format('YYYY-MM-DD HH:mm:ss')}</span>
+            <span className="text-xs text-zinc-500">
+              {getWordCount(value)} {messageControlT('words')}
+            </span>
+          </div>
         </SheetHeader>
         <div className="h-[calc(100vh-88px)] overflow-y-auto md:p-8 p-2">
           {

@@ -48,6 +48,10 @@
           "title": "Interface Scale",
           "desc": "Adjust the overall scale of the application interface",
           "placeholder": "Select scale ratio"
+        },
+        "contentTextScale": {
+          "title": "Content Scale",
+          "desc": "Adjust the text size in editor and chat Markdown content"
         }
       }
     },
@@ -70,6 +74,61 @@
       "similarityThresholdDesc": "The minimum similarity threshold between documents and queries. Only documents exceeding this threshold will be returned. The value range is 0.0-1.0, the higher the threshold, the stricter the requirement.",
       "resetToDefaults": "Reset to defaults",
       "deleteVector": "Clear knowledge base"
+    },
+    "mcp": {
+      "title": "MCP",
+      "desc": "Model Context Protocol allows AI to call external tools and access resources, extending AI capabilities.",
+      "enableTitle": "Enable MCP",
+      "enableDesc": "When enabled, AI can call tools provided by configured MCP servers.",
+      "servers": "Server List",
+      "serversDesc": "Manage MCP server configurations. Each server can provide different tools and resources.",
+      "addServer": "Add Server",
+      "addFirstServer": "Add First Server",
+      "editServer": "Edit Server",
+      "serverName": "Server Name",
+      "serverNamePlaceholder": "e.g., File System Server",
+      "serverEnabled": "Enable Server",
+      "serverEnabledDesc": "When enabled, this server will automatically connect and provide tools.",
+      "serverType": "Server Type",
+      "stdio": "Local Command",
+      "http": "HTTP Service",
+      "command": "Command",
+      "args": "Arguments",
+      "argsDesc": "Command line arguments, separated by spaces",
+      "env": "Environment Variables",
+      "envDesc": "Environment variable configuration in JSON format",
+      "url": "Service URL",
+      "headers": "Request Headers",
+      "headersDesc": "HTTP request headers in JSON format",
+      "testConnection": "Test Connection",
+      "test": "Test",
+      "testSuccess": "Connection test successful",
+      "testFailed": "Connection test failed",
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "disconnected": "Disconnected",
+      "error": "Error",
+      "tools": "Tools",
+      "noServers": "MCP service not enabled",
+      "noServersFound": "No matching servers found",
+      "serverAdded": "Server added successfully",
+      "serverUpdated": "Server updated successfully",
+      "serverDeleted": "Server deleted successfully",
+      "deleteServerTitle": "Delete Server",
+      "deleteServerDesc": "Are you sure you want to delete this server? This action cannot be undone.",
+      "nameRequired": "Please enter server name",
+      "commandRequired": "Please enter command",
+      "urlRequired": "Please enter service URL",
+      "toolBrowser": "Tool Browser",
+      "searchTools": "Search tools...",
+      "noToolsFound": "No tools found",
+      "parameters": "Parameters",
+      "testAll": "Test All Connections",
+      "testAllCompleted": "All connection tests completed",
+      "testAllFailed": "Connection test failed",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete"
     },
     "editor": {
       "title": "Markdown Editor",
@@ -262,6 +321,23 @@
         "1m": "1 minute",
         "5m": "5 minutes",
         "30m": "30 minutes"
+      },
+      "exclusions": {
+        "title": "Sync Exclusion Configuration",
+        "desc": "The following settings will not be synced across devices as they are device-specific",
+        "workspacePath": "Workspace Path",
+        "workspaceHistory": "Workspace History",
+        "assetsPath": "Assets Path",
+        "uiScale": "UI Scale",
+        "contentTextScale": "Content Text Scale",
+        "reason": "These settings may differ across devices, excluding them from sync prevents path errors and other issues"
+      },
+      "settingsSync": {
+        "uploadSuccess": "Settings uploaded successfully",
+        "uploadFailed": "Failed to upload settings",
+        "downloadSuccess": "Settings downloaded successfully",
+        "downloadFailed": "Failed to download settings",
+        "autoSync": "Settings will be automatically synced during upload/download (excluding device-specific settings like workspace path)"
       }
     },
     "imageHosting": {
@@ -718,6 +794,18 @@
           },
           "messageControl": {
             "words": "words"
+          },
+          "mcp": {
+            "maxIterationsReached": "Maximum tool call iterations reached",
+            "toolCall": "MCP Server",
+            "params": "Parameters",
+            "result": "Result",
+            "copy": "Copy",
+            "paramsCopied": "Parameters copied",
+            "resultCopied": "Result copied",
+            "calling": "Calling",
+            "success": "Completed",
+            "error": "Failed"
           },
           "empty": {
             "features": [
@@ -1222,5 +1310,19 @@
         "synced": "Synced"
       }
     }
+  },
+  "mcp": {
+    "selectServers": "MCP Servers",
+    "searchServers": "Search servers...",
+    "noServers": "MCP service not enabled",
+    "noServersFound": "No matching servers found",
+    "addServer": "Add server...",
+    "goToSettings": "Go to Settings",
+    "close": "Close",
+    "navigate": "Select",
+    "confirm": "Confirm",
+    "tools": "tools",
+    "connecting": "Connecting",
+    "disconnected": "Disconnected"
   }
 }

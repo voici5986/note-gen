@@ -26,7 +26,7 @@ import useImageStore from "@/stores/imageHosting"
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { toggleFileSidebar } = useSidebarStore()
+  const { toggleFileSidebar, toggleNoteSidebar, showFileSidebar, showNoteSidebar } = useSidebarStore()
   const t = useTranslations()
   const { imageRepoUserInfo } = useImageStore()
   const [items, setItems] = useState([
@@ -62,9 +62,18 @@ export function AppSidebar() {
   }
 
   async function menuHandler(item: typeof items[0]) {
+    // 如果是当前页面，执行 toggle 切换显示/隐藏
     if (pathname === '/core/article' && item.url === '/core/article') {
       toggleFileSidebar()
+    } else if (pathname === '/core/record' && item.url === '/core/record') {
+      toggleNoteSidebar()
     } else {
+      // 如果是路由切换，确保对应的侧边栏显示
+      if (item.url === '/core/article') {
+        await showFileSidebar()
+      } else if (item.url === '/core/record') {
+        await showNoteSidebar()
+      }
       router.push(item.url)
     }
     const store = await Store.load('store.json')

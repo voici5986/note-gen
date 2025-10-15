@@ -163,6 +163,10 @@ interface SettingState {
   // 界面缩放设置
   uiScale: number
   setUiScale: (scale: number) => Promise<void>
+
+  // 正文文字大小缩放设置
+  contentTextScale: number
+  setContentTextScale: (scale: number) => Promise<void>
 }
 
 
@@ -652,6 +656,15 @@ const useSettingStore = create<SettingState>((set, get) => ({
     
     // 使用fontSize实现基于rem的缩放
     document.documentElement.style.fontSize = `${scale}%`
+  },
+
+  // 正文文字大小缩放设置 (75%, 100%, 125%, 150%)
+  contentTextScale: 100,
+  setContentTextScale: async (scale: number) => {
+    set({ contentTextScale: scale })
+    const store = await Store.load('store.json');
+    await store.set('contentTextScale', scale)
+    await store.save()
   },
 
   // 自定义仓库名称设置

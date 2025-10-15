@@ -31,7 +31,7 @@ export function NoteSidebar() {
   }
 
   return (
-    <Sidebar collapsible="none" className="border-r w-full hidden md:flex md:w-[300px] flex-col">
+    <Sidebar collapsible="none" className="w-full h-screen hidden md:flex flex-col">
       <SidebarHeader className="p-0">
         <MarkHeader />
         {

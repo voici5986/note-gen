@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { ThemeSettings } from './theme'
 import { LanguageSettings } from './language'
 import { ScaleSettings } from './scale'
+import { ContentTextScaleSettings } from './content-text-scale'
 
 export function InterfaceSettings() {
   const t = useTranslations('settings.general.interface')
@@ -14,6 +15,7 @@ export function InterfaceSettings() {
       <ThemeSettings />
       <LanguageSettings />
       <ScaleSettings />
+      <ContentTextScaleSettings />
     </div>
   )
 }

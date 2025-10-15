@@ -32,6 +32,7 @@ NoteGen is a cross-platform `Markdown` note-taking application dedicated to usin
 - 🌐 Cross-platform support.
 - 🆓 Free AI and sync solutions.
 - 📦 Out-of-the-box RAG support.
+- 🔌 MCP support for AI tool integration.
 - ✍️ Quick note-taking for fragmented information.
 - 📝 Native Markdown storage format.
 
