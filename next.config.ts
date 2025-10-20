@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
   turbopack: {},
+  devIndicators: false
 };
 
 export default withNextIntl(nextConfig);

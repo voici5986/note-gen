@@ -80,7 +80,7 @@ export default function Page() {
     setSearchData()
   }, [allArticle])
 
-  return <div className="h-screen flex flex-col justify-center items-center overflow-y-auto">
+  return <div id="search-page" className="h-screen flex flex-col justify-center items-center overflow-y-auto">
     <div className={`${searchValue ? 'border-b' : ''} w-full h-20 flex justify-center items-center`}>
       <div className="relative">
         <Input

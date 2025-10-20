@@ -4,6 +4,9 @@ export const SYNC_EXCLUDED_FIELDS: string[] = [
   'workspacePath',
   'workspaceHistory',
   'assetsPath',
+  'uiScale',
+  'contentTextScale',
+  'customCss',
 ]
 
 // 检查字段是否应该被排除在同步之外

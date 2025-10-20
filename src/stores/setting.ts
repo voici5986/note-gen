@@ -167,6 +167,10 @@ interface SettingState {
   // 正文文字大小缩放设置
   contentTextScale: number
   setContentTextScale: (scale: number) => Promise<void>
+
+  // 自定义 CSS 设置
+  customCss: string
+  setCustomCss: (css: string) => Promise<void>
 }
 
 
@@ -665,6 +669,24 @@ const useSettingStore = create<SettingState>((set, get) => ({
     const store = await Store.load('store.json');
     await store.set('contentTextScale', scale)
     await store.save()
+  },
+
+  // 自定义 CSS 设置
+  customCss: '',
+  setCustomCss: async (css: string) => {
+    set({ customCss: css })
+    const store = await Store.load('store.json');
+    await store.set('customCss', css)
+    await store.save()
+    
+    // 应用自定义 CSS
+    let styleElement = document.getElementById('custom-css-style')
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = 'custom-css-style'
+      document.head.appendChild(styleElement)
+    }
+    styleElement.textContent = css
   },
 
   // 自定义仓库名称设置

@@ -5,6 +5,7 @@ import { ThemeSettings } from './theme'
 import { LanguageSettings } from './language'
 import { ScaleSettings } from './scale'
 import { ContentTextScaleSettings } from './content-text-scale'
+import { CustomCssSettings } from './custom-css'
 
 export function InterfaceSettings() {
   const t = useTranslations('settings.general.interface')
@@ -16,6 +17,7 @@ export function InterfaceSettings() {
       <LanguageSettings />
       <ScaleSettings />
       <ContentTextScaleSettings />
+      <CustomCssSettings />
     </div>
   )
 }

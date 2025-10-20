@@ -15,7 +15,7 @@ export default function Record() {
     setTrashState(false)
   }
   return (
-    <div className="flex flex-col h-full w-full">
+    <div id="mobile-record" className="flex flex-col h-full w-full">
       <MarkHeader />
       {
         trashState? 

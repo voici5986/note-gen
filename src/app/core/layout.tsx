@@ -23,7 +23,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { initSettingData, uiScale } = useSettingStore()
+  const { initSettingData, uiScale, customCss } = useSettingStore()
   const { initMainHosting } = useImageStore()
   const { currentLocale } = useI18n()
   const { initShortcut } = useShortcutStore()
@@ -48,6 +48,19 @@ export default function RootLayout({
     }
   }, [uiScale])
 
+  // 应用自定义 CSS
+  useEffect(() => {
+    if (customCss) {
+      let styleElement = document.getElementById('custom-css-style')
+      if (!styleElement) {
+        styleElement = document.createElement('style')
+        styleElement.id = 'custom-css-style'
+        document.head.appendChild(styleElement)
+      }
+      styleElement.textContent = customCss
+    }
+  }, [customCss])
+
   useEffect(() => {
     switch (currentLocale) {
       case 'zh':
@@ -60,6 +73,34 @@ export default function RootLayout({
         break;
     }
   }, [currentLocale])
+
+  // 禁用浏览器后退快捷键（Backspace）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果按下 Backspace 键，且不在可编辑元素中
+      if (e.key === 'Backspace') {
+        const target = e.target as HTMLElement
+        const isEditable = 
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.getAttribute('contenteditable') === 'true'
+        
+        // 如果在可编辑元素中，允许正常删除
+        if (isEditable) {
+          return
+        }
+        
+        // 否则阻止默认的后退行为
+        e.preventDefault()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   return (
     <ThemeProvider

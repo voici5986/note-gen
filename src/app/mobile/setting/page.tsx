@@ -7,7 +7,7 @@ import Updater from "@/app/core/setting/about/updater"
 import UploadStore from "@/app/core/setting/components/upload-store"
 
 export default function Setting() {
-  return <div className="flex w-full h-full overflow-y-auto flex-col">
+  return <div id="mobile-setting" className="flex w-full h-full overflow-y-auto flex-col">
     <div className="h-12 flex items-center justify-between p-2 border-b overflow-hidden">
       <div className="flex items-center gap-2">
         <LanguageSwitch />

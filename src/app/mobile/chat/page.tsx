@@ -6,7 +6,7 @@ import { ChatHeader } from './components/chat-header'
 
 export default function Chat() {
   return (
-    <div className="flex flex-col flex-1 w-full">
+    <div id="mobile-chat" className="flex flex-col flex-1 w-full">
       <ChatHeader />
       <ChatContent />
       <ClipboardListener />
