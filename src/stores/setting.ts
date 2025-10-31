@@ -2,7 +2,8 @@ import { Store } from '@tauri-apps/plugin-store'
 import { create } from 'zustand'
 import { getVersion } from '@tauri-apps/api/app'
 import { AiConfig } from '@/app/core/setting/config'
-import { GitlabInstanceType } from '@/lib/gitlab.types'
+import { GitlabInstanceType } from '@/lib/sync/gitlab.types'
+import { GiteaInstanceType } from '@/lib/sync/gitea.types'
 import { noteGenDefaultModels, noteGenModelKeys } from '@/app/model-config'
 import { fetch } from '@tauri-apps/plugin-http'
 
@@ -66,6 +67,9 @@ interface SettingState {
   audioModel: string
   setAudioModel: (audioModel: string) => Promise<void>
 
+  sttModel: string
+  setSttModel: (sttModel: string) => Promise<void>
+
   templateList: GenTemplate[]
   setTemplateList: (templateList: GenTemplate[]) => Promise<void>
 
@@ -120,9 +124,25 @@ interface SettingState {
   gitlabUsername: string
   setGitlabUsername: (gitlabUsername: string) => Promise<void>
 
+  // Gitea 相关设置
+  giteaInstanceType: GiteaInstanceType
+  setGiteaInstanceType: (instanceType: GiteaInstanceType) => Promise<void>
+
+  giteaCustomUrl: string
+  setGiteaCustomUrl: (customUrl: string) => Promise<void>
+
+  giteaAccessToken: string
+  setGiteaAccessToken: (giteaAccessToken: string) => void
+
+  giteaAutoSync: string
+  setGiteaAutoSync: (giteaAutoSync: string) => Promise<void>
+
+  giteaUsername: string
+  setGiteaUsername: (giteaUsername: string) => Promise<void>
+
   // 主要备份方式设置
-  primaryBackupMethod: 'github' | 'gitee' | 'gitlab'
-  setPrimaryBackupMethod: (method: 'github' | 'gitee' | 'gitlab') => Promise<void>
+  primaryBackupMethod: 'github' | 'gitee' | 'gitlab' | 'gitea'
+  setPrimaryBackupMethod: (method: 'github' | 'gitee' | 'gitlab' | 'gitea') => Promise<void>
 
   lastSettingPage: string
   setLastSettingPage: (page: string) => Promise<void>
@@ -153,6 +173,9 @@ interface SettingState {
   gitlabCustomSyncRepo: string
   setGitlabCustomSyncRepo: (repo: string) => Promise<void>
 
+  giteaCustomSyncRepo: string
+  setGiteaCustomSyncRepo: (repo: string) => Promise<void>
+
   githubCustomImageRepo: string
   setGithubCustomImageRepo: (repo: string) => Promise<void>
 
@@ -171,6 +194,26 @@ interface SettingState {
   // 自定义 CSS 设置
   customCss: string
   setCustomCss: (css: string) => Promise<void>
+
+  // 聊天工具栏配置
+  chatToolbarConfig: ChatToolbarItem[]
+  setChatToolbarConfig: (config: ChatToolbarItem[]) => Promise<void>
+
+  // 记录工具栏配置
+  recordToolbarConfig: RecordToolbarItem[]
+  setRecordToolbarConfig: (config: RecordToolbarItem[]) => Promise<void>
+}
+
+export interface ChatToolbarItem {
+  id: string
+  enabled: boolean
+  order: number
+}
+
+export interface RecordToolbarItem {
+  id: string
+  enabled: boolean
+  order: number
 }
 
 
@@ -245,25 +288,49 @@ const useSettingStore = create<SettingState>((set, get) => ({
       }
     }
 
-    // 检查是否设置了音频模型，如果没有且存在note-gen-audio，则设置为默认音频模型
+    // 检查是否设置了TTS模型，如果没有且存在note-gen-tts，则设置为默认TTS模型
     const currentAudioModel = await store.get('audioModel') as string
-    const hasNoteGenAudio = finalAiModelList.some(config => 
-      config.models?.some(model => model.modelType === 'audio') || config.modelType === 'audio'
+    const hasNoteGenTTS = finalAiModelList.some(config => 
+      config.models?.some(model => model.modelType === 'tts') || config.modelType === 'tts'
     )
     
-    if (!currentAudioModel && hasNoteGenAudio) {
-      // 查找第一个可用的音频模型
+    if (!currentAudioModel && hasNoteGenTTS) {
+      // 查找第一个可用的TTS模型
       for (const config of finalAiModelList) {
         if (config.models && config.models.length > 0) {
-          const audioModel = config.models.find(model => model.modelType === 'audio')
-          if (audioModel) {
-            await store.set('audioModel', `${config.key}-${audioModel.id}`)
-            set({ audioModel: `${config.key}-${audioModel.id}` })
+          const ttsModel = config.models.find(model => model.modelType === 'tts')
+          if (ttsModel) {
+            await store.set('audioModel', `${config.key}-${ttsModel.id}`)
+            set({ audioModel: `${config.key}-${ttsModel.id}` })
             break
           }
-        } else if (config.modelType === 'audio') {
+        } else if (config.modelType === 'tts') {
           await store.set('audioModel', config.key)
           set({ audioModel: config.key })
+          break
+        }
+      }
+    }
+
+    // 检查是否设置了STT模型，如果没有且存在note-gen-stt，则设置为默认STT模型
+    const currentSttModel = await store.get('sttModel') as string
+    const hasNoteGenSTT = finalAiModelList.some(config => 
+      config.models?.some(model => model.modelType === 'stt') || config.modelType === 'stt'
+    )
+    
+    if (!currentSttModel && hasNoteGenSTT) {
+      // 查找第一个可用的STT模型
+      for (const config of finalAiModelList) {
+        if (config.models && config.models.length > 0) {
+          const sttModel = config.models.find(model => model.modelType === 'stt')
+          if (sttModel) {
+            await store.set('sttModel', `${config.key}-${sttModel.id}`)
+            set({ sttModel: `${config.key}-${sttModel.id}` })
+            break
+          }
+        } else if (config.modelType === 'stt') {
+          await store.set('sttModel', config.key)
+          set({ sttModel: config.key })
           break
         }
       }
@@ -444,6 +511,13 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ audioModel })
   },
 
+  sttModel: '',
+  setSttModel: async (sttModel) => {
+    const store = await Store.load('store.json');
+    await store.set('sttModel', sttModel)
+    set({ sttModel })
+  },
+
   templateList: [
     {
       id: '0',
@@ -615,9 +689,55 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ gitlabUsername })
   },
 
+  // Gitea 相关实现
+  giteaInstanceType: GiteaInstanceType.OFFICIAL,
+  setGiteaInstanceType: async (instanceType: GiteaInstanceType) => {
+    const store = await Store.load('store.json')
+    await store.set('giteaInstanceType', instanceType)
+    await store.save()
+    set({ giteaInstanceType: instanceType })
+  },
+
+  giteaCustomUrl: '',
+  setGiteaCustomUrl: async (customUrl: string) => {
+    const store = await Store.load('store.json')
+    await store.set('giteaCustomUrl', customUrl)
+    await store.save()
+    set({ giteaCustomUrl: customUrl })
+  },
+
+  giteaAccessToken: '',
+  setGiteaAccessToken: (giteaAccessToken: string) => {
+    set({ giteaAccessToken })
+  },
+
+  giteaAutoSync: 'disabled',
+  setGiteaAutoSync: async (giteaAutoSync: string) => {
+    set({ giteaAutoSync })
+    const store = await Store.load('store.json');
+    await store.set('giteaAutoSync', giteaAutoSync)
+    await store.save()
+  },
+
+  giteaUsername: '',
+  setGiteaUsername: async (giteaUsername: string) => {
+    const store = await Store.load('store.json')
+    await store.set('giteaUsername', giteaUsername)
+    await store.save()
+    set({ giteaUsername })
+  },
+
+  giteaCustomSyncRepo: '',
+  setGiteaCustomSyncRepo: async (repo: string) => {
+    set({ giteaCustomSyncRepo: repo })
+    const store = await Store.load('store.json');
+    await store.set('giteaCustomSyncRepo', repo)
+    await store.save()
+  },
+
   // 默认使用 GitHub 作为主要备份方式
   primaryBackupMethod: 'github',
-  setPrimaryBackupMethod: async (method: 'github' | 'gitee' | 'gitlab') => {
+  setPrimaryBackupMethod: async (method: 'github' | 'gitee' | 'gitlab' | 'gitea') => {
     const store = await Store.load('store.json')
     await store.set('primaryBackupMethod', method)
     await store.save()
@@ -719,6 +839,43 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ githubCustomImageRepo: repo })
     const store = await Store.load('store.json');
     await store.set('githubCustomImageRepo', repo)
+    await store.save()
+  },
+
+  // 聊天工具栏配置
+  chatToolbarConfig: [
+    { id: 'modelSelect', enabled: true, order: 0 },
+    { id: 'promptSelect', enabled: true, order: 1 },
+    { id: 'chatLanguage', enabled: true, order: 2 },
+    { id: 'chatLink', enabled: true, order: 3 },
+    { id: 'fileLink', enabled: true, order: 4 },
+    { id: 'mcpButton', enabled: true, order: 5 },
+    { id: 'ragSwitch', enabled: true, order: 6 },
+    { id: 'chatPlaceholder', enabled: true, order: 7 },
+    { id: 'clipboardMonitor', enabled: true, order: 8 },
+    { id: 'clearContext', enabled: true, order: 9 },
+    { id: 'clearChat', enabled: true, order: 10 },
+  ],
+  setChatToolbarConfig: async (config: ChatToolbarItem[]) => {
+    set({ chatToolbarConfig: config })
+    const store = await Store.load('store.json');
+    await store.set('chatToolbarConfig', config)
+    await store.save()
+  },
+
+  // 记录工具栏配置
+  recordToolbarConfig: [
+    { id: 'text', enabled: true, order: 0 },
+    { id: 'recording', enabled: true, order: 1 },
+    { id: 'scan', enabled: true, order: 2 },
+    { id: 'image', enabled: true, order: 3 },
+    { id: 'link', enabled: true, order: 4 },
+    { id: 'file', enabled: true, order: 5 },
+  ],
+  setRecordToolbarConfig: async (config: RecordToolbarItem[]) => {
+    set({ recordToolbarConfig: config })
+    const store = await Store.load('store.json');
+    await store.set('recordToolbarConfig', config)
     await store.save()
   },
 }))

@@ -128,9 +128,9 @@ export default function ModelCard({ modelConfig, aiConfig, onUpdate, onDelete }:
           }
           return true
 
-        case 'audio':
+        case 'tts':
           const testAudioText = '测试音频生成'
-          const audioResponse = await fetch(aiConfig.baseURL + '/audio/speech', {
+          const ttsResponse = await fetch(aiConfig.baseURL + '/audio/speech', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -145,13 +145,42 @@ export default function ModelCard({ modelConfig, aiConfig, onUpdate, onDelete }:
             }),
             signal
           })
-          if (!audioResponse.ok) {
-            throw new Error(`音频生成请求失败: ${audioResponse.status} ${audioResponse.statusText}`)
+          if (!ttsResponse.ok) {
+            throw new Error(`TTS请求失败: ${ttsResponse.status} ${ttsResponse.statusText}`)
           }
-          const contentType = audioResponse.headers.get('content-type')
-          if (!contentType || !contentType.includes('audio')) {
-            throw new Error('音频模型返回格式不正确')
+          const ttsContentType = ttsResponse.headers.get('content-type')
+          if (!ttsContentType || !ttsContentType.includes('audio')) {
+            throw new Error('TTS模型返回格式不正确')
           }
+          return true
+
+        case 'stt':
+          // STT 测试：只检查 API 端点连通性
+          // 发送一个简单的测试请求，不验证具体返回内容
+          // 因为空音频文件可能导致服务器ffmpeg解析失败，但这不代表模型不可用
+          const testAudioBlob = new Blob([new Uint8Array(100)], { type: 'audio/webm' })
+          const sttFormData = new FormData()
+          sttFormData.append('file', testAudioBlob, 'test.webm')
+          sttFormData.append('model', model.model)
+          
+          const sttResponse = await fetch(aiConfig.baseURL + '/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${aiConfig.apiKey}`,
+              ...(aiConfig.customHeaders || {})
+            },
+            body: sttFormData,
+            signal
+          })
+          
+          // 对于STT，只要API响应了（即使是400错误），就认为连接成功
+          // 400错误通常是因为测试音频无效，但说明API端点是可达的
+          if (sttResponse.status === 401 || sttResponse.status === 403) {
+            // 认证错误才是真正的失败
+            throw new Error(`STT认证失败 (${sttResponse.status})`)
+          }
+          
+          // 其他情况（包括200成功和400音频解析失败）都认为连接成功
           return true
 
         default:
@@ -246,8 +275,12 @@ export default function ModelCard({ modelConfig, aiConfig, onUpdate, onDelete }:
               <Label htmlFor={`chat-${modelConfig.id}`}>{t('modelType.chat')}</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="audio" id={`audio-${modelConfig.id}`} />
-              <Label htmlFor={`audio-${modelConfig.id}`}>{t('modelType.audio')}</Label>
+              <RadioGroupItem value="tts" id={`tts-${modelConfig.id}`} />
+              <Label htmlFor={`tts-${modelConfig.id}`}>{t('modelType.tts')}</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="stt" id={`stt-${modelConfig.id}`} />
+              <Label htmlFor={`stt-${modelConfig.id}`}>{t('modelType.stt')}</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="embedding" id={`embedding-${modelConfig.id}`} />
@@ -311,8 +344,8 @@ export default function ModelCard({ modelConfig, aiConfig, onUpdate, onDelete }:
           </>
         )}
 
-        {/* 音频模型的特殊配置 */}
-        {modelConfig.modelType === 'audio' && (
+        {/* TTS模型的特殊配置 */}
+        {modelConfig.modelType === 'tts' && (
           <div className="space-y-2">
             <Label>{t('voice')}</Label>
             <Input

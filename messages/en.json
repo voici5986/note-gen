@@ -64,6 +64,23 @@
           "save": "Save",
           "cancel": "Cancel"
         }
+      },
+      "tools": {
+        "title": "Tool Settings",
+        "chatToolbar": {
+          "title": "Chat Toolbar",
+          "desc": "Customize the display order and visibility of chat toolbar buttons",
+          "button": "Configure",
+          "dialogTitle": "Configure Chat Toolbar",
+          "dialogDesc": "Drag tools to adjust order, use switches to show or hide"
+        },
+        "recordToolbar": {
+          "title": "Record Toolbar",
+          "desc": "Customize the display order and visibility of record toolbar buttons",
+          "button": "Configure",
+          "dialogTitle": "Configure Record Toolbar",
+          "dialogDesc": "Drag tools to adjust order, use switches to show or hide"
+        }
       }
     },
     "rag": {
@@ -250,18 +267,33 @@
         }
       }
     },
-    "readAloud": {
-      "title": "Read Aloud",
-      "desc": "Here, you can configure read aloud related settings to provide voice playback functionality for chat content.",
-      "noModel": "Do not use",
-      "options": {
-        "audioModel": {
-          "title": "Audio Model",
+    "audio": {
+      "title": "Audio Settings",
+      "desc": "Here, you can configure audio settings, including text-to-speech (TTS) and speech-to-text (STT) functions.",
+      "tts": {
+        "title": "Text-to-Speech (TTS)",
+        "desc": "Configure read aloud functionality to provide voice playback for chat content.",
+        "model": {
+          "title": "TTS Model",
           "desc": "Select the AI model for text-to-speech conversion, supporting various voice types and parameter configurations."
         },
         "speed": {
           "title": "Speech Rate",
-          "desc": "Adjust the playback speed of the voice, ranging from 0.25x to 4x speed, with 1x being the normal speed."
+          "desc": "Adjust the playback speed of the voice, ranging from 0.5x to 2x speed, with 1x being the normal speed."
+        }
+      },
+      "stt": {
+        "title": "Speech-to-Text (STT)",
+        "desc": "Configure voice recognition to convert speech to text records.",
+        "mode": {
+          "title": "Recognition Mode",
+          "desc": "Choose between browser built-in recognition or AI model recognition",
+          "builtin": "Built-in",
+          "model": "AI Model"
+        },
+        "model": {
+          "title": "STT Model",
+          "desc": "Select the AI model for speech recognition, supporting real-time voice-to-text conversion."
         }
       }
     },
@@ -323,7 +355,16 @@
         "selfHosted": "Self-hosted Instance",
         "selfHostedDesc": "Enter your self-hosted GitLab server address (e.g., https://gitlab.example.com)"
       },
-      "gitlabAccessTokenDesc": "Create a personal access token in {instanceDisplayName}, requires api permission",
+      "gitlabAccessTokenDesc": "Create a personal access token at {instanceDisplayName}, requires api permission",
+      "giteaInstanceType": "Gitea Instance Type",
+      "giteaInstanceTypeDesc": "Select the type of Gitea instance to connect to",
+      "giteaInstanceTypePlaceholder": "Select Gitea Instance Type",
+      "giteaInstanceTypeOptions": {
+        "selfHosted": "Self-hosted Instance",
+        "selfHostedDesc": "Enter your self-hosted Gitea server address (e.g., https://gitea.example.com)"
+      },
+      "giteaAccessTokenDesc": "Create a personal access token at {instanceDisplayName}, requires full repository permission",
+      "autoSync": "Auto Sync",
       "autoSyncOptions": {
         "placeholder": "Select auto sync time",
         "disabled": "Disabled",
@@ -607,7 +648,8 @@
         "chat": "Chat",
         "image": "Image",
         "video": "Video",
-        "audio": "Audio",
+        "tts": "Text-to-Speech",
+        "stt": "Speech-to-Text",
         "embedding": "Embedding",
         "rerank": "Reranking"
       },
@@ -744,6 +786,7 @@
         "image": "Image",
         "screenshot": "Screenshot",
         "text": "Text",
+        "recording": "Recording",
         "file": "File",
         "link": "Link",
         "upload": "Upload Record",
@@ -792,9 +835,14 @@
         "rename": "Rename",
         "delete": "Delete",
         "pin": "Pin",
-        "unpin": "Unpin"
+        "unpin": "Unpin",
+        "newTag": "New Tag",
+        "newTagPlaceholder": "Enter tag name...",
+        "add": "Add"
       },
       "mark": {
+        "empty": "No records",
+        "emptyHint": "Use the toolbar at the top to create your first record!",
         "type": {
           "text": "Text"
         },
@@ -911,12 +959,12 @@
         "restore": "Restore",
         "delete": "Delete",
         "deleteConfirm": "Are you sure to delete?",
-        "moveTag": "Move to Tag",
+        "moveTag": "Move Tag",
         "convertTo": "Convert to {type}",
         "copyLink": "Copy Link",
         "copied": "Copied to clipboard!",
         "regenerateDesc": "Regenerate Description",
-        "viewFolder": "View in Folder",
+        "viewFolder": "View Folder",
         "viewFile": "View Original File",
         "deleteForever": "Delete Forever",
         "sortByName": "Sort by Name",
@@ -935,7 +983,13 @@
         "selectedCount": "Selected {count} items",
         "moveSelectedTags": "Move selected {count} items",
         "deleteSelected": "Delete selected {count} items",
-        "deleteSelectedForever": "Delete selected {count} items forever"
+        "deleteSelectedForever": "Delete selected {count} items forever",
+        "text": "Record Text",
+        "recording": "Audio Recording",
+        "scan": "Scan Image",
+        "image": "Upload Image",
+        "link": "Record Link",
+        "file": "Upload File"
       }
     },
     "chat": {
@@ -1027,6 +1081,9 @@
         "clearContext": {
           "tooltip": "Clear context"
         },
+        "mcp": {
+          "tooltip": "MCP server"
+        },
         "chatLanguage": {
           "tooltip": "Select chat language",
           "placeholder": "Search language"
@@ -1107,6 +1164,7 @@
     "placeholder": "Search notes and articles...",
     "results": "{count} search results",
     "noResults": "No search results",
+    "tryDifferentKeywords": "Try using different keywords",
     "item": {
       "record": "Record",
       "article": "Article",
@@ -1352,5 +1410,128 @@
     "tools": "tools",
     "connecting": "Connecting",
     "disconnected": "Disconnected"
+  },
+  "recording": {
+    "title": "Voice Recording",
+    "description": "Click the microphone button to start recording, the system will automatically recognize and convert to text",
+    "recording": "Recording",
+    "paused": "Paused",
+    "ready": "Ready",
+    "processing": "Processing...",
+    "cancel": "Cancel",
+    "error": "Error",
+    "success": "Success",
+    "noModelConfigured": "Speech recognition model not configured, please configure in settings first",
+    "startError": "Unable to start recording",
+    "noAudioData": "No audio data recorded",
+    "transcriptionSuccess": "Speech recognition completed",
+    "transcriptionEmpty": "Recognition result is empty",
+    "transcriptionError": "Speech recognition failed",
+    "noContentDetected": "No content detected",
+    "doubleClickToSelectFile": "Double click to select audio file",
+    "mode": {
+      "builtin": "Browser Recognition",
+      "builtinDesc": "Free, real-time recognition",
+      "model": "AI Model Recognition",
+      "modelDesc": "Requires STT model, more accurate"
+    }
+  },
+  "editor": {
+    "copySuccess": "Copy Success",
+    "copySuccessDescription": "Copied to clipboard",
+    "floatbar": {
+      "readAloud": {
+        "start": "Read Aloud",
+        "stop": "Stop Reading",
+        "loading": "Loading..."
+      }
+    },
+    "toolbar": {
+      "mark": {
+        "title": "Records",
+        "tooltip": "Records",
+        "description": "Convert records into content to insert into the article.",
+        "noRecords": "No records",
+        "ocrNoContent": "OCR did not recognize any content"
+      },
+      "question": {
+        "tooltip": "Q&A",
+        "selectContent": "Please select content first",
+        "promptTemplate": "Reference text: \n{content}\nBased on the question: \n{question}\n, directly provide the answer content."
+      },
+      "continue": {
+        "tooltip": "Continue",
+        "promptTemplate": "Based on the preceding text: \n{content}\n continue writing and return content not exceeding 100 words.\nYou can reference the following text: \n{endContent}\n, but avoid duplicating its content."
+      },
+      "polish": {
+        "tooltip": "Polish",
+        "selectContent": "Please select content first",
+        "promptTemplate": "Polish this text: \n{content}\n, keep the language unchanged, fix typos and grammatical errors, directly return the polished result."
+      },
+      "eraser": {
+        "tooltip": "Simplify",
+        "selectContent": "Please select content first",
+        "promptTemplate": "Simplify this text: \n{content}\n, this text is too verbose, reduce the word count by at least half, keep the language unchanged, directly return the optimized result."
+      },
+      "expansion": {
+        "tooltip": "Expand",
+        "selectContent": "Please select content first",
+        "promptTemplate": "Expand this text: \n{content}\n, this text is too short, increase the word count by at least half, keep the language unchanged, directly return the expanded result."
+      },
+      "translation": {
+        "tooltip": "Translate",
+        "description": "Translate the selected text",
+        "selectContent": "Please select content first",
+        "promptTemplate": "Translate this text: \n{content}\n, into {language}, directly return the translated result."
+      }
+    },
+    "upload": {
+      "error": "Upload failed",
+      "needToken": "Upload images need to configure accessToken",
+      "uploading": "Uploading image"
+    }
+  },
+  "footer": {
+    "wordCount": "Words",
+    "sync": {
+      "sync": "Sync",
+      "synced": "Synced",
+      "syncing": "Syncing",
+      "syncFailed": "Sync Failed",
+      "checkNetworkOrToken": "Please check network connection or token",
+      "quickSync": "Quick Sync"
+    },
+    "history": {
+      "loadingHistory": "Loading history",
+      "historyRecords": "History Records",
+      "noHistory": "No History",
+      "loading": "Loading",
+      "recordsCount": "records",
+      "filterQuickSync": "Filter Quick Syncs",
+      "committedAt": "committed at",
+      "pull": "Pull",
+      "quickSync": "Quick Sync"
+    },
+    "vectorCalc": {
+      "tooltip": "Vector Calculation: Auto-calculate 30s after editing, or click to calculate now",
+      "calculating": "Calculating",
+      "pending": "Pending {progress}%",
+      "synced": "Synced"
+    }
   }
+},
+"mcp": {
+  "selectServers": "MCP Servers",
+  "searchServers": "Search servers...",
+  "noServers": "MCP service not enabled",
+  "noServersFound": "No matching servers found",
+  "addServer": "Add server...",
+  "goToSettings": "Go to Settings",
+  "close": "Close",
+  "navigate": "Select",
+  "confirm": "Confirm",
+  "tools": "tools",
+  "connecting": "Connecting",
+  "disconnected": "Disconnected"
+}
 }

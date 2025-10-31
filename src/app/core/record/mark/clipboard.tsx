@@ -11,8 +11,8 @@ import { v4 as uuid } from 'uuid'
 import ocr from "@/lib/ocr";
 import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai";
 import { insertMark, Mark } from "@/db/marks";
-import { uint8ArrayToBase64, uploadFile } from "@/lib/github";
-import { RepoNames } from "@/lib/github.types";
+import { uint8ArrayToBase64, uploadFile } from "@/lib/sync/github";
+import { RepoNames } from "@/lib/sync/github.types";
 import { CheckCircle, CircleX } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { convertBytesToSize } from "@/lib/utils";
@@ -58,7 +58,7 @@ export function Clipboard() {
     setImage('')
     const queueId = uuid()
     // 获取文件后缀
-    addQueue({ queueId, progress: t('record.mark.progress.saveImage'), type: 'image', startTime: Date.now() })
+    addQueue({ queueId, tagId: currentTagId!, progress: t('record.mark.progress.saveImage'), type: 'image', startTime: Date.now() })
     const isImageFolderExists = await exists('image', { baseDir: BaseDirectory.AppData})
     if (!isImageFolderExists) {
       await mkdir('image', { baseDir: BaseDirectory.AppData})

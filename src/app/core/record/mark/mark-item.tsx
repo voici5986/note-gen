@@ -24,9 +24,11 @@ import { ImageUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { open } from "@tauri-apps/plugin-shell";
 import { Textarea } from "@/components/ui/textarea";
+import { AudioPlayer } from "@/components/audio-player";
 import { ImageViewer } from "@/components/image-viewer";
 import ChatPreview from "../chat/chat-preview";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MarkMobileActions } from "./mark-mobile-actions";
 
 dayjs.extend(relativeTime)
 
@@ -113,9 +115,9 @@ export function MarkWrapper({mark}: {mark: Mark}) {
     switch (mark.type) {
     case 'scan':
     return (
-        <div className="pr-2 flex-1 overflow-hidden text-xs">
+        <div className="flex-1 overflow-hidden text-xs pr-10 md:pr-2">
           <div className="flex w-full items-center gap-2 text-zinc-500">
-            <span className="flex items-center gap-1 bg-cyan-900 text-white px-1 rounded">
+            <span className="flex items-center gap-1 bg-cyan-900 text-white px-1 rounded text-xs">
               {t(mark.type)}
             </span>
             <span className="ml-auto text-xs">{dayjs(mark.createdAt).fromNow()}</span>
@@ -125,9 +127,9 @@ export function MarkWrapper({mark}: {mark: Mark}) {
     )
     case 'image':
     return (
-        <div className="pr-2 flex-1 overflow-hidden text-xs">
+        <div className="flex-1 overflow-hidden text-xs pr-10 md:pr-2">
           <div className="flex w-full items-center gap-2 text-zinc-500">
-            <span className="flex items-center gap-1 bg-fuchsia-900 text-white px-1 rounded">
+            <span className="flex items-center gap-1 bg-fuchsia-900 text-white px-1 rounded text-xs">
               {t(mark.type)}
             </span>
             {mark.url.includes('http') ? <ImageUp className="size-3 text-zinc-400" /> : null}
@@ -138,7 +140,7 @@ export function MarkWrapper({mark}: {mark: Mark}) {
     )
     case 'link':
     return (
-        <div className="flex-1">
+        <div className="flex-1 pr-10 md:pr-0">
           <div className="flex w-full items-center gap-2 text-zinc-500 text-xs">
             <span className="flex items-center gap-1 bg-blue-900 text-white px-1 rounded">
               {t(mark.type)}
@@ -160,7 +162,7 @@ export function MarkWrapper({mark}: {mark: Mark}) {
     )
     case 'text':
       return (
-          <div className="flex-1">
+          <div className="flex-1 pr-10 md:pr-0">
             <div className="flex w-full items-center gap-2 text-zinc-500 text-xs">
               <span className="flex items-center gap-1 bg-lime-900 text-white px-1 rounded">
                 {t(mark.type)}
@@ -170,9 +172,26 @@ export function MarkWrapper({mark}: {mark: Mark}) {
             <DetailViewer mark={mark} content={mark.content || ''} />
           </div>
       )
+    case 'recording':
+      return (
+          <div className="flex-1 pr-10 md:pr-0">
+            <div className="flex w-full items-center gap-2 text-zinc-500 text-xs">
+              <span className="flex items-center gap-1 bg-red-900 text-white px-1 rounded">
+                {t(mark.type)}
+              </span>
+              <span className="ml-auto text-xs">{dayjs(mark.createdAt).fromNow()}</span>
+            </div>
+            <DetailViewer mark={mark} content={mark.content || ''} />
+            {mark.url && (
+              <div className="mt-2">
+                <AudioPlayer audioPath={mark.url} />
+              </div>
+            )}
+          </div>
+      )
     case 'file':
       return (
-          <div className="flex-1">
+          <div className="flex-1 pr-10 md:pr-0">
             <div className="flex w-full items-center gap-2 text-zinc-500 text-xs">
               <span className="flex items-center gap-1 bg-orange-800 text-white px-1 rounded">
                 {t(mark.type)}
@@ -195,18 +214,20 @@ export function MarkWrapper({mark}: {mark: Mark}) {
   }
 
   return (
-    <div className="flex p-2">
+    <div className="flex p-2 items-start">
       {isMultiSelectMode && (
-        <div className="pr-2 flex items-start">
+        <div className="pr-2 flex items-start pt-1">
           <Checkbox
             checked={selectedMarkIds.has(mark.id)}
             onCheckedChange={handleCheckboxChange}
           />
         </div>
       )}
-      {renderContent()}
+      <div className="flex-1 min-w-0">
+        {renderContent()}
+      </div>
       {(mark.type === 'scan' || mark.type === 'image') && (
-        <div className="bg-zinc-900 flex items-center justify-center">
+        <div className="bg-zinc-900 flex items-center justify-center ml-2">
           <ImageViewer url={mark.url} path={mark.type === 'scan' ? 'screenshot' : 'image'} />
         </div>
       )}
@@ -227,7 +248,8 @@ export function MarkItem({mark}: {mark: Mark}) {
   } = useMarkStore()
   const { tags, currentTagId, fetchTags, getCurrentTag } = useTagStore()
 
-  async function handleDelMark() {
+  async function handleDelMark(e?: React.MouseEvent) {
+    e?.stopPropagation()
     if (isMultiSelectMode && selectedMarkIds.size > 0) {
       // 多选删除
       const selectedMarks = Array.from(selectedMarkIds)
@@ -244,7 +266,8 @@ export function MarkItem({mark}: {mark: Mark}) {
     getCurrentTag()
   }
 
-  async function handleDelForever() {
+  async function handleDelForever(e?: React.MouseEvent) {
+    e?.stopPropagation()
     if (isMultiSelectMode && selectedMarkIds.size > 0) {
       // 多选永久删除
       const selectedMarks = Array.from(selectedMarkIds)
@@ -259,7 +282,8 @@ export function MarkItem({mark}: {mark: Mark}) {
     await fetchAllTrashMarks()
   }
 
-  async function handleRestore() {
+  async function handleRestore(e?: React.MouseEvent) {
+    e?.stopPropagation()
     await restoreMark(mark.id)
     if (trashState) {
       await fetchAllTrashMarks()
@@ -268,7 +292,8 @@ export function MarkItem({mark}: {mark: Mark}) {
     }
   }
 
-  async function handleTransfer(tagId: number) {
+  async function handleTransfer(tagId: number, e?: React.MouseEvent) {
+    e?.stopPropagation()
     if (isMultiSelectMode && selectedMarkIds.size > 0) {
       // 多选转移 - 只处理选中的记录
       const selectedMarks = Array.from(selectedMarkIds)
@@ -289,19 +314,22 @@ export function MarkItem({mark}: {mark: Mark}) {
     fetchMarks()
   }
 
-  async function regenerateDesc() {
+  async function regenerateDesc(e?: React.MouseEvent) {
+    e?.stopPropagation()
     const desc = await fetchAiDesc(mark.content || '') || ''
     await updateMark({ ...mark, desc })
     fetchMarks()
   }
 
-  async function handelShowInFolder() {
+  async function handelShowInFolder(e?: React.MouseEvent) {
+    e?.stopPropagation()
     const appDir = await appDataDir()
     const path = mark.type === 'scan' ? 'screenshot' : 'image'
     open(`${appDir}/${path}`)
   }
 
-  async function handelShowInFile() {
+  async function handelShowInFile(e?: React.MouseEvent) {
+    e?.stopPropagation()
     const appDir = await appDataDir()
     const path = mark.type === 'scan' ? 'screenshot' : 'image'
     let filename = mark.url
@@ -311,7 +339,8 @@ export function MarkItem({mark}: {mark: Mark}) {
     open(`${appDir}/${path}/${filename}`)
   }
 
-  async function handleCopyLink() {
+  async function handleCopyLink(e?: React.MouseEvent) {
+    e?.stopPropagation()
     await navigator.clipboard.writeText(mark.url)
     toast({
       title: t('record.mark.toolbar.copied')
@@ -321,8 +350,26 @@ export function MarkItem({mark}: {mark: Mark}) {
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div className="border-b">
+        <div className="border-t relative">
           <MarkWrapper mark={mark} />
+          <div className="absolute top-2 right-2">
+            <MarkMobileActions
+              mark={mark}
+              tags={tags}
+              currentTagId={currentTagId}
+              trashState={trashState}
+              isMultiSelectMode={isMultiSelectMode}
+              selectedMarkIds={selectedMarkIds}
+              onTransfer={handleTransfer}
+              onCopyLink={handleCopyLink}
+              onRegenerateDesc={regenerateDesc}
+              onShowInFolder={handelShowInFolder}
+              onShowInFile={handelShowInFile}
+              onRestore={handleRestore}
+              onDelete={handleDelMark}
+              onDeleteForever={handleDelForever}
+            />
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

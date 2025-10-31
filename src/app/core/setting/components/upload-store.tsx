@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { DownloadCloud, Loader2, UploadCloud } from "lucide-react";
 import { Store } from "@tauri-apps/plugin-store";
-import { uint8ArrayToBase64, uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase64ToString } from "@/lib/github";
-import { getFiles as giteeGetFiles, uploadFile as uploadGiteeFile } from "@/lib/gitee";
-import { uploadFile as uploadGitlabFile, getFiles as gitlabGetFiles, getFileContent as gitlabGetFileContent } from "@/lib/gitlab";
-import { getSyncRepoName } from "@/lib/repo-utils";
+import { uint8ArrayToBase64, uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase64ToString } from "@/lib/sync/github";
+import { getFiles as giteeGetFiles, uploadFile as uploadGiteeFile } from "@/lib/sync/gitee";
+import { uploadFile as uploadGitlabFile, getFiles as gitlabGetFiles, getFileContent as gitlabGetFileContent } from "@/lib/sync/gitlab";
+import { uploadFile as uploadGiteaFile, getFiles as giteaGetFiles, getFileContent as giteaGetFileContent } from "@/lib/sync/gitea";
+import { getSyncRepoName } from "@/lib/sync/repo-utils";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { isMobileDevice } from "@/lib/check";
@@ -41,7 +42,7 @@ export default function UploadStore() {
     const file = new TextEncoder().encode(filteredContent)
     
     const primaryBackupMethod = await store.get('primaryBackupMethod')
-    let files;
+    let files: any;
     let res;
     switch (primaryBackupMethod) {
       case 'github':
@@ -71,7 +72,9 @@ export default function UploadStore() {
       case 'gitlab':
         const gitlabRepo = await getSyncRepoName('gitlab')
         files = await gitlabGetFiles({ path, repo: gitlabRepo })
-        const storeFile = files?.find(file => file.name === filename)
+        const storeFile = Array.isArray(files)
+          ? files.find(file => file.name === filename)
+          : (files?.name === filename ? files : undefined)
         res = await uploadGitlabFile({
           ext: 'json',
           file: uint8ArrayToBase64(file),
@@ -79,6 +82,21 @@ export default function UploadStore() {
           path,
           filename,
           sha: storeFile?.sha || '',
+        })
+        break;
+      case 'gitea':
+        const giteaRepo = await getSyncRepoName('gitea')
+        files = await giteaGetFiles({ path, repo: giteaRepo })
+        const giteaStoreFile = Array.isArray(files) 
+          ? files.find(file => file.name === filename)
+          : (files?.name === filename ? files : undefined)
+        res = await uploadGiteaFile({
+          ext: 'json',
+          file: uint8ArrayToBase64(file),
+          repo: giteaRepo,
+          path,
+          filename,
+          sha: giteaStoreFile?.sha || '',
         })
         break;
     }
@@ -119,6 +137,10 @@ export default function UploadStore() {
       case 'gitlab':
         const gitlabRepo2 = await getSyncRepoName('gitlab')
         file = await gitlabGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: gitlabRepo2 })
+        break;
+      case 'gitea':
+        const giteaRepo2 = await getSyncRepoName('gitea')
+        file = await giteaGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: giteaRepo2 })
         break;
     }
     if (file) {

@@ -1,13 +1,15 @@
 import { deleteAllMarks, getAllMarks, getMarks, insertMarks, Mark, updateMark } from '@/db/marks'
-import { uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase64ToString } from '@/lib/github';
-import { uploadFile as uploadGiteeFile, getFiles as giteeGetFiles } from '@/lib/gitee';
-import { uploadFile as uploadGitlabFile, getFiles as gitlabGetFiles, getFileContent as gitlabGetFileContent } from '@/lib/gitlab';
-import { getSyncRepoName } from '@/lib/repo-utils';
+import { uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase64ToString } from '@/lib/sync/github';
+import { uploadFile as uploadGiteeFile, getFiles as giteeGetFiles } from '@/lib/sync/gitee';
+import { uploadFile as uploadGitlabFile, getFiles as gitlabGetFiles, getFileContent as gitlabGetFileContent } from '@/lib/sync/gitlab';
+import { uploadFile as uploadGiteaFile, getFiles as giteaGetFiles, getFileContent as giteaGetFileContent } from '@/lib/sync/gitea';
+import { getSyncRepoName } from '@/lib/sync/repo-utils';
 import { Store } from '@tauri-apps/plugin-store';
 import { create } from 'zustand'
 
 export interface MarkQueue {
   queueId: string
+  tagId: number
   type: Mark["type"]
   progress: string
   startTime: number
@@ -196,7 +198,7 @@ const useMarkStore = create<MarkState>((set, get) => ({
     }
     const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github';
     let result = false
-    let files;
+    let files: any;
     let res;
     switch (primaryBackupMethod) {
       case 'github':
@@ -229,7 +231,9 @@ const useMarkStore = create<MarkState>((set, get) => ({
     case 'gitlab':
       const gitlabRepoName = await getSyncRepoName('gitlab')
       files = await gitlabGetFiles({ path, repo: gitlabRepoName })
-      const markFile = files?.find(file => file.name === filename)
+      const markFile = Array.isArray(files)
+        ? files.find(file => file.name === filename)
+        : (files?.name === filename ? files : undefined)
       res = await uploadGitlabFile({
         ext: 'json',
         file: jsonToBase64(marks),
@@ -237,6 +241,21 @@ const useMarkStore = create<MarkState>((set, get) => ({
         path,
         filename,
         sha: markFile?.sha || '',
+      })
+      break;
+    case 'gitea':
+      const giteaRepoName = await getSyncRepoName('gitea')
+      files = await giteaGetFiles({ path, repo: giteaRepoName })
+      const giteaMarkFile = Array.isArray(files)
+        ? files.find(file => file.name === filename)
+        : (files?.name === filename ? files : undefined)
+      res = await uploadGiteaFile({
+        ext: 'json',
+        file: jsonToBase64(marks),
+        repo: giteaRepoName,
+        path,
+        filename,
+        sha: giteaMarkFile?.sha || '',
       })
       break;
     }
@@ -265,6 +284,10 @@ const useMarkStore = create<MarkState>((set, get) => ({
       case 'gitlab':
         const gitlabRepoName = await getSyncRepoName('gitlab')
         files = await gitlabGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: gitlabRepoName })
+        break;
+      case 'gitea':
+        const giteaRepoName = await getSyncRepoName('gitea')
+        files = await giteaGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: giteaRepoName })
         break;
     }
     if (files) {
