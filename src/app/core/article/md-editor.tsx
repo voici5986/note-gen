@@ -1,8 +1,8 @@
 'use client'
 import useArticleStore from '@/stores/article'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Vditor from 'vditor'
-import { exists, mkdir, writeFile } from '@tauri-apps/plugin-fs'
+import { exists, mkdir, writeFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import "vditor/dist/index.css"
 import CustomToolbar from './custom-toolbar'
 import './style.scss'
@@ -24,11 +24,14 @@ import useSettingStore from '@/stores/setting'
 import { uploadImage } from '@/lib/imageHosting'
 import FloatBar from './floatbar'
 import { createToolbarConfig } from './toolbar.config'
+import { delMark } from '@/db/marks'
+import useMarkStore from '@/stores/mark'
 
 export function MdEditor() {
   const [editor, setEditor] = useState<Vditor>();
-  const { currentArticle, saveCurrentArticle, loading, activeFilePath, matchPosition, setMatchPosition } = useArticleStore()
+  const { currentArticle, saveCurrentArticle, loading, activeFilePath, matchPosition, setMatchPosition, setActiveFilePath, loadFileTree, setCurrentArticle } = useArticleStore()
   const { assetsPath, contentTextScale } = useSettingStore()
+  const { fetchMarks } = useMarkStore()
   const [floatBarPosition, setFloatBarPosition] = useState<{left: number, top: number} | null>(null)
   const [selectedText, setSelectedText] = useState<string>('')
   const [editorWidth, setEditorWidth] = useState<number>(0)
@@ -36,6 +39,9 @@ export function MdEditor() {
   const t = useTranslations('article.editor')
   const { currentLocale } = useI18n()
   const [localMode, setLocalMode] = useLocalStorage<'ir' | 'sv' | 'wysiwyg'>('useLocalMode', 'ir')
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const isCreatingFileRef = useRef(false)
+  const activeFilePathRef = useRef(activeFilePath)
 
   function getLang() {
     switch (currentLocale) {
@@ -128,10 +134,19 @@ export function MdEditor() {
         }
         setEditorPadding(vditor)
       },
-      input: (value) => {
-        saveCurrentArticle(value)
-        emitter.emit('editor-input')
-        handleLocalImage(vditor)
+      input: async (value) => {
+        if (!activeFilePathRef.current && !isCreatingFileRef.current) {
+          // 自动创建 untitled.md 文件，并写入当前内容
+          isCreatingFileRef.current = true
+          await createUntitledFile(value)
+          isCreatingFileRef.current = false
+          return // 创建文件后会触发 setActiveFilePath，不需要再次保存
+        }
+        if (activeFilePathRef.current) {
+          saveCurrentArticle(value)
+          emitter.emit('editor-input')
+          handleLocalImage(vditor)
+        }
       },
       mode: localMode,
       upload: {
@@ -185,6 +200,54 @@ export function MdEditor() {
   function resetSelectedText() {
     setSelectedText('')
     setFloatBarPosition(null)
+  }
+
+  // 自动创建 untitled.md 文件
+  async function createUntitledFile(content: string) {
+    try {
+      const workspace = await getWorkspacePath()
+      
+      // 生成唯一的文件名
+      let fileName = 'untitled.md'
+      let counter = 1
+      let filePath = fileName
+      
+      // 检查文件是否存在，如果存在则添加数字后缀
+      while (true) {
+        const pathOptions = await import('@/lib/workspace').then(m => m.getFilePathOptions(filePath))
+        let fileExists = false
+        
+        if (workspace.isCustom) {
+          fileExists = await exists(pathOptions.path)
+        } else {
+          fileExists = await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
+        }
+        
+        if (!fileExists) break
+        
+        fileName = `untitled-${counter}.md`
+        filePath = fileName
+        counter++
+      }
+      
+      // 创建文件并写入内容
+      const pathOptions = await import('@/lib/workspace').then(m => m.getFilePathOptions(filePath))
+      if (workspace.isCustom) {
+        await writeTextFile(pathOptions.path, content)
+      } else {
+        await writeTextFile(pathOptions.path, content, { baseDir: pathOptions.baseDir })
+      }
+      
+      // 先更新 store 中的内容，避免后续读取文件时覆盖
+      setCurrentArticle(content)
+      
+      // 设置为当前活动文件
+      await setActiveFilePath(filePath)
+      await loadFileTree()
+      
+    } catch (error) {
+      console.error('Create untitled file error:', error)
+    }
   }
 
   // 设置编辑器 padding
@@ -354,6 +417,11 @@ export function MdEditor() {
     }
   }
 
+  // 同步更新 activeFilePathRef
+  useEffect(() => {
+    activeFilePathRef.current = activeFilePath
+  }, [activeFilePath])
+
   useEffect(() => {
     emitter.on('toolbar-reset-selected-text', resetSelectedText)
     return () => {
@@ -362,21 +430,26 @@ export function MdEditor() {
   }, [editor])
 
   useEffect(() => {
-    if (!activeFilePath) {
-      editor?.destroy()
-      setEditor(undefined)
-    } else {
-      if (!editor) {
-        init()
+    if (!editor) {
+      init()
+      if (activeFilePath) {
         setContent(currentArticle)
+      }
+    } else {
+      // 如果文件被删除或取消选中，清空编辑器
+      if (!activeFilePath) {
+        editor.setValue('', true)
+        setCurrentArticle('')
       }
     }
   }, [activeFilePath])
 
   useEffect(() => {
-    if (activeFilePath) {
-      init()
+    if (editor) {
+      editor.destroy()
+      setEditor(undefined)
     }
+    init()
   }, [currentLocale])
 
   useEffect(() => {
@@ -418,11 +491,13 @@ export function MdEditor() {
   }, [theme, editor])
 
   useEffect(() => {
-    setContent(currentArticle)
-    editor?.clearStack()
-    if (!editor) return
-    handleLocalImage(editor)
-  }, [currentArticle, editor])
+    if (activeFilePath) {
+      setContent(currentArticle)
+      editor?.clearStack()
+      if (!editor) return
+      handleLocalImage(editor)
+    }
+  }, [currentArticle, editor, activeFilePath])
 
   useEffect(() => {
     window.addEventListener('resize', () => {
@@ -558,9 +633,124 @@ export function MdEditor() {
     }
   }, [contentTextScale, editor])
 
-  return <div id="article-editor" className='flex-1 relative w-full h-full flex flex-col overflow-hidden dark:bg-zinc-950'>
+  // 处理拖放事件
+  useEffect(() => {
+    if (!editor) return
+
+    const editorContainer = document.getElementById('article-editor')
+    if (!editorContainer) return
+
+    const handleDragOver = (e: DragEvent) => {
+      // 检查是否是从记录拖拽过来的
+      if (e.dataTransfer?.types.includes('text/plain')) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'copy'
+        setIsDraggingOver(true)
+        
+        // 聚焦编辑器并根据鼠标位置设置光标
+        if (editor) {
+          editor.focus()
+          
+          // 尝试根据鼠标位置设置光标
+          // Vditor 使用 CodeMirror 或其他编辑器，需要找到对应的编辑区域
+          const vditorElement = editor.vditor.element
+          const editArea = vditorElement?.querySelector('.vditor-ir__marker, .vditor-wysiwyg, .vditor-sv') as HTMLElement
+          
+          if (editArea) {
+            // 使用 document.caretPositionFromPoint 或 document.caretRangeFromPoint
+            let range: Range | null = null
+            
+            if (document.caretRangeFromPoint) {
+              range = document.caretRangeFromPoint(e.clientX, e.clientY)
+            } else if ((document as any).caretPositionFromPoint) {
+              const position = (document as any).caretPositionFromPoint(e.clientX, e.clientY)
+              if (position) {
+                range = document.createRange()
+                range.setStart(position.offsetNode, position.offset)
+              }
+            }
+            
+            if (range) {
+              const selection = window.getSelection()
+              if (selection) {
+                selection.removeAllRanges()
+                selection.addRange(range)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+      // 只有当离开整个编辑器容器时才清除状态
+      const rect = editorContainer.getBoundingClientRect()
+      if (
+        e.clientX < rect.left ||
+        e.clientX >= rect.right ||
+        e.clientY < rect.top ||
+        e.clientY >= rect.bottom
+      ) {
+        setIsDraggingOver(false)
+      }
+    }
+
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDraggingOver(false)
+
+      if (!e.dataTransfer) return
+
+      // 获取拖放的文本内容和记录信息
+      const markdownContent = e.dataTransfer.getData('text/plain')
+      const markJson = e.dataTransfer.getData('application/json')
+      
+      if (markdownContent && editor) {
+        // 光标位置已经在 dragover 时设置好了，直接插入内容
+        // 不添加换行，允许插入到文本中间
+        editor.insertValue(markdownContent)
+        editor.focus()
+        
+        // 插入成功后删除记录
+        if (markJson) {
+          try {
+            const mark = JSON.parse(markJson)
+            if (mark.id) {
+              await delMark(mark.id)
+              // 刷新记录列表
+              await fetchMarks()
+            }
+          } catch (error) {
+            console.error('Failed to delete mark:', error)
+          }
+        }
+      }
+    }
+
+    editorContainer.addEventListener('dragover', handleDragOver)
+    editorContainer.addEventListener('dragleave', handleDragLeave)
+    editorContainer.addEventListener('drop', handleDrop)
+
+    return () => {
+      editorContainer.removeEventListener('dragover', handleDragOver)
+      editorContainer.removeEventListener('dragleave', handleDragLeave)
+      editorContainer.removeEventListener('drop', handleDrop)
+    }
+  }, [editor])
+
+
+  return <div 
+    id="article-editor" 
+    className={`flex-1 relative w-full h-full flex flex-col overflow-hidden dark:bg-zinc-950 transition-all ${isDraggingOver ? 'bg-accent/20' : ''}`}
+  >
     <CustomToolbar editor={editor} />
-    <div id="aritcle-md-editor" className='flex-1' style={{minWidth: 0}}></div>
+    <div 
+      id="aritcle-md-editor" 
+      className="flex-1"
+      style={{minWidth: 0}}
+    ></div>
     <CustomFooter editor={editor} />
     <FloatBar left={floatBarPosition?.left} top={floatBarPosition?.top} value={selectedText} editor={editor} />
   </div>
