@@ -27,7 +27,7 @@ interface ChatSendProps {
 export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ inputValue, onSent, linkedFile }, ref) => {
   const { primaryModel } = useSettingStore()
   const { currentTagId } = useTagStore()
-  const { insert, loading, setLoading, saveChat, chats, locale, chatMode, setAgentState } = useChatStore()
+  const { insert, loading, setLoading, saveChat, chats, chatMode, setAgentState } = useChatStore()
   const { fetchMarks, marks } = useMarkStore()
   const { isLinkMark } = useChatStore()
   const { isRagEnabled } = useVectorStore()
@@ -228,7 +228,6 @@ ${ragContext}
     }
 
     const request_content = `
-      Use ${locale} language, don't use any other language.
       ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks].length ? 'You can refer to the following content notes:' : ''}
       ${scanMarks.length ? 'The following are screenshots after using OCR to identify text fragments:' : ''}
       ${scanMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
