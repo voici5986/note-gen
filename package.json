@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3456",
+    "dev": "next dev --turbopack -p 3456 -H 0.0.0.0",
     "build": "next build --turbopack",
     "start": "next start --turbopack -p 3456",
     "lint": "next lint",
     "tauri": "tauri",
-    "docs:build": "npm --prefix ./docs run build"
+    "docs:build": "npm --prefix ./docs run build",
+    "sync-version": "./scripts/sync-version.sh",
+    "ios-build": "npm run sync-version && pnpm tauri ios build --open"
   },
   "dependencies": {
     "@codemirror/commands": "^6.7.1",
@@ -73,11 +75,12 @@
     "lucide-react": "^0.561.0",
     "markdown-it": "^14.1.0",
     "mitt": "^3.0.1",
-    "next": "15.3.2",
+    "next": "^15.1.0",
     "next-intl": "^3.26.5",
     "next-themes": "^0.4.3",
     "openai": "^4.78.1",
     "pdfjs-dist": "^4.10.38",
+    "pinyin": "^4.0.0",
     "react": "19.1.0",
     "react-advanced-cropper": "^0.20.1",
     "react-dom": "19.1.0",

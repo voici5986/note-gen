@@ -28,9 +28,7 @@ interface ChatState {
 
   isLinkMark: boolean // 是否关联记录
   setIsLinkMark: (isLinkMark: boolean) => void
-
-  isPlaceholderEnabled: boolean // 是否启用AI提示占位符
-  setPlaceholderEnabled: (isEnabled: boolean) => void
+  initIsLinkMark: () => void // 初始化关联状态
 
   chats: Chat[]
   init: (tagId: number) => Promise<void> // 初始化 chats
@@ -70,6 +68,10 @@ interface ChatState {
   resetAgentState: () => void
   addAgentToolCall: (toolCall: ToolCall) => void
   updateAgentToolCall: (id: string, updates: Partial<ToolCall>) => void
+  
+  // Placeholder 状态
+  isPlaceholderEnabled: boolean
+  setPlaceholderEnabled: (enabled: boolean) => void
 }
 
 const useChatStore = create<ChatState>((set, get) => ({
@@ -79,14 +81,23 @@ const useChatStore = create<ChatState>((set, get) => ({
     set({ loading })
   },
 
-  isLinkMark: true,
+  isLinkMark: (typeof window !== 'undefined' ? localStorage.getItem('isLinkMark') === 'true' : true),
   setIsLinkMark: (isLinkMark: boolean) => {
     set({ isLinkMark })
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('isLinkMark', String(isLinkMark))
+    }
   },
-
-  isPlaceholderEnabled: true,
-  setPlaceholderEnabled: (isEnabled: boolean) => {
-    set({ isPlaceholderEnabled: isEnabled })
+  initIsLinkMark: () => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('isLinkMark')
+      if (stored === null) {
+        localStorage.setItem('isLinkMark', 'true')
+        set({ isLinkMark: true })
+      } else {
+        set({ isLinkMark: stored === 'true' })
+      }
+    }
   },
 
   chatMode: (typeof window !== 'undefined' ? localStorage.getItem('chatMode') as ChatMode : null) || 'chat',
@@ -99,6 +110,7 @@ const useChatStore = create<ChatState>((set, get) => ({
 
   agentState: {
     isRunning: false,
+    isThinking: false,
     currentThought: '',
     thoughtHistory: [],
     currentAction: undefined,
@@ -118,6 +130,7 @@ const useChatStore = create<ChatState>((set, get) => ({
     set({
       agentState: {
         isRunning: false,
+        isThinking: false,
         currentThought: '',
         thoughtHistory: [],
         currentAction: '',
@@ -151,6 +164,11 @@ const useChatStore = create<ChatState>((set, get) => ({
         )
       }
     })
+  },
+
+  isPlaceholderEnabled: true,
+  setPlaceholderEnabled: (enabled: boolean) => {
+    set({ isPlaceholderEnabled: enabled })
   },
 
   chats: [],

@@ -17,6 +17,7 @@ export class ReActAgent {
   private currentIteration = 0
   private toolCallCounter = 0
   private stopped = false
+  private abortController: AbortController | null = null
 
   constructor(config: ReActConfig) {
     this.config = config
@@ -27,13 +28,20 @@ export class ReActAgent {
 
   stop() {
     this.stopped = true
+    // 终止所有正在进行的异步操作
+    if (this.abortController) {
+      this.abortController.abort()
+      this.abortController = null
+    }
   }
 
-  async run(userInput: string, context?: string): Promise<string> {
+  async run(userInput: string, context?: string, imageUrls?: string[]): Promise<string> {
     this.steps = []
     this.currentIteration = 0
     this.toolCallCounter = 0
     this.stopped = false
+    // 创建新的 AbortController
+    this.abortController = new AbortController()
 
     const systemPrompt = this.buildSystemPrompt()
     let finalAnswer = ''
@@ -51,7 +59,7 @@ export class ReActAgent {
         this.config.onIterationStart?.()
       }
 
-      const thought = await this.think(userInput, context, systemPrompt)
+      const thought = await this.think(userInput, context, systemPrompt, imageUrls)
       
       // 再次检查是否已停止
       if (this.stopped) {
@@ -176,7 +184,7 @@ Final Answer: 已创建笔记"NoteGen介绍.md"
 现在开始执行任务！`
   }
 
-  private async think(userInput: string, context: string | undefined, systemPrompt: string): Promise<string> {
+  private async think(userInput: string, context: string | undefined, systemPrompt: string, imageUrls?: string[]): Promise<string> {
     const historyContext = this.steps.map((step, i) => 
       `Iteration ${i + 1}:
 Thought: ${step.thought}
@@ -202,15 +210,44 @@ ${userInput}
     try {
       const { fetchAiStream } = await import('@/lib/ai')
       let response = ''
+      let lastUpdateLength = 0
       
+      // 传递 AbortSignal 以支持终止，同时传递图片URL（仅在第一次迭代时）
+      const imagesForThisIteration = this.currentIteration === 1 ? imageUrls : undefined
       await fetchAiStream(prompt, (content) => {
+        // 检查是否已终止
+        if (this.stopped) {
+          return
+        }
+        
         response = content
-        // 实时更新思考内容
-        this.config.onThought?.(content)
-      })
+        
+        // 实时更新，但只在内容有实质性增长时更新（避免频繁更新）
+        if (content.length - lastUpdateLength > 10 || content.includes('Action:') || content.includes('Final Answer:')) {
+          this.config.onThought?.(content)
+          lastUpdateLength = content.length
+        }
+      }, this.abortController?.signal, undefined, undefined, undefined, imagesForThisIteration)
+      
+      // 检查是否已终止
+      if (this.stopped) {
+        return `Thought: 用户终止了任务
+Final Answer: 任务已被用户终止`
+      }
+      
+      // 确保最终内容被更新
+      if (response.length !== lastUpdateLength) {
+        this.config.onThought?.(response)
+      }
       
       return response
     } catch (error) {
+      // 检查是否是因为终止导致的错误
+      if (this.stopped || (error instanceof Error && error.name === 'AbortError')) {
+        return `Thought: 用户终止了任务
+Final Answer: 任务已被用户终止`
+      }
+      
       console.error('LLM API call failed:', error)
       // 如果 API 调用失败，返回错误提示
       return `Thought: 抱歉，AI 服务暂时不可用
@@ -232,6 +269,9 @@ Final Answer: 无法完成任务，请稍后重试或检查 AI 配置`
       
       if (inputMatch) {
         let jsonStr = inputMatch[1].trim()
+        
+        // 移除可能的标记符号（如 <|begin_of_box|> 和 <|end_of_box|>）
+        jsonStr = jsonStr.replace(/<\|begin_of_box\|>/g, '').replace(/<\|end_of_box\|>/g, '').trim()
         
         // 尝试找到完整的 JSON 对象
         let braceCount = 0
@@ -279,7 +319,6 @@ Final Answer: 无法完成任务，请稍后重试或检查 AI 配置`
           params = JSON.parse(jsonStr)
         } catch {
           // JSON 解析失败，尝试修复
-          console.warn('JSON parse failed, attempting repair:', jsonStr)
           
           // 移除末尾可能的不完整内容
           jsonStr = jsonStr.replace(/,\s*$/, '') // 移除末尾的逗号
@@ -338,6 +377,7 @@ Final Answer: 无法完成任务，请稍后重试或检查 AI 配置`
 
     if (tool.requiresConfirmation && this.config.requestConfirmation) {
       const confirmed = await this.config.requestConfirmation(toolName, params)
+      
       if (!confirmed) {
         toolCall.status = 'error'
         toolCall.result = {
@@ -360,7 +400,22 @@ Final Answer: 无法完成任务，请稍后重试或检查 AI 配置`
       this.config.onToolCall?.(toolCall)
 
       if (result.success) {
-        return result.message || `工具 ${toolName} 执行成功。${result.data ? `\n数据：${JSON.stringify(result.data, null, 2)}` : ''}`
+        let observation = result.message || `工具 ${toolName} 执行成功。`
+        
+        // 如果有数据，将其完整添加到观察结果中
+        // AI 需要看到完整数据才能生成准确的笔记
+        if (result.data) {
+          if (Array.isArray(result.data)) {
+            if (result.data.length > 0) {
+              observation += `\n\n数据详情：\n${JSON.stringify(result.data, null, 2)}`
+            }
+          } else {
+            // 对于对象数据，也格式化显示
+            observation += `\n\n数据详情：\n${JSON.stringify(result.data, null, 2)}`
+          }
+        }
+        
+        return observation
       } else {
         return `工具 ${toolName} 执行失败：${result.error}`
       }
