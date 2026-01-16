@@ -35,6 +35,21 @@ export interface Article {
   path: string
 }
 
+// 查找文件夹节点
+export const findFolderInTree = (path: string, tree: DirTree[]): DirTree | null => {
+  for (const item of tree) {
+    const itemPath = computedParentPath(item)
+    if (itemPath === path && item.isDirectory) {
+      return item
+    }
+    if (item.children && item.children.length > 0) {
+      const found = findFolderInTree(path, item.children)
+      if (found) return found
+    }
+  }
+  return null
+}
+
 interface NoteState {
   loading: boolean
   setLoading: (loading: boolean) => void
@@ -51,6 +66,7 @@ interface NoteState {
 
   sortType: SortType
   sortDirection: SortDirection
+  initSortSettings: () => Promise<void>
   setSortType: (sortType: SortType) => Promise<void>
   setSortDirection: (direction: SortDirection) => Promise<void>
   sortFileTree: (tree: DirTree[]) => DirTree[]
@@ -71,6 +87,7 @@ interface NoteState {
   newFolderInFolder: (path: string) => void
 
   collapsibleList: string[]
+  collapsibleListInitialized: boolean
   initCollapsibleList: () => Promise<void>
   setCollapsibleList: (name: string, value: boolean) => Promise<void>
   expandAllFolders: () => Promise<void>
@@ -95,6 +112,12 @@ interface NoteState {
   scheduleVectorCalculation: (path: string, content: string) => void
   executeVectorCalculation: () => Promise<void>
   cancelVectorCalculation: () => void
+  triggerVectorCalculation: () => Promise<void> // 手动触发向量计算
+  // 向量索引状态
+  vectorIndexedFiles: Map<string, number> // 文件名 -> 向量索引时间戳
+  checkFileVectorIndexed: (filename: string) => Promise<boolean>
+  clearFileVector: (filename: string) => Promise<void>
+  initVectorIndexedFiles: () => Promise<void> // 初始化向量索引状态
 
   allArticle: Article[]
   loadAllArticle: () => Promise<void>
@@ -106,6 +129,18 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
   sortType: 'none',
   sortDirection: 'asc',
+  initSortSettings: async () => {
+    const store = await Store.load('store.json')
+    const sortType = await store.get<SortType>('sortType')
+    const sortDirection = await store.get<SortDirection>('sortDirection')
+    if (sortType) set({ sortType })
+    if (sortDirection) set({ sortDirection })
+
+    // 如果需要按时间排序，加载统计信息
+    if (sortType === 'created' || sortType === 'modified') {
+      await get().loadFileStatsIfNeeded()
+    }
+  },
   setSortType: async (sortType: SortType) => {
     set({ sortType })
     const store = await Store.load('store.json')
@@ -143,33 +178,32 @@ const useArticleStore = create<NoteState>((set, get) => ({
     
     const sortedTree = cloneDeep(tree)
     
-    const sortFunction = (a: DirTree, b: DirTree) => {
-      if (a.isDirectory && !b.isDirectory) return -1
-      if (!a.isDirectory && b.isDirectory) return 1
-      
-      let result = 0
+    const compareItems = (a: DirTree, b: DirTree): number => {
       switch (sortType) {
         case 'name':
-          result = a.name.localeCompare(b.name)
-          break
+          return a.name.localeCompare(b.name)
         case 'created':
           if (a.createdAt && b.createdAt) {
-            result = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          } else {
-            result = a.name.localeCompare(b.name)
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           }
-          break
+          return a.name.localeCompare(b.name)
         case 'modified':
           if (a.modifiedAt && b.modifiedAt) {
-            result = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime()
-          } else {
-            result = a.name.localeCompare(b.name)
+            return new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime()
           }
-          break
+          return a.name.localeCompare(b.name)
         default:
-          result = 0
+          return 0
       }
-      
+    }
+
+    const sortFunction = (a: DirTree, b: DirTree) => {
+      // 文件夹始终在文件上方
+      if (a.isDirectory && !b.isDirectory) return -1
+      if (!a.isDirectory && b.isDirectory) return 1
+
+      // 同类型的进行排序
+      const result = compareItems(a, b)
       return sortDirection === 'asc' ? result : -result
     }
     
@@ -277,7 +311,12 @@ const useArticleStore = create<NoteState>((set, get) => ({
   loadFileTree: async () => {
     set({ fileTreeLoading: true })
     set({ fileTree: [] })
-    
+
+    // 确保 collapsibleList 已初始化
+    if (!get().collapsibleListInitialized) {
+      await get().initCollapsibleList()
+    }
+
     // 获取当前工作区路径
     const workspace = await getWorkspacePath()
     
@@ -408,10 +447,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
     // 排序文件树
     const sortedDirs = get().sortFileTree(dirs)
     set({ fileTree: sortedDirs })
-    
+
     // 先显示本地文件树
     set({ fileTreeLoading: false })
-    
+
+    // 初始化向量索引状态（异步，不阻塞界面）
+    get().initVectorIndexedFiles()
+
     // 异步加载远程同步文件（不阻塞界面）
     get().loadRemoteSyncFiles()
   },
@@ -912,15 +954,36 @@ const useArticleStore = create<NoteState>((set, get) => ({
   },
 
   collapsibleList: [],
+  collapsibleListInitialized: false,
   initCollapsibleList: async () => {
+    // 防止重复初始化
+    if (get().collapsibleListInitialized) {
+      return
+    }
+
     const store = await Store.load('store.json');
     const res = await store.get<string[]>('collapsibleList')
     const activeFilePath = await store.get<string>('activeFilePath')
+    set({
+      collapsibleList: res ? uniq(res.filter(item => !item.includes('.md'))) : [],
+      collapsibleListInitialized: true
+    })
+
     if (activeFilePath) {
       set({ activeFilePath })
-      get().readArticle(activeFilePath)
+
+      // 检查是否是文件夹（没有 .md 扩展名）
+      if (!activeFilePath.endsWith('.md') && !activeFilePath.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)) {
+        // 文件夹：确保展开并加载内容
+        if (!get().collapsibleList.includes(activeFilePath)) {
+          await get().setCollapsibleList(activeFilePath, true)
+        }
+        await get().loadCollapsibleFiles(activeFilePath)
+      } else {
+        // 文件：读取内容
+        get().readArticle(activeFilePath)
+      }
     }
-    set({ collapsibleList: res ? uniq(res.filter(item => !item.includes('.md'))) : [] })
   },
   
   setCollapsibleList: async (path: string, value: boolean) => {
@@ -1051,6 +1114,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
       set({ currentArticle: localContent })
       // 本地内容加载完成，解除加载状态
       get().setLoading(false)
+      // 检查文件的向量索引状态
+      const filename = actualPath.split('/').pop() || actualPath
+      get().checkFileVectorIndexed(filename)
     } catch (error) {
       // 本地文件不存在，检查是否是远程文件
       if (error instanceof Error && 
@@ -1162,6 +1228,8 @@ const useArticleStore = create<NoteState>((set, get) => ({
   isVectorCalculating: false,
   lastEditTime: 0,
   pendingVectorContent: null as { path: string; content: string } | null,
+  // 向量索引状态
+  vectorIndexedFiles: new Map<string, number>(), // 文件名 -> 向量索引时间戳
 
   setCurrentArticle: (content: string) => {
     set({ currentArticle: content })
@@ -1335,8 +1403,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
       // 如果向量数据库已启用，执行向量计算
       if (vectorStore.isVectorDbEnabled) {
         await vectorStore.processDocument(path, content)
+        // 更新向量索引状态
+        const filename = path.split('/').pop() || path
+        const newMap = new Map(get().vectorIndexedFiles)
+        newMap.set(filename, Date.now())
+        set({ vectorIndexedFiles: newMap })
       }
-      
+
       // 清除待处理内容和定时器
       if (state.vectorCalcTimer) {
         clearTimeout(state.vectorCalcTimer)
@@ -1367,12 +1440,90 @@ const useArticleStore = create<NoteState>((set, get) => ({
     if (state.vectorCalcProgressInterval) {
       clearInterval(state.vectorCalcProgressInterval)
     }
-    set({ 
+    set({
       vectorCalcTimer: null,
       vectorCalcProgressInterval: null,
       vectorCalcProgress: 0,
       pendingVectorContent: null
     })
+  },
+
+  // 检查文件是否已被向量索引
+  checkFileVectorIndexed: async (filename: string) => {
+    const { checkVectorDocumentExists, getVectorDocumentsByFilename } = await import('@/db/vector')
+    const hasVector = await checkVectorDocumentExists(filename)
+    if (hasVector) {
+      // 获取向量文档记录更新时间
+      const docs = await getVectorDocumentsByFilename(filename)
+      if (docs.length > 0) {
+        const latestTime = Math.max(...docs.map(d => d.updated_at))
+        const newMap = new Map(get().vectorIndexedFiles)
+        newMap.set(filename, latestTime)
+        set({ vectorIndexedFiles: newMap })
+        return true
+      }
+    }
+    // 如果没有向量，从映射中移除
+    const newMap = new Map(get().vectorIndexedFiles)
+    newMap.delete(filename)
+    set({ vectorIndexedFiles: newMap })
+    return false
+  },
+
+  // 清除文件的向量数据
+  clearFileVector: async (filename: string) => {
+    const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+    await deleteVectorDocumentsByFilename(filename)
+    // 从映射中移除
+    const newMap = new Map(get().vectorIndexedFiles)
+    newMap.delete(filename)
+    set({ vectorIndexedFiles: newMap })
+  },
+
+  // 初始化向量索引状态 - 加载所有已索引的文件
+  initVectorIndexedFiles: async () => {
+    try {
+      const { getAllVectorDocumentFilenames, getVectorDocumentsByFilename } = await import('@/db/vector')
+      const indexedFiles = await getAllVectorDocumentFilenames()
+
+      // 构建 vectorIndexedFiles Map
+      const vectorIndexedMap = new Map<string, number>()
+      for (const file of indexedFiles) {
+        const docs = await getVectorDocumentsByFilename(file.filename)
+        if (docs.length > 0) {
+          const latestTime = Math.max(...docs.map(d => d.updated_at))
+          vectorIndexedMap.set(file.filename, latestTime)
+        }
+      }
+
+      set({ vectorIndexedFiles: vectorIndexedMap })
+    } catch (error) {
+      console.error('初始化向量索引状态失败:', error)
+    }
+  },
+
+  // 手动触发向量计算（使用当前文章内容）
+  triggerVectorCalculation: async () => {
+    const state = get()
+    if (!state.activeFilePath || state.isVectorCalculating) {
+      return
+    }
+
+    // 使用当前文章内容
+    const content = state.currentArticle
+    if (!content) {
+      return
+    }
+
+    // 设置待处理内容并执行
+    set({
+      pendingVectorContent: {
+        path: state.activeFilePath,
+        content
+      }
+    })
+
+    await get().executeVectorCalculation()
   },
 
   allArticle: [],

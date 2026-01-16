@@ -85,6 +85,96 @@
           "save": "保存",
           "cancel": "取消"
         },
+        "customTheme": {
+          "title": "自定义主题颜色",
+          "desc": "自定义应用的主题颜色，包括背景色、前景色、边框色等",
+          "button": "编辑颜色",
+          "dialogTitle": "自定义主题颜色",
+          "dialogDesc": "配置自定义主题颜色。颜色更改会实时保存并生效，同时覆盖亮色和暗色主题。",
+          "close": "关闭",
+          "reset": "重置全部",
+          "tabs": {
+            "custom": "自定义",
+            "presets": "预设方案",
+            "importExport": "导入导出"
+          },
+          "export": {
+            "title": "导出配色方案",
+            "button": "生成导出代码",
+            "placeholder": "点击生成按钮将当前配色导出为代码"
+          },
+          "import": {
+            "title": "导入配色方案",
+            "button": "导入配色",
+            "placeholder": "粘贴配色方案的 JSON 代码"
+          },
+          "colors": {
+            "background": "背景色",
+            "foreground": "前景色",
+            "card": "卡片背景色",
+            "cardForeground": "卡片前景色",
+            "primary": "主色调",
+            "primaryForeground": "主色调前景色",
+            "secondary": "次要色调",
+            "secondaryForeground": "次要色调前景色",
+            "third": "第三色调",
+            "thirdForeground": "第三色调前景色",
+            "muted": "柔和色",
+            "mutedForeground": "柔和色前景色",
+            "accent": "强调色",
+            "accentForeground": "强调色前景色",
+            "border": "边框色",
+            "shadow": "阴影色"
+          },
+          "presets": {
+            "apply": "应用",
+            "reset": {
+              "name": "恢复默认"
+            },
+            "default": {
+              "name": "默认白色"
+            },
+            "ocean": {
+              "name": "海洋蓝"
+            },
+            "forest": {
+              "name": "森林绿"
+            },
+            "sunset": {
+              "name": "日落红"
+            },
+            "lavender": {
+              "name": "薰衣草紫"
+            },
+            "midnight": {
+              "name": "午夜暗"
+            },
+            "deepSea": {
+              "name": "深海蓝"
+            },
+            "darkForest": {
+              "name": "暗夜绿"
+            },
+            "darkViolet": {
+              "name": "紫罗兰暗"
+            },
+            "coralWarm": {
+              "name": "珊瑚暖"
+            },
+            "slateGray": {
+              "name": "石板灰"
+            },
+            "darkGold": {
+              "name": "暗夜金"
+            },
+            "beigeWarm": {
+              "name": "米黄暖"
+            },
+            "beigeDark": {
+              "name": "米黄暗"
+            }
+          }
+        },
         "tray": {
           "enabled": {
             "title": "启用托盘",
@@ -248,7 +338,7 @@
       "noModel": "不使用模型",
       "placeholder": "请选择或搜索模型",
       "mainModel": "主要模型",
-      "options" : {
+      "options": {
         "primaryModel": {
           "title": "主要模型",
           "desc": "作为所有场景的主要模型，如果其他对话模型未选择默认模型，则使用此模型。"
@@ -775,7 +865,7 @@
         "noResults": "未找到结果"
       },
       "info": {
-        "title": "工作区说明", 
+        "title": "工作区说明",
         "desc": "更改工作区后需要重启应用程序才能完全生效。新工作区中的文件将在重启后显示。"
       },
       "toast": {
@@ -842,6 +932,7 @@
         "recording": "录音",
         "file": "文件",
         "link": "链接",
+        "pdf": "PDF",
         "upload": "上传记录",
         "download": "下载记录",
         "uploadTo": "从本地同步到 {provider}",
@@ -922,6 +1013,8 @@
             "thinking": "思考中",
             "acting": "执行中",
             "observation": "观察结果",
+            "thought": "思考",
+            "action": "行动",
             "toolCalls": "工具调用",
             "confirmation": {
               "title": "确认操作",
@@ -1071,6 +1164,9 @@
         "image": "上传图片",
         "link": "记录链接",
         "file": "上传文件"
+      },
+      "list": {
+        "title": "记录"
       }
     },
     "chat": {
@@ -1166,8 +1262,11 @@
         "agent": {
           "running": "Agent 运行中",
           "thinking": "思考中",
+          "analyzingRequest": "Agent 正在分析您的请求...",
           "acting": "执行中",
           "observation": "观察结果",
+          "thought": "思考",
+          "action": "行动",
           "toolCalls": "工具调用",
           "confirmation": {
             "title": "确认操作",
@@ -1424,7 +1523,32 @@
         "syncFolderError": "文件夹同步失败",
         "syncFolderProgress": "正在同步文件夹...",
         "deleteSyncFileSuccess": "删除成功",
-        "deleteSyncFileError": "删除失败"
+        "deleteSyncFileError": "删除失败",
+        "knowledgeBase": "知识库",
+        "calculateVectors": "计算向量",
+        "updateVectors": "更新向量",
+        "deleteVectors": "删除向量",
+        "includeInKB": "包含在知识库",
+        "includeInKBFile": "包含在知识库中",
+        "autoVectorCalc": "自动向量计算",
+        "vectorCalculated": "向量已更新",
+        "vectorCalcCompleted": "向量计算完成",
+        "vectorCalcFailed": "向量计算失败",
+        "vectorDeleted": "向量已删除",
+        "vectorDeleteFailed": "删除向量失败",
+        "batchCalcSuccess": "成功计算 {count} 个文件的向量",
+        "batchCalcPartial": "计算完成：成功 {success} 个，失败 {failed} 个",
+        "batchCalcFailed": "批量计算向量失败",
+        "batchDeleteSuccess": "成功删除 {count} 个文件的向量",
+        "batchDeletePartial": "删除完成：成功 {success} 个，失败 {failed} 个",
+        "batchDeleteFailed": "批量删除向量失败",
+        "noMarkdownFiles": "文件夹中没有 Markdown 文件",
+        "includedInKB": "已包含在知识库中",
+        "excludedFromKB": "已从知识库中排除",
+        "autoCalcEnabled": "已启用自动向量计算",
+        "autoCalcDisabled": "已禁用自动向量计算",
+        "settingFailed": "设置失败",
+        "confirmDeleteVectors": "确定要删除 {count} 个文件的向量吗？"
       },
       "error": {
         "fileExists": "文件名已存在"
@@ -1539,10 +1663,16 @@
         "quickSync": "快速同步"
       },
       "vectorCalc": {
-        "tooltip": "向量计算：编辑完成30秒后自动计算，或点击立即计算",
-        "calculating": "计算中",
-        "pending": "待计算 {progress}%",
-        "synced": "已同步"
+        "tooltip": {
+          "default": "向量索引状态",
+          "none": "点击开始向量计算",
+          "indexed": "已索引",
+          "pending": "待更新，点击立即计算",
+          "calculating": "计算中..."
+        },
+        "status": {
+          "calculating": "计算中"
+        }
       }
     }
   },

@@ -831,6 +831,7 @@
         "recording": "Gravação",
         "file": "Arquivo",
         "link": "Vínculo",
+        "pdf": "PDF",
         "upload": "Upload de Registro",
         "download": "Download de Registro",
         "uploadTo": "Sincronizar do local para {provider}",
@@ -890,6 +891,29 @@
           "text": "Texto"
         },
         "chat": {
+          "modeSelect": {
+            "chat": "Chat",
+            "agent": "Agente"
+          },
+          "agent": {
+            "running": "Agente em Execução",
+            "thinking": "Pensando",
+            "acting": "Agindo",
+            "observation": "Observação",
+            "toolCalls": "Chamadas de Ferramenta",
+            "thought": "Pensamento",
+            "action": "Ação",
+            "confirmation": {
+              "title": "Confirmar Ação",
+              "description": "O agente deseja executar a seguinte ação. Por favor, confirme para continuar.",
+              "tool": "Ferramenta",
+              "parameters": "Parâmetros",
+              "cancel": "Cancelar",
+              "confirm": "Confirmar",
+              "confirmed": "Confirmado",
+              "cancelled": "Cancelado"
+            }
+          },
           "placeholder": {
             "default": "Faça perguntas ou organize suas notas em um artigo...",
             "noApiKey": "Chave de API não configurada, recurso de chat com IA indisponível..."
@@ -912,17 +936,7 @@
             }
           },
           "messageControl": {
-            "words": "palavras",
-            "confirmation": {
-              "title": "Confirmar Ação",
-              "description": "O agente deseja executar a seguinte ação. Por favor, confirme para continuar.",
-              "tool": "Ferramenta",
-              "parameters": "Parâmetros",
-              "cancel": "Cancelar",
-              "confirm": "Confirmar",
-              "confirmed": "Confirmado",
-              "cancelled": "Cancelado"
-            }
+            "words": "palavras"
           },
           "mcp": {
             "maxIterationsReached": "Número máximo de iterações de chamada de ferramenta atingido",
@@ -1048,6 +1062,9 @@
         "image": "Carregar Imagem",
         "link": "Gravar Link",
         "file": "Carregar Arquivo"
+      },
+      "list": {
+        "title": "Registros"
       }
     },
     "chat": {
@@ -1156,6 +1173,24 @@
           "agentDescription": "Assistente inteligente, pode executar ações"
         },
         "attachImage": "Anexar imagens",
+        "agent": {
+          "running": "Agente em Execução",
+          "thinking": "Pensando",
+          "analyzingRequest": "O agente está analisando sua solicitação...",
+          "acting": "Agindo",
+          "observation": "Observação",
+          "toolCalls": "Chamadas de Ferramenta",
+          "thought": "Pensamento",
+          "action": "Ação",
+          "confirmation": {
+            "title": "Confirmar Ação",
+            "description": "O agente deseja executar a seguinte ação. Por favor, confirme para continuar.",
+            "tool": "Ferramenta",
+            "parameters": "Parâmetros",
+            "cancel": "Cancelar",
+            "confirm": "Confirmar"
+          }
+        },
         "imageSelector": {
           "title": "Selecionar Imagens",
           "local": "Arquivos Locais",
@@ -1379,7 +1414,32 @@
         "syncFolderError": "Erro ao sincronizar pasta",
         "syncFolderProgress": "Sincronizando pasta...",
         "deleteSyncFileSuccess": "Sucesso ao Excluir Arquivo Sincronizado",
-        "deleteSyncFileError": "Erro ao Excluir Arquivo Sincronizado"
+        "deleteSyncFileError": "Erro ao Excluir Arquivo Sincronizado",
+        "knowledgeBase": "Base de Conhecimento",
+        "calculateVectors": "Calcular Vetores",
+        "updateVectors": "Atualizar Vetores",
+        "deleteVectors": "Excluir Vetores",
+        "includeInKB": "Incluir na Base de Conhecimento",
+        "includeInKBFile": "Incluir na Base de Conhecimento",
+        "autoVectorCalc": "Cálculo Automático de Vetores",
+        "vectorCalculated": "Vetor Atualizado",
+        "vectorCalcCompleted": "Cálculo de Vetor Concluído",
+        "vectorCalcFailed": "Falha no Cálculo de Vetor",
+        "vectorDeleted": "Vetor Excluído",
+        "vectorDeleteFailed": "Falha ao Excluir Vetor",
+        "batchCalcSuccess": "Vetores calculados com sucesso para {count} arquivos",
+        "batchCalcPartial": "Cálculo concluído: {success} succeeded, {failed} failed",
+        "batchCalcFailed": "Falha no cálculo em lote de vetores",
+        "batchDeleteSuccess": "Vetores excluídos com sucesso para {count} arquivos",
+        "batchDeletePartial": "Exclusão concluída: {success} succeeded, {failed} failed",
+        "batchDeleteFailed": "Falha na exclusão em lote de vetores",
+        "noMarkdownFiles": "Nenhum arquivo Markdown na pasta",
+        "includedInKB": "Incluído na Base de Conhecimento",
+        "excludedFromKB": "Excluído da Base de Conhecimento",
+        "autoCalcEnabled": "Cálculo automático de vetores habilitado",
+        "autoCalcDisabled": "Cálculo automático de vetores desabilitado",
+        "settingFailed": "Falha na configuração",
+        "confirmDeleteVectors": "Tem certeza de que deseja excluir vetores de {count} arquivos?"
       },
       "error": {
         "fileExists": "O nome do arquivo já existe"
@@ -1523,10 +1583,16 @@
         "quickSync": "Sincronização Rápida"
       },
       "vectorCalc": {
-        "tooltip": "Cálculo Vetorial: Cálculo automático 30s após a edição, ou clique para calcular agora",
-        "calculating": "Calculando",
-        "pending": "Pendente {progress}%",
-        "synced": "Sincronizado"
+        "tooltip": {
+          "default": "Status do Índice Vetorial",
+          "none": "Clique para iniciar o cálculo vetorial",
+          "indexed": "Indexado",
+          "pending": "Atualização pendente, clique para calcular agora",
+          "calculating": "Calculando..."
+        },
+        "status": {
+          "calculating": "Calculando"
+        }
       }
     }
   },

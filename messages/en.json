@@ -74,6 +74,96 @@
           "save": "Save",
           "cancel": "Cancel"
         },
+        "customTheme": {
+          "title": "Custom Theme Colors",
+          "desc": "Customize application theme colors including background, foreground, border, etc.",
+          "button": "Edit Colors",
+          "dialogTitle": "Custom Theme Colors",
+          "dialogDesc": "Configure custom theme colors. Color changes are saved and applied in real-time, overriding both light and dark themes.",
+          "close": "Close",
+          "reset": "Reset All",
+          "tabs": {
+            "custom": "Custom",
+            "presets": "Presets",
+            "importExport": "Import/Export"
+          },
+          "export": {
+            "title": "Export Color Scheme",
+            "button": "Generate Export Code",
+            "placeholder": "Click the generate button to export current color scheme as code"
+          },
+          "import": {
+            "title": "Import Color Scheme",
+            "button": "Import Scheme",
+            "placeholder": "Paste the JSON code of the color scheme"
+          },
+          "colors": {
+            "background": "Background",
+            "foreground": "Foreground",
+            "card": "Card Background",
+            "cardForeground": "Card Foreground",
+            "primary": "Primary",
+            "primaryForeground": "Primary Foreground",
+            "secondary": "Secondary",
+            "secondaryForeground": "Secondary Foreground",
+            "third": "Third",
+            "thirdForeground": "Third Foreground",
+            "muted": "Muted",
+            "mutedForeground": "Muted Foreground",
+            "accent": "Accent",
+            "accentForeground": "Accent Foreground",
+            "border": "Border",
+            "shadow": "Shadow"
+          },
+          "presets": {
+            "apply": "Apply",
+            "reset": {
+              "name": "Reset to Default"
+            },
+            "default": {
+              "name": "Default White"
+            },
+            "ocean": {
+              "name": "Ocean Blue"
+            },
+            "forest": {
+              "name": "Forest Green"
+            },
+            "sunset": {
+              "name": "Sunset Red"
+            },
+            "lavender": {
+              "name": "Lavender Purple"
+            },
+            "midnight": {
+              "name": "Midnight Dark"
+            },
+            "deepSea": {
+              "name": "Deep Sea"
+            },
+            "darkForest": {
+              "name": "Dark Forest"
+            },
+            "darkViolet": {
+              "name": "Dark Violet"
+            },
+            "coralWarm": {
+              "name": "Coral Warm"
+            },
+            "slateGray": {
+              "name": "Slate Gray"
+            },
+            "darkGold": {
+              "name": "Dark Gold"
+            },
+            "beigeWarm": {
+              "name": "Beige Warm"
+            },
+            "beigeDark": {
+              "name": "Beige Dark"
+            }
+          }
+        },
         "tray": {
           "enabled": {
             "title": "Enable Tray",
@@ -624,11 +714,8 @@
       "windowPin": "Window Pin"
     },
     "theme": {
-      "title": "Appearance",
-      "appTheme": "Application theme",
-      "previewTheme": "Preview content theme",
-      "codeTheme": "Code block highlight theme",
-      "selectTheme": "Select Theme"
+      "title": "Theme Settings",
+      "desc": "Customize application theme colors"
     },
     "dev": {
       "title": "Developer",
@@ -828,6 +915,7 @@
         "recording": "Recording",
         "file": "File",
         "link": "Link",
+        "pdf": "PDF",
         "upload": "Upload Record",
         "download": "Download Record",
         "uploadTo": "Sync from local to {provider}",
@@ -901,6 +989,8 @@
             "thinking": "Thinking",
             "acting": "Acting",
             "observation": "Observation",
+            "thought": "Thought",
+            "action": "Action",
             "toolCalls": "Tool Calls",
             "confirmation": {
               "title": "Confirm Action",
@@ -1042,6 +1132,9 @@
         "organizeSuccess": "Notes organized successfully: {title}",
         "organizeError": "Failed to organize notes",
         "currentTag": "Current Tag"
+      },
+      "list": {
+        "title": "Records"
       }
     },
     "chat": {
@@ -1169,8 +1262,11 @@
         "agent": {
           "running": "Agent Running",
           "thinking": "Thinking",
+          "analyzingRequest": "Agent is analyzing your request...",
           "acting": "Acting",
           "observation": "Observation",
+          "thought": "Thought",
+          "action": "Action",
           "toolCalls": "Tool Calls",
           "confirmation": {
             "title": "Confirm Action",
@@ -1401,7 +1497,32 @@
         "syncFolderError": "Sync folder error",
         "syncFolderProgress": "Syncing folder...",
         "deleteSyncFileSuccess": "Delete Sync File Success",
-        "deleteSyncFileError": "Delete Sync File Error"
+        "deleteSyncFileError": "Delete Sync File Error",
+        "knowledgeBase": "Knowledge Base",
+        "calculateVectors": "Calculate Vectors",
+        "updateVectors": "Update Vectors",
+        "deleteVectors": "Delete Vectors",
+        "includeInKB": "Include in Knowledge Base",
+        "includeInKBFile": "Include in Knowledge Base",
+        "autoVectorCalc": "Auto Vector Calculation",
+        "vectorCalculated": "Vector Updated",
+        "vectorCalcCompleted": "Vector Calculation Completed",
+        "vectorCalcFailed": "Vector Calculation Failed",
+        "vectorDeleted": "Vector Deleted",
+        "vectorDeleteFailed": "Delete Vector Failed",
+        "batchCalcSuccess": "Successfully calculated vectors for {count} files",
+        "batchCalcPartial": "Calculation completed: {success} succeeded, {failed} failed",
+        "batchCalcFailed": "Batch vector calculation failed",
+        "batchDeleteSuccess": "Successfully deleted vectors for {count} files",
+        "batchDeletePartial": "Deletion completed: {success} succeeded, {failed} failed",
+        "batchDeleteFailed": "Batch vector deletion failed",
+        "noMarkdownFiles": "No Markdown files in folder",
+        "includedInKB": "Included in Knowledge Base",
+        "excludedFromKB": "Excluded from Knowledge Base",
+        "autoCalcEnabled": "Auto vector calculation enabled",
+        "autoCalcDisabled": "Auto vector calculation disabled",
+        "settingFailed": "Setting failed",
+        "confirmDeleteVectors": "Are you sure you want to delete vectors for {count} files?"
       },
       "error": {
         "fileExists": "File name already exists"
@@ -1554,10 +1675,16 @@
         "quickSync": "Quick Sync"
       },
       "vectorCalc": {
-        "tooltip": "Vector Calculation: Auto-calculate 30s after editing, or click to calculate now",
-        "calculating": "Calculating",
-        "pending": "Pending {progress}%",
-        "synced": "Synced"
+        "tooltip": {
+          "default": "Vector Index Status",
+          "none": "Click to start vector calculation",
+          "indexed": "Indexed",
+          "pending": "Pending update, click to calculate now",
+          "calculating": "Calculating..."
+        },
+        "status": {
+          "calculating": "Calculating"
+        }
       }
     }
   },

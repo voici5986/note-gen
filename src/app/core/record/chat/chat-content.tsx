@@ -4,7 +4,7 @@ import { ArrowDownToLine, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Chat } from '@/db/chats'
 import ChatPreview from './chat-preview'
-import './chat.scss'
+import './chat.css'
 import { NoteOutput } from './message-control/note-output'
 import { MarkText } from './message-control/mark-text'
 import { ChatClipboard } from './chat-clipboard'
@@ -114,7 +114,7 @@ function MessageWrapper({ chat, children }: { chat: Chat, children: React.ReactN
   // AI 消息：左对齐，无边框，无图标
   return (
     <div className="flex w-full min-w-0">
-      <div className='text-sm leading-6 flex-1 break-words min-w-0 overflow-hidden'>
+      <div className='text-sm leading-6 flex-1 word-break min-w-0 overflow-hidden'>
         {children}
       </div>
     </div>
@@ -230,7 +230,11 @@ function Message({ chat }: { chat: Chat }) {
         <div className="w-full">
           {/* Agent 执行历史 - 显示保存的历史记录 */}
           {chat.role === 'system' && chat.agentHistory && (
-            <AgentHistory historyJson={chat.agentHistory} />
+            <div className="flex w-full min-w-0">
+              <div className='text-sm leading-6 flex-1 wrap-break-word min-w-0 overflow-hidden'>
+                <AgentHistory historyJson={chat.agentHistory} />
+              </div>
+            </div>
           )}
           
           {/* MCP 工具调用展示 */}

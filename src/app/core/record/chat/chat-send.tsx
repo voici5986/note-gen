@@ -9,9 +9,9 @@ import { TooltipButton } from "@/components/tooltip-button"
 import { useImperativeHandle, forwardRef, useRef } from "react"
 import { useTranslations } from "next-intl"
 import useVectorStore from "@/stores/vector"
-import { getContextForQuery } from '@/lib/rag'
+import { getContextForQuery, getContextForQueryInFolder } from '@/lib/rag'
 import { invoke } from "@tauri-apps/api/core"
-import { MarkdownFile } from "@/lib/files"
+import { LinkedResource, isLinkedFolder } from "@/lib/files"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { getFilePathOptions, getWorkspacePath } from "@/lib/workspace"
 import { useMcpStore } from "@/stores/mcp"
@@ -31,12 +31,12 @@ interface QuoteData {
 interface ChatSendProps {
   inputValue: string;
   onSent?: () => void;
-  linkedFile?: MarkdownFile | null;
+  linkedResource?: LinkedResource | null;
   attachedImages?: ImageAttachment[];
   quoteData?: QuoteData | null;
 }
 
-export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ inputValue, onSent, linkedFile, attachedImages = [], quoteData = null }, ref) => {
+export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ inputValue, onSent, linkedResource, attachedImages = [], quoteData = null }, ref) => {
   const { primaryModel } = useSettingStore()
   const { currentTagId } = useTagStore()
   const { insert, loading, setLoading, saveChat, chats, chatMode, setAgentState } = useChatStore()
@@ -90,7 +90,7 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
     // 每次都创建新的 AgentHandler，使用当前的 placeholderMessage
     const agentHandler = new AgentHandler({
       requestConfirmation,
-      onComplete: async (result, steps) => {
+      onComplete: async (result, steps, stopped) => {
         // 获取 Agent 执行历史，保存完整的 ReAct 步骤
         const { agentState } = useChatStore.getState()
         const agentHistory = {
@@ -98,14 +98,30 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
           toolCalls: agentState.toolCalls,
           iterations: agentState.currentIteration,
         }
-        
+
+        // 如果是被终止的，构建包含终止信息的消息
+        let finalContent = result
+        if (stopped) {
+          // 保留已产生的步骤，并添加终止信息
+          const stepCount = steps?.length || 0
+          if (stepCount > 0) {
+            // 有已完成的步骤，显示这些步骤的内容
+            finalContent = `${t('record.chat.input.stopped')}\n\n已完成 ${stepCount} 个步骤：\n${steps!.map((step, i) =>
+              `${i + 1}. ${step.action?.tool || '思考'}`
+            ).join('\n')}`
+          } else {
+            // 没有已完成步骤，显示简单的终止信息
+            finalContent = t('record.chat.input.stopped')
+          }
+        }
+
         // 更新占位消息
         await saveChat({
           ...placeholderMessage,
-          content: result,
+          content: finalContent,
           agentHistory: JSON.stringify(agentHistory),
         }, true)
-        
+
         // 清空 ref
         agentHandlerRef.current = null
       },
@@ -115,7 +131,7 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
           ...placeholderMessage,
           content: `Error: ${error}`,
         }, true)
-        
+
         // 清空 ref
         agentHandlerRef.current = null
       },
@@ -227,19 +243,19 @@ ${fullContent}
     }
     
     // 如果有关联文件，读取文件内容
-    if (linkedFile) {
+    if (linkedResource && !isLinkedFolder(linkedResource)) {
       try {
         const workspace = await getWorkspacePath()
         if (workspace.isCustom) {
-          linkedFileContent = await readTextFile(linkedFile.path)
+          linkedFileContent = await readTextFile(linkedResource.path)
         } else {
-          const { path, baseDir } = await getFilePathOptions(linkedFile.path)
+          const { path, baseDir } = await getFilePathOptions(linkedResource.path)
           linkedFileContent = await readTextFile(path, { baseDir })
         }
-        
+
         if (linkedFileContent) {
           linkedFileContent = `
-The following is the content of the linked file "${linkedFile.name}" (${linkedFile.relativePath}):
+The following is the content of the linked file "${linkedResource.name}" (${linkedResource.relativePath}):
 ${linkedFileContent}
 `
         }
@@ -247,17 +263,27 @@ ${linkedFileContent}
         console.error('Failed to read linked file:', error)
       }
     }
-    
+
     // 如果启用RAG，获取相关上下文
     if (isRagEnabled) {
       try {
         // 基于TextRank算法提取前3个关键词
         const keywords = await invoke<{text: string, weight: number}[]>('rank_keywords', { text: inputValue, topK: 5 })
-        // 获取相关文档内容
-        const ragResult = await getContextForQuery(keywords)
+
+        // 根据关联资源类型选择检索方式
+        let ragResult: { context: string; sources: string[] }
+
+        if (linkedResource && isLinkedFolder(linkedResource)) {
+          // 文件夹关联：限定检索范围到文件夹
+          ragResult = await getContextForQueryInFolder(keywords, linkedResource.relativePath)
+        } else {
+          // 文件关联或无关联：全局检索
+          ragResult = await getContextForQuery(keywords)
+        }
+
         ragContext = ragResult.context
         ragSources = ragResult.sources
-        
+
         if (ragContext) {
           // 如果获取到了相关内容，将其作为独立部分添加到请求中
           ragContext = `
@@ -365,25 +391,15 @@ ${ragContext}
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-    
+
     // 停止 Agent 执行
     if (agentHandlerRef.current) {
       agentHandlerRef.current.stop()
-      agentHandlerRef.current = null
+      // 不立即清空 ref，等待 Agent 的错误处理完成并调用 onComplete
     }
-    
+
     // 重置 loading 状态
     setLoading(false)
-    
-    // 保存终止消息
-    const lastChat = chats[chats.length - 1]
-    if (lastChat && lastChat.role === 'system') {
-      // 如果最后一条消息是系统消息，更新为终止消息
-      await saveChat({
-        ...lastChat,
-        content: t('record.chat.input.stopped'),
-      }, true)
-    }
   }
 
   return (

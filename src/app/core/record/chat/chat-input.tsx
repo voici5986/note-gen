@@ -17,7 +17,7 @@ import { ChatSend } from "./chat-send"
 import { LinkedFileDisplay } from "./file-link"
 import { FileSelector } from "./file-selector"
 import { ChatModeSelect } from "./chat-mode-select"
-import { MarkdownFile } from "@/lib/files"
+import { LinkedResource, MarkdownFile, LinkedFolder } from "@/lib/files"
 import emitter from "@/lib/emitter"
 import { ChatSettingsDrawer } from "@/app/mobile/chat/components/chat-settings-drawer"
 import { ChatToolsDrawer } from "@/app/mobile/chat/components/chat-tools-drawer"
@@ -31,6 +31,7 @@ import { QuoteDisplay } from "./quote-display"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { writeFile } from "@tauri-apps/plugin-fs"
 import { BaseDirectory } from "@tauri-apps/plugin-fs"
+import { ShineBorder } from "@/components/ui/shine-border"
 import {
   DndContext,
   closestCenter,
@@ -60,7 +61,8 @@ export function ChatInput() {
   const t = useTranslations()
   const [inputHistory, setInputHistory] = useLocalStorage<string[]>('chat-input-history', [])
   const [historyIndex, setHistoryIndex] = useState(-1)
-  const [linkedFile, setLinkedFile] = useState<MarkdownFile | null>(null)
+  const [tempInput, setTempInput] = useState('')
+  const [linkedResource, setLinkedResource] = useState<LinkedResource | null>(null)
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([])
   const [quoteData, setQuoteData] = useState<{
     quote: string
@@ -98,11 +100,15 @@ export function ChatInput() {
   }
 
   // 处理历史记录导航
-  function navigateHistory(direction: 'up' | 'down') {
+  function navigateHistory(direction: 'up' | 'down', currentText: string) {
     if (!inputHistory || inputHistory.length === 0) return
 
     let newIndex: number
     if (direction === 'up') {
+      // 保存当前输入内容（第一次向上时）
+      if (historyIndex === -1) {
+        setTempInput(currentText)
+      }
       newIndex = historyIndex + 1
       if (newIndex >= inputHistory.length) {
         newIndex = inputHistory.length - 1
@@ -115,9 +121,10 @@ export function ChatInput() {
     }
 
     setHistoryIndex(newIndex)
-    
+
     if (newIndex === -1) {
-      setText('')
+      // 恢复到原本输入的内容
+      setText(tempInput)
     } else {
       setText(inputHistory[newIndex])
     }
@@ -125,7 +132,7 @@ export function ChatInput() {
 
   // 移除关联文件
   function removeLinkedFile() {
-    setLinkedFile(null)
+    setLinkedResource(null)
   }
 
   function removeImage(id: string) {
@@ -384,7 +391,10 @@ export function ChatInput() {
       setText(event as string)
     })
     emitter.on('fileSelected', (event: unknown) => {
-      setLinkedFile(event as MarkdownFile)
+      setLinkedResource(event as MarkdownFile)
+    })
+    emitter.on('folderSelected', (event: unknown) => {
+      setLinkedResource(event as LinkedFolder)
     })
     emitter.on('insert-quote', (event: unknown) => {
       const data = event as {
@@ -405,17 +415,25 @@ export function ChatInput() {
     return () => {
       emitter.off('revertChat')
       emitter.off('fileSelected')
+      emitter.off('folderSelected')
       emitter.off('insert-quote')
     }
   }, [debouncedGenPlaceholder])
 
-  // 自动关联当前打开的 markdown 文件
+  // 自动关联当前打开的 markdown 文件或文件夹
   useEffect(() => {
-    async function linkCurrentFile() {
-      if (activeFilePath && activeFilePath.endsWith('.md')) {
-        const workspace = await getWorkspacePath()
+    async function linkCurrentResource() {
+      if (!activeFilePath) {
+        setLinkedResource(null)
+        return
+      }
+
+      const workspace = await getWorkspacePath()
+
+      if (activeFilePath.endsWith('.md')) {
+        // 文件关联逻辑
         const fileName = activeFilePath.split('/').pop() || activeFilePath
-        
+
         // 构建完整路径
         let fullPath: string
         if (workspace.isCustom) {
@@ -424,27 +442,58 @@ export function ChatInput() {
         } else {
           fullPath = activeFilePath
         }
-        
-        setLinkedFile({
+
+        setLinkedResource({
           name: fileName,
           path: fullPath,
           relativePath: activeFilePath
         })
       } else {
-        // 如果没有打开的文件，清除关联
-        setLinkedFile(null)
+        // 文件夹关联逻辑 - 只有在有索引文件时才关联
+        const folderName = activeFilePath.split('/').pop() || activeFilePath
+
+        // 构建完整路径
+        let fullPath: string
+        if (workspace.isCustom) {
+          const pathParts = activeFilePath.split('/')
+          fullPath = workspace.path + '/' + pathParts.join('/')
+        } else {
+          fullPath = activeFilePath
+        }
+
+        // 计算文件夹中的文件数量和索引状态
+        const { collectMarkdownFiles } = await import('@/lib/files')
+        const files = await collectMarkdownFiles(activeFilePath)
+        const { vectorIndexedFiles } = useArticleStore.getState()
+        const indexedCount = files.filter(f =>
+          vectorIndexedFiles.has(f.name)
+        ).length
+
+        // 只有在有索引文件时才关联文件夹
+        if (indexedCount > 0) {
+          setLinkedResource({
+            name: folderName,
+            path: fullPath,
+            relativePath: activeFilePath,
+            fileCount: files.length,
+            indexedCount: indexedCount
+          })
+        } else {
+          // 没有索引文件，清除关联
+          setLinkedResource(null)
+        }
       }
     }
-    
-    linkCurrentFile()
+
+    linkCurrentResource()
   }, [activeFilePath])
 
   // 当关联文件变化时，触发防抖的 placeholder 重新生成
   useEffect(() => {
-    if (linkedFile) {
+    if (linkedResource) {
       debouncedGenPlaceholder()
     }
-  }, [linkedFile, debouncedGenPlaceholder])
+  }, [linkedResource, debouncedGenPlaceholder])
 
   return (
     <footer className="flex flex-col w-full p-1 justify-between items-center">
@@ -460,10 +509,17 @@ export function ChatInput() {
         />
       )}
       <LinkedFileDisplay
-        linkedFile={linkedFile}
+        linkedResource={linkedResource}
         onFileRemove={removeLinkedFile}
       />
-      <div className="group relative flex flex-col border rounded-xl z-10 gap-1 p-1 w-full bg-background focus-within:border-primary transition-colors">
+      <div className="group relative flex flex-col border rounded-xl z-10 gap-1 p-1 w-full bg-background focus-within:border-primary transition-colors overflow-hidden">
+        {loading && (
+          <ShineBorder
+            borderWidth={1}
+            duration={5}
+            shineColor={["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A"]}
+          />
+        )}
         {quoteData && (
           <QuoteDisplay quoteData={quoteData} onRemove={removeQuote} />
         )}
@@ -484,6 +540,11 @@ export function ChatInput() {
             }}
             placeholder={placeholder}
             onKeyDown={(e) => {
+              const textarea = e.target as HTMLTextAreaElement
+              const cursorPosition = textarea.selectionStart
+              const isAtStart = cursorPosition === 0
+              const isAtEnd = cursorPosition === text.length
+
               if (e.key === "Enter" && !isComposing && !e.shiftKey && e.keyCode === 13) {
                 e.preventDefault()
                 chatSendRef.current?.sendChat()
@@ -493,12 +554,24 @@ export function ChatInput() {
                 insertPlaceholder()
               }
               if (e.key === "ArrowUp" && !isComposing) {
-                e.preventDefault()
-                navigateHistory('up')
+                if (isAtStart) {
+                  e.preventDefault()
+                  navigateHistory('up', text)
+                } else if (isAtEnd) {
+                  e.preventDefault()
+                  // 移动光标到开头
+                  textarea.setSelectionRange(0, 0)
+                }
               }
               if (e.key === "ArrowDown" && !isComposing) {
-                e.preventDefault()
-                navigateHistory('down')
+                if (isAtStart) {
+                  e.preventDefault()
+                  navigateHistory('down', text)
+                } else if (isAtEnd) {
+                  e.preventDefault()
+                  // 移动光标到开头
+                  textarea.setSelectionRange(0, 0)
+                }
               }
               if (e.key === "Backspace") {
                 if (text === '') {
@@ -545,7 +618,7 @@ export function ChatInput() {
                 <ChatAttachmentsDrawer
                   onImageSelect={handleSelectFromGallery}
                   onCameraOpen={handleTakePhoto}
-                  onFileLink={setLinkedFile}
+                  onFileLink={setLinkedResource}
                 />
                 <ChatSettingsDrawer />
                 <ChatToolsDrawer />
@@ -564,7 +637,7 @@ export function ChatInput() {
               />
             )}
             <ChatModeSelect />
-            <ChatSend inputValue={text} onSent={handleSent} linkedFile={linkedFile} attachedImages={attachedImages} quoteData={quoteData} ref={chatSendRef} />
+            <ChatSend inputValue={text} onSent={handleSent} linkedResource={linkedResource} attachedImages={attachedImages} quoteData={quoteData} ref={chatSendRef} />
           </div>
         </div>
 
@@ -574,7 +647,7 @@ export function ChatInput() {
             isOpen={showFileSelector}
             onClose={() => setShowFileSelector(false)}
             onFileSelect={(file) => {
-              setLinkedFile(file)
+              setLinkedResource(file)
               setShowFileSelector(false)
             }}
           />

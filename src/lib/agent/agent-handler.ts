@@ -1,12 +1,12 @@
 import { ReActAgent, ReActConfig } from './react'
-import { ToolCall } from './types'
+import { ToolCall, ReActStep } from './types'
 import useChatStore from '@/stores/chat'
 
 export interface AgentHandlerConfig {
   onThought?: (thought: string) => void
   onAction?: (action: string, params: Record<string, any>) => void
   onObservation?: (observation: string) => void
-  onComplete?: (result: string, steps?: any[]) => void
+  onComplete?: (result: string, steps?: any[], stopped?: boolean) => void
   onError?: (error: string) => void
   requestConfirmation?: (toolName: string, params: Record<string, any>) => Promise<boolean>
 }
@@ -30,12 +30,37 @@ export class AgentHandler {
       onIterationStart: () => {
         // 在新迭代开始时，将完整的 ReAct 循环保存到历史，然后清空当前状态
         const currentState = useChatStore.getState()
-        if (currentState.agentState.currentThought || 
-            currentState.agentState.currentAction || 
+        if (currentState.agentState.currentThought ||
+            currentState.agentState.currentAction ||
             currentState.agentState.currentObservation) {
+          // 解析当前动作
+          let action = undefined
+          if (currentState.agentState.currentAction) {
+            const match = currentState.agentState.currentAction.match(/^(\w+)\((.*)\)$/)
+            if (match) {
+              try {
+                action = {
+                  tool: match[1],
+                  params: match[2] ? JSON.parse(match[2]) : {}
+                }
+              } catch {
+                // 解析失败，忽略
+              }
+            }
+          }
+
+          // 创建完整的步骤
+          const completedStep: ReActStep = {
+            thought: currentState.agentState.currentThought,
+            action: action,
+            observation: currentState.agentState.currentObservation
+          }
+
           const newHistory = [...currentState.agentState.thoughtHistory, currentState.agentState.currentThought]
-          store.setAgentState({ 
+          const newCompletedSteps = [...currentState.agentState.completedSteps, completedStep]
+          store.setAgentState({
             thoughtHistory: newHistory,
+            completedSteps: newCompletedSteps,
             currentThought: '',
             currentAction: undefined,
             currentObservation: undefined,
@@ -48,7 +73,7 @@ export class AgentHandler {
       },
       onThought: (thought: string) => {
         // 流式输出时只更新当前思考，不保存到历史
-        store.setAgentState({ 
+        store.setAgentState({
           currentThought: thought,
           isThinking: false  // 开始输出内容，取消思考状态
         })
@@ -80,19 +105,23 @@ export class AgentHandler {
     try {
       const result = await this.agent.run(userInput, context, imageUrls)
       store.setAgentState({ isRunning: false })
-      
-      // 如果结果为空字符串，说明被用户终止
-      if (result === '') {
-        // 不调用 onComplete，让 handleStop 处理终止消息
-        return ''
-      }
-      
+
       // 获取完整的 ReAct 步骤
       const steps = this.agent.getSteps()
-      this.config.onComplete?.(result, steps)
+      this.config.onComplete?.(result, steps, false)
       return result
     } catch (error) {
       store.setAgentState({ isRunning: false })
+
+      // 检查是否是用户终止
+      if (error instanceof Error && error.message === 'USER_STOPPED') {
+        // 获取已产生的步骤
+        const steps = this.agent.getSteps()
+        // 调用 onComplete，传入空结果和已产生的步骤，标记为已停止
+        this.config.onComplete?.('', steps, true)
+        return ''
+      }
+
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.config.onError?.(errorMessage)
       throw error
@@ -102,9 +131,8 @@ export class AgentHandler {
   stop() {
     if (this.agent) {
       this.agent.stop()
-      this.agent = null
+      // 不立即清空 agent，等待 run 方法中的错误处理完成
+      // 不调用 resetAgentState，让 onComplete 回调保存已产生的内容
     }
-    const store = useChatStore.getState()
-    store.resetAgentState()
   }
 }
