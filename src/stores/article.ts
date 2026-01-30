@@ -1,8 +1,10 @@
 import { getFiles as getGithubFiles } from '@/lib/sync/github'
 import { GithubContent } from '@/lib/sync/github.types'
 import { getFiles as getGiteeFiles } from '@/lib/sync/gitee'
+import { getFiles as getGiteaFiles } from '@/lib/sync/gitea'
 import { getFiles as getGitlabFiles } from '@/lib/sync/gitlab'
 import { GiteeFile } from '@/lib/sync/gitee'
+import { GiteaDirectoryItem } from '@/lib/sync/gitea.types'
 import { getSyncRepoName } from '@/lib/sync/repo-utils'
 import { autoSyncIfNeeded, hasNetworkConnection, ensureDirectoryExists } from '@/lib/sync/auto-sync'
 import { sanitizeFilePath, hasInvalidFileNameChars } from '@/lib/sync/filename-utils'
@@ -15,6 +17,7 @@ import { cloneDeep, uniq } from 'lodash-es'
 import { create } from 'zustand'
 import { getFilePathOptions, getWorkspacePath, toWorkspaceRelativePath } from '@/lib/workspace'
 import emitter from '@/lib/emitter'
+import { isSkillsFolder } from '@/lib/skills/utils'
 
 export type SortType = 'name' | 'created' | 'modified' | 'none'
 export type SortDirection = 'asc' | 'desc'
@@ -28,6 +31,7 @@ export interface DirTree extends DirEntry {
   createdAt?: string
   modifiedAt?: string
   loading?: boolean  // 文件夹正在加载中
+  vectorCalcStatus?: 'idle' | 'calculating' | 'completed'  // 向量计算状态
 }
 
 export interface Article {
@@ -54,7 +58,7 @@ interface NoteState {
   loading: boolean
   setLoading: (loading: boolean) => void
 
-  activeFilePath: string 
+  activeFilePath: string
   setActiveFilePath: (name: string) => void
 
   matchPosition: number | null
@@ -118,6 +122,8 @@ interface NoteState {
   checkFileVectorIndexed: (filename: string) => Promise<boolean>
   clearFileVector: (filename: string) => Promise<void>
   initVectorIndexedFiles: () => Promise<void> // 初始化向量索引状态
+  // 向量计算状态更新
+  setVectorCalcStatus: (path: string, status: 'idle' | 'calculating' | 'completed') => void
 
   allArticle: Article[]
   loadAllArticle: () => Promise<void>
@@ -175,40 +181,48 @@ const useArticleStore = create<NoteState>((set, get) => ({
     const sortType = get().sortType
     const sortDirection = get().sortDirection
     if (sortType === 'none') return tree
-    
+
     const sortedTree = cloneDeep(tree)
-    
-    const compareItems = (a: DirTree, b: DirTree): number => {
-      switch (sortType) {
-        case 'name':
-          return a.name.localeCompare(b.name)
-        case 'created':
-          if (a.createdAt && b.createdAt) {
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          }
-          return a.name.localeCompare(b.name)
-        case 'modified':
-          if (a.modifiedAt && b.modifiedAt) {
-            return new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime()
-          }
-          return a.name.localeCompare(b.name)
-        default:
-          return 0
-      }
-    }
 
     const sortFunction = (a: DirTree, b: DirTree) => {
+      // skills 文件夹始终置顶（在任何排序方式下）
+      const aIsSkills = a.isDirectory && isSkillsFolder(a.name)
+      const bIsSkills = b.isDirectory && isSkillsFolder(b.name)
+      if (aIsSkills && !bIsSkills) return -1
+      if (!aIsSkills && bIsSkills) return 1
+
       // 文件夹始终在文件上方
       if (a.isDirectory && !b.isDirectory) return -1
       if (!a.isDirectory && b.isDirectory) return 1
 
       // 同类型的进行排序
-      const result = compareItems(a, b)
+      let result = 0
+      switch (sortType) {
+        case 'name':
+          result = a.name.localeCompare(b.name)
+          break
+        case 'created':
+          if (a.createdAt && b.createdAt) {
+            result = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          } else {
+            result = a.name.localeCompare(b.name)
+          }
+          break
+        case 'modified':
+          if (a.modifiedAt && b.modifiedAt) {
+            result = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime()
+          } else {
+            result = a.name.localeCompare(b.name)
+          }
+          break
+        default:
+          result = 0
+      }
       return sortDirection === 'asc' ? result : -result
     }
-    
+
     sortedTree.sort(sortFunction)
-    
+
     const sortChildren = (items: DirTree[]) => {
       for (const item of items) {
         if (item.children && item.children.length > 0) {
@@ -217,7 +231,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
         }
       }
     }
-    
+
     sortChildren(sortedTree)
     return sortedTree
   },
@@ -479,6 +493,11 @@ const useArticleStore = create<NoteState>((set, get) => ({
         if (!gitlabAccessToken) {
           return
         }
+      } else if (primaryBackupMethod === 'gitea') {
+        const giteaAccessToken = await store.get<string>('giteaAccessToken')
+        if (!giteaAccessToken) {
+          return
+        }
       }
     
     // 只为根目录和本地存在的已展开文件夹加载远程文件
@@ -527,11 +546,15 @@ const useArticleStore = create<NoteState>((set, get) => ({
             const gitlabRepo = await getSyncRepoName('gitlab');
             files = await getGitlabFiles({ path, repo: gitlabRepo });
             break;
+          case 'gitea':
+            const giteaRepo = await getSyncRepoName('gitea');
+            files = await getGiteaFiles({ path, repo: giteaRepo });
+            break;
         }
 
         if (files) {
           const dirs = get().fileTree
-          files.forEach((file: GithubContent | GiteeFile) => {
+          files.forEach((file: GithubContent | GiteeFile | GiteaDirectoryItem) => {
             // 过滤以"."开头的文件和文件夹
             if (file.name.startsWith('.')) {
               return;
@@ -632,6 +655,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
     } else if (primaryBackupMethod === 'gitlab') {
       const gitlabAccessToken = await store.get<string>('gitlabAccessToken')
       hasCloudSync = !!gitlabAccessToken
+    } else if (primaryBackupMethod === 'gitea') {
+      const giteaAccessToken = await store.get<string>('giteaAccessToken')
+      hasCloudSync = !!giteaAccessToken
     }
     
     // 只有在配置了云同步时才设置加载状态
@@ -722,6 +748,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
     } else if (primaryBackupMethod === 'gitlab') {
       const gitlabAccessToken = await store.get<string>('gitlabAccessToken')
       if (!gitlabAccessToken) return
+    } else if (primaryBackupMethod === 'gitea') {
+      const giteaAccessToken = await store.get<string>('giteaAccessToken')
+      if (!giteaAccessToken) return
     }
     
     try {
@@ -739,6 +768,10 @@ const useArticleStore = create<NoteState>((set, get) => ({
           const gitlabRepo1 = await getSyncRepoName('gitlab');
           files = await getGitlabFiles({ path: fullpath, repo: gitlabRepo1 });
           break;
+        case 'gitea':
+          const giteaRepo1 = await getSyncRepoName('gitea');
+          files = await getGiteaFiles({ path: fullpath, repo: giteaRepo1 });
+          break;
       }
       
       if (files) {
@@ -746,7 +779,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
         const currentFolder = getCurrentFolder(fullpath, cacheTree)
         
         if (currentFolder) {
-          files.forEach((file: GithubContent | GiteeFile) => {
+          files.forEach((file: GithubContent | GiteeFile | GiteaDirectoryItem) => {
             // 过滤以"."开头的文件和文件夹
             if (file.name.startsWith('.')) {
               return;
@@ -1095,7 +1128,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
       
       // 如果是远程文件且本地内容为空，立即拉取
       if (isRemoteFile && (!localContent || localContent.trim() === '')) {
-        console.log('Remote file with empty local content detected, starting immediate pull')
         get().setIsPulling(true)
         
         // 立即触发拉取，不等待历史记录组件
@@ -1120,10 +1152,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
     } catch (error) {
       // 本地文件不存在，检查是否是远程文件
       if (error instanceof Error && 
-          (error.message.includes('no such file') || 
+          (error.message.includes('no such file') ||
            error.message.includes('not found') ||
            error.message.includes('系统找不到指定的路径'))) {
-        console.log(`Local file does not exist: ${actualPath}`)
         
         // 检查是否是远程文件（通过文件管理器状态判断）
         const fileTree = get().fileTree
@@ -1146,7 +1177,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
         
         if (isRemoteFile) {
           // 远程文件且本地不存在，立即开始拉取
-          console.log('Remote file detected, starting immediate pull')
           get().setIsPulling(true)
           
           // 立即触发拉取，不等待历史记录组件
@@ -1177,7 +1207,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
           }
         } else {
           // 本地文件，创建空白文件
-          console.log(`Creating empty local file: ${actualPath}`)
           await ensureDirectoryExists(actualPath)
           const workspace = await getWorkspacePath()
           const pathOptions = await getFilePathOptions(actualPath)
@@ -1213,7 +1242,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
         
         if (syncedContent !== null && syncedContent !== localContent) {
           // 远程内容不同，但这里不自动更新，让用户通过 Pull 按钮手动处理
-          console.log('Remote update detected, user can pull via button')
         }
       } catch (error) {
         console.warn('Async sync check failed:', error)
@@ -1524,6 +1552,29 @@ const useArticleStore = create<NoteState>((set, get) => ({
     })
 
     await get().executeVectorCalculation()
+  },
+
+  // 设置向量计算状态
+  setVectorCalcStatus: (path: string, status: 'idle' | 'calculating' | 'completed') => {
+    const fileTree = get().fileTree
+
+    // 递归查找并更新文件/文件夹的状态
+    const updateStatus = (items: DirTree[]): boolean => {
+      for (const item of items) {
+        const itemPath = computedParentPath(item)
+        if (itemPath === path) {
+          item.vectorCalcStatus = status
+          return true
+        }
+        if (item.children && updateStatus(item.children)) {
+          return true
+        }
+      }
+      return false
+    }
+
+    updateStatus(fileTree)
+    set({ fileTree: [...fileTree] })
   },
 
   allArticle: [],

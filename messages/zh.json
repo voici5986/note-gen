@@ -36,7 +36,9 @@
     "loading": "加载中...",
     "warning": "警告",
     "info": "信息",
-    "restartToApply": "，请重启应用使配置生效"
+    "restartToApply": "，请重启应用使配置生效",
+    "unsaved": "未保存",
+    "saving": "保存中..."
   },
   "settings": {
     "others": "高级",
@@ -281,7 +283,77 @@
       "testAllFailed": "连接测试失败",
       "save": "保存",
       "cancel": "取消",
-      "delete": "删除"
+      "delete": "删除",
+      "importJson": "导入 JSON",
+      "jsonImportTitle": "从 JSON 导入服务器配置",
+      "jsonImportDesc": "粘贴 MCP 服务器的 mcpServers 配置格式",
+      "jsonInput": "JSON 配置",
+      "jsonInputHelp": "支持 mcpServers 格式，会自动使用服务器名称作为 key",
+      "jsonRequired": "请输入 JSON 配置",
+      "jsonEmpty": "JSON 配置不能为空",
+      "jsonInvalidJson": "JSON 格式错误",
+      "jsonInvalidFormat": "配置格式无效，必须包含 name 和 type 字段",
+      "jsonInvalidType": "服务器类型必须是 stdio 或 http",
+      "jsonMissingCommand": "stdio 类型服务器必须指定 command",
+      "jsonMissingUrl": "http 类型服务器必须指定 url",
+      "jsonImportSuccess": "成功导入 {count} 个服务器",
+      "jsonImportSkipped": "跳过 {count} 个已存在的服务器",
+      "jsonImportNoServers": "没有导入任何服务器",
+      "import": "导入"
+    },
+    "skills": {
+      "title": "Skills",
+      "desc": "Skills 是可重用的 AI 能力包，让 AI 助手能够根据任务自动应用特定的行为模式。",
+      "enable": "启用 Skills 功能",
+      "enableDesc": "启用后，AI 可以使用已配置的 Skills",
+      "autoMatch": "自动匹配 Skills",
+      "autoMatchDesc": "根据用户输入自动选择合适的 Skills",
+      "project": "工作区 Skills",
+      "global": "全局 Skills",
+      "globalPath": "全局 Skills 存储位置",
+      "openInFileManager": "在文件管理器中打开",
+      "createSkill": "创建 Skill",
+      "editSkill": "编辑 Skill",
+      "deleteSkill": "删除 Skill",
+      "exportSkill": "导出 Skill",
+      "importSkill": "导入 Skill",
+      "selectSkillZip": "选择 Skill zip 文件",
+      "importSuccess": "导入成功",
+      "importError": "导入失败",
+      "imported": "已导入",
+      "importing": "导入中...",
+      "skillName": "Skill 名称",
+      "skillDescription": "描述",
+      "skillVersion": "版本",
+      "skillAuthor": "作者",
+      "allowedTools": "允许使用的工具",
+      "userInvocable": "在斜杠菜单显示",
+      "instructions": "指令内容",
+      "instructionsPlaceholder": "输入给 AI 的详细指令...",
+      "importHelp": "支持导入 zip 格式的 Skill，zip 文件需包含 SKILL.md 文件。",
+      "metadata": "元数据",
+      "content": "指令内容",
+      "noSkills": "还没有 Skills",
+      "noSkillsDesc": "创建或导入 Skills 以开始使用",
+      "noSkillsGlobal": "还没有全局 Skills",
+      "noSkillsGlobalDesc": "创建或导入 Skills 以在所有项目中使用",
+      "emptyWorkspace": "工作区中没有 Skills",
+      "emptyWorkspaceDesc": "在 skills 文件夹中创建 SKILL.md 文件来添加 Skill",
+      "basicSettings": "基础设置",
+      "installedGlobalSkills": "已安装的全局 Skills",
+      "nameRequired": "请输入 Skill 名称",
+      "descriptionRequired": "请输入描述",
+      "namePlaceholder": "note-organizer",
+      "versionPlaceholder": "1.0.0",
+      "descriptionPlaceholder": "自动整理和优化笔记结构...",
+      "authorPlaceholder": "Your Name",
+      "descriptionHelp": "用于 AI 匹配，描述此 Skill 的功能和适用场景",
+      "allowedToolsHelp": "这些工具使用时不需要用户确认",
+      "userInvocableHelp": "用户可以通过 /skill-name 手动触发",
+      "instructionsHelp": "给 AI 的详细指令，支持 Markdown 格式",
+      "deleteSkillTitle": "删除 Skill",
+      "deleteSkillDesc": "确定要删除这个 Skill 吗？此操作无法撤销。",
+      "skillDeleted": "Skill 删除成功"
     },
     "editor": {
       "title": "Markdown 编辑器",
@@ -932,6 +1004,7 @@
         "recording": "录音",
         "file": "文件",
         "link": "链接",
+        "todo": "待办",
         "pdf": "PDF",
         "upload": "上传记录",
         "download": "下载记录",
@@ -972,12 +1045,36 @@
         "title": "记录文本",
         "description": "记录一段文本，笔记整理时将插入到合适的位置。",
         "characterCount": "{count} 字符",
-        "save": "记录"
+        "save": "记录",
+        "autoReadClipboard": "自动读取剪贴板文本"
       },
       "link": {
         "title": "链接记录",
         "description": "输入网页链接，系统将自动爬取页面内容并保存",
-        "save": "保存"
+        "save": "保存",
+        "autoReadClipboard": "自动读取剪贴板链接"
+      },
+      "todo": {
+        "title": "待办记录",
+        "description": "创建待办事项，管理你的任务",
+        "titlePlaceholder": "输入待办标题...",
+        "descriptionPlaceholder": "输入详细描述（可选）",
+        "priority": "优先级",
+        "priorityLow": "低",
+        "priorityMedium": "中",
+        "priorityHigh": "高",
+        "dateRange": "日期范围",
+        "dateRangePlaceholder": "选择日期范围",
+        "dueDate": "截止日期",
+        "dueDatePlaceholder": "选择日期",
+        "save": "创建待办",
+        "saveEdit": "保存",
+        "edit": "编辑待办",
+        "editDescription": "修改待办事项的详细信息",
+        "cancel": "取消",
+        "selectTag": "选择标签",
+        "completed": "已完成",
+        "uncompleted": "未完成"
       },
       "clipboard": {
         "detectedImage": "检测到剪贴板图片",
@@ -1163,7 +1260,8 @@
         "scan": "扫描图片",
         "image": "上传图片",
         "link": "记录链接",
-        "file": "上传文件"
+        "file": "上传文件",
+        "todo": "待办记录"
       },
       "list": {
         "title": "记录"
@@ -1402,6 +1500,7 @@
     "logout": "登出",
     "setting": "设置",
     "files": "笔记",
+    "outline": "大纲",
     "showLeftSidebar": "显示左侧边栏",
     "hideLeftSidebar": "隐藏左侧边栏",
     "showCenterPanel": "显示编辑器",
@@ -1550,6 +1649,26 @@
         "settingFailed": "设置失败",
         "confirmDeleteVectors": "确定要删除 {count} 个文件的向量吗？"
       },
+      "folderView": {
+        "vectorDbNotEnabled": "向量数据库未启用",
+        "indexed": "已计算",
+        "vectorCount": "向量数",
+        "databaseSize": "数据库大小",
+        "lastCalculated": "最后计算",
+        "never": "从未",
+        "calculating": "计算中...",
+        "failed": "失败",
+        "recalculateVectors": "重新计算向量",
+        "skills": "Skills",
+        "skillNotFound": "Skill 未找到",
+        "skillNotFoundDesc": "无法找到 ID 为 {id} 的 Skill",
+        "loadingSkills": "加载 Skills...",
+        "loadingSkill": "加载 Skill...",
+        "globalSkills": "全局 Skills",
+        "workspaceSkills": "工作区 Skills",
+        "instructions": "指令",
+        "examples": "示例"
+      },
       "error": {
         "fileExists": "文件名已存在"
       },
@@ -1567,6 +1686,15 @@
     "editor": {
       "copySuccess": "复制成功",
       "copySuccessDescription": "已复制到剪贴板",
+      "search": {
+        "placeholder": "在文档中查找",
+        "replacePlaceholder": "替换为",
+        "caseSensitive": "区分大小写",
+        "replace": "替换",
+        "replaceAll": "全部替换",
+        "findPrev": "上一个",
+        "findNext": "下一个"
+      },
       "floatbar": {
         "quote": {
           "tooltip": "引用"

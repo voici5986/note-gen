@@ -30,11 +30,12 @@ import { useAiCompletion } from '@/hooks/useAiCompletion'
 import { AiCompletionPreview } from './ai-completion-preview'
 import { isMobileDevice } from '@/lib/check'
 import { Loader2, Download } from 'lucide-react'
+import { EditorSearch } from './editor-search'
 import { infographicRenderer, renderInfographicElements } from '@/lib/infographic'
 
 export function MdEditor() {
   const [editor, setEditor] = useState<Vditor>();
-  const { currentArticle, saveCurrentArticle, loading, isPulling, activeFilePath, matchPosition, setMatchPosition, setActiveFilePath, loadFileTree, setCurrentArticle } = useArticleStore()
+  const { currentArticle, saveCurrentArticle, loading, isPulling, activeFilePath, matchPosition, setMatchPosition, setActiveFilePath, loadFileTree, setCurrentArticle, readArticle } = useArticleStore()
   const { assetsPath, contentTextScale } = useSettingStore()
   const { fetchMarks } = useMarkStore()
   const [floatBarPosition, setFloatBarPosition] = useState<{left: number, top: number} | null>(null)
@@ -42,6 +43,7 @@ export function MdEditor() {
   const { theme } = useTheme()
   const { currentLocale } = useI18n()
   const t = useTranslations('article.file.sync')
+  const te = useTranslations('article.editor')
   // 移动端强制使用即时渲染模式
   const defaultMode = isMobileDevice() ? 'ir' : 'ir'
   const [localMode, setLocalMode] = useLocalStorage<'ir' | 'sv' | 'wysiwyg'>('useLocalMode', defaultMode)
@@ -55,6 +57,7 @@ export function MdEditor() {
   const completionRef = useRef<string>('') // 用 ref 存储最新的 completion 值
   const editorRef = useRef<Vditor | undefined>(undefined) // 用 ref 存储最新的 editor 实例
   const justAcceptedCompletionRef = useRef(false) // 标记是否刚刚接受了补全
+  const [searchOpen, setSearchOpen] = useState(false) // 编辑器搜索对话框状态
   const autoCompletionEnabledRef = useRef(autoCompletionEnabled !== undefined ? autoCompletionEnabled : true) // 用 ref 存储最新的开关状态
   
   // 同步 autoCompletionEnabled 到 ref
@@ -184,6 +187,11 @@ export function MdEditor() {
       after: () => {
         setEditor(vditor);
         editorRef.current = vditor;
+        // 保存编辑器实例到全局，供其他组件使用
+        (window as any).vditorInstance = vditor;
+        emitter.emit('vditor:ready', vditor);
+        emitter.emit('editor-mode-changed', localMode);
+
         // 切换记录编辑模式
         const editModeButtons = vditor.vditor.element.querySelectorAll('.edit-mode-button .vditor-hint button')
         editModeButtons.forEach(button => {
@@ -191,13 +199,18 @@ export function MdEditor() {
             const mode = button.getAttribute('data-mode')
             if (!mode) return
             setLocalMode(mode as 'ir' | 'sv' | 'wysiwyg')
+            emitter.emit('editor-mode-changed', mode)
           })
         })
+
         if (activeFilePath === '') {
           vditor.setValue('', true)
+        } else {
+          // 编辑器初始化时，重新读取文件内容，确保显示最新内容
+          readArticle(activeFilePath)
         }
         setEditorPadding(vditor)
-        
+
         // 保存编辑器元素引用
         const editorElement = vditor.vditor.element
         setEditorElement(editorElement)
@@ -383,10 +396,15 @@ export function MdEditor() {
             const filesUrls = await uploadImages(files)
             if (vditor && typeof vditor.insertValue === 'function') {
               for (let i = 0; i < filesUrls.length; i++) {
-                vditor.insertValue(`![${files[i].name}](${filesUrls[i]})`)
+                // 只插入有效的 URL
+                if (filesUrls[i] && filesUrls[i] !== 'undefined') {
+                  vditor.insertValue(`![${files[i].name}](${filesUrls[i]})`)
+                }
               }
             }
-            return filesUrls.join('\n')
+            // 过滤掉 undefined 并返回有效的 URL
+            const validUrls = filesUrls.filter(url => url && url !== 'undefined')
+            return validUrls.join('\n')
           } else {
             // 保存到当前笔记所在文件夹的静态资源目录
             const workspace = await getWorkspacePath()
@@ -572,15 +590,23 @@ export function MdEditor() {
   async function uploadImages(files: File[]) {
     const list = await Promise.all(
       files.map((file) => {
-        return new Promise<string>(async(resolve, reject) => {
-          if (!file.type.includes('image')) return
+        return new Promise<string>((resolve, reject) => {
+          // 过滤掉非图片文件和 null
+          if (!file || !file.type || !file.type.includes('image')) {
+            resolve(undefined as unknown as string)
+            return
+          }
           const toastNotification = toast({
-            title: t('upload.uploading'),
+            title: te('upload.uploading'),
             description: file.name,
             duration: 600000,
           })
-          await uploadImage(file).then(async url => {
-            resolve(url)
+          uploadImage(file).then(url => {
+            if (url) {
+              resolve(url)
+            } else {
+              resolve(undefined as unknown as string)
+            }
           }).catch(err => {
             reject(err)
           }).finally(() => {
@@ -717,14 +743,14 @@ export function MdEditor() {
   useEffect(() => {
     if (!editor) {
       init()
-      if (activeFilePath) {
-        setContent(currentArticle)
-      }
     } else {
       // 如果文件被删除或取消选中，清空编辑器
       if (!activeFilePath) {
         editor.setValue('', true)
         setCurrentArticle('')
+      } else if (activeFilePath) {
+        // 切换到新文件时，重新读取文件内容
+        readArticle(activeFilePath)
       }
     }
   }, [activeFilePath])
@@ -955,6 +981,19 @@ export function MdEditor() {
     }
   }, [editor])
 
+  // 全局快捷键：Ctrl+F / Cmd+F 打开搜索框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
 
   return <div 
     id="article-editor" 
@@ -991,5 +1030,6 @@ export function MdEditor() {
     </div>
     <CustomFooter editor={editor} />
     <FloatBar left={floatBarPosition?.left} top={floatBarPosition?.top} value={selectedText} editor={editor} />
+    <EditorSearch open={searchOpen} onOpenChange={setSearchOpen} editor={editor} />
   </div>
 }
