@@ -41,6 +41,9 @@
     "saving": "保存中..."
   },
   "settings": {
+    "defaultModels": {
+      "title": "默认模型"
+    },
     "others": "高级",
     "general": {
       "title": "常规设置",
@@ -186,6 +189,7 @@
       },
       "tools": {
         "title": "工具设置",
+        "desc": "配置各种工具栏按钮的显示和排序",
         "chatToolbar": {
           "title": "对话工具栏",
           "desc": "自定义对话工具栏按钮的显示顺序和可见性",
@@ -356,8 +360,9 @@
       "skillDeleted": "Skill 删除成功"
     },
     "editor": {
-      "title": "Markdown 编辑器",
-      "desc": "在这里，你可以对 Markdown 编辑器进行自定义配置，打造更适合你的写作方式。",
+      "title": "编辑器设置",
+      "desc": "在这里，你可以对编辑器进行自定义配置，打造更适合你的写作方式。",
+      "interfaceSettings": "界面设置",
       "typewriterMode": "打字机模式",
       "typewriterModeDesc": "打字机模式下，编辑器会模拟打字机效果，帮助你更好地沉浸在写作中。",
       "outlineEnable": "默认启用大纲",
@@ -375,7 +380,61 @@
         "panoramaView": "全景视图"
       },
       "enableLineNumber": "代码块行号",
-      "enableLineNumberDesc": "启用后，代码块将显示行号。"
+      "enableLineNumberDesc": "启用后，代码块将显示行号。",
+      "completion": {
+        "title": "快速补全",
+        "model": {
+          "title": "快速补全模型",
+          "desc": "选择用于编辑器 AI 内联补全的模型"
+        }
+      },
+      "commit": {
+        "title": "自动生成 Commit",
+        "model": {
+          "title": "提交模型",
+          "desc": "用于自动生成 Git 提交信息，基于文件内容变化智能生成描述性提交信息"
+        }
+      }
+    },
+    "record": {
+      "title": "记录设置",
+      "desc": "在这里，你可以配置记录相关的设置，包括记录描述和工具栏配置。",
+      "model": {
+        "title": "模型设置",
+        "markDesc": {
+          "title": "记录描述",
+          "desc": "用于处理 OCR 识别后的记录，生成记录描述"
+        }
+      },
+      "toolbar": {
+        "title": "工具栏设置",
+        "recordToolbar": {
+          "title": "记录工具栏",
+          "desc": "自定义记录工具栏按钮的显示顺序和可见性",
+          "button": "设置",
+          "text": {
+            "desc": "记录文本内容"
+          },
+          "recording": {
+            "desc": "录音记录功能"
+          },
+          "scan": {
+            "desc": "扫描识别图片中的文字"
+          },
+          "image": {
+            "desc": "上传图片到笔记"
+          },
+          "link": {
+            "desc": "记录网页链接"
+          },
+          "file": {
+            "desc": "上传文件到笔记"
+          },
+          "todo": {
+            "desc": "创建待办事项"
+          }
+        }
+      }
     },
     "uploadStore": {
       "uploadConfirm": "上传配置请确保同步仓库为私有，否则数据将会泄露！",
@@ -402,6 +461,56 @@
       "optimizeSuccess": "提示词优化成功",
       "optimizeFailed": "提示词优化失败，请稍后重试",
       "noContentToOptimize": "请先输入提示词内容"
+    },
+    "memories": {
+      "title": "记忆管理",
+      "desc": "AI 长期记忆功能，让 AI 记住你的写作偏好、经验知识和笔记习惯。",
+      "stats": {
+        "total": "总记忆数",
+        "preferences": "偏好",
+        "memories": "记忆"
+      },
+      "form": {
+        "title": "添加新记忆",
+        "categoryDescription": "记忆分为两种类型：",
+        "preferenceDescription": "偏好：语言、格式、风格等设置，每次对话都会自动加载",
+        "memoryDescription": "记忆：事实、经验、专长等信息，根据对话内容智能匹配",
+        "contentLabel": "记忆内容",
+        "contentPlaceholder": "例如：我喜欢用中文回答、我是React专家...",
+        "categoryLabel": "类型",
+        "preferenceLabel": "偏好",
+        "memoryLabel": "记忆",
+        "preferenceDesc": "语言、格式、风格等",
+        "memoryDesc": "事实、经验、专长等",
+        "save": "保存记忆",
+        "saving": "保存中..."
+      },
+      "listTitle": "我的记忆",
+      "addMemory": "添加记忆",
+      "empty": "暂无记忆，添加第一条记忆吧！",
+      "emptyHint": "你可以手动添加记忆，或在对话中使用「请记住」「记住这个」等话术让 AI 自动记忆。",
+      "preference": "偏好",
+      "memory": "记忆",
+      "replaced": "已替换",
+      "accessCount": "访问 {count} 次",
+      "tabs": {
+        "all": "全部",
+        "preference": "偏好",
+        "memory": "记忆"
+      },
+      "success": "成功",
+      "saved": "记忆已保存",
+      "updated": "记忆已更新（已替换相似记忆）",
+      "deleted": "记忆已删除",
+      "cleared": "所有记忆已清空",
+      "found": "找到 {count} 条记忆",
+      "error": "错误",
+      "errorEmpty": "请输入记忆内容",
+      "errorSave": "保存失败",
+      "errorDelete": "删除记忆失败",
+      "errorList": "获取记忆列表失败",
+      "errorEmbedding": "无法生成向量嵌入，请检查嵌入模型配置",
+      "errorClear": "清空记忆失败"
     },
     "defaultModel": {
       "title": "默认模型",
@@ -438,6 +547,10 @@
         "reranking": {
           "title": "重排模型",
           "desc": "用于搜索结果的重新排序和优化。"
+        },
+        "condense": {
+          "title": "摘要模型",
+          "desc": "用于压缩历史对话内容，节省 token 使用量"
         }
       }
     },
@@ -805,6 +918,112 @@
       "importButton": "导入",
       "exportButton": "导出"
     },
+    "chat": {
+      "title": "对话设置",
+      "desc": "在这里，你可以配置对话相关的设置，包括摘要生成等功能。",
+      "primaryModel": {
+        "title": "主要模型",
+        "model": {
+          "title": "主要聊天模型",
+          "desc": "选择用于日常对话的主要 AI 模型"
+        }
+      },
+      "toolbar": {
+        "title": "工具栏设置",
+        "chatToolbar": {
+          "title": "对话工具栏",
+          "desc": "自定义对话工具栏按钮的显示顺序和可见性",
+          "button": "设置",
+          "modelSelect": {
+            "desc": "切换用于对话的 AI 模型"
+          },
+          "promptSelect": {
+            "desc": "选择对话使用的预设提示词"
+          },
+          "chatLanguage": {
+            "desc": "设置对话的语言"
+          },
+          "chatLink": {
+            "title": "关联标签",
+            "desc": "关联当前标签的笔记内容到对话上下文"
+          },
+          "fileLink": {
+            "desc": "关联文件或文件夹到对话上下文"
+          },
+          "mcpButton": {
+            "desc": "选择并连接 MCP 服务器以使用外部工具"
+          },
+          "ragSwitch": {
+            "title": "知识库检索",
+            "desc": "启用向量知识库检索功能"
+          },
+          "clipboardMonitor": {
+            "title": "剪贴板监听",
+            "desc": "自动监听剪贴板内容变化"
+          },
+          "newChat": {
+            "desc": "开始新对话"
+          },
+          "clearContext": {
+            "desc": "清除对话上下文，保留聊天记录"
+          },
+          "clearChat": {
+            "desc": "删除所有聊天记录"
+          }
+        }
+      },
+      "condense": {
+        "title": "对话摘要",
+        "enable": {
+          "title": "启用摘要",
+          "desc": "自动压缩长对话以节省 token 使用量"
+        },
+        "model": {
+          "title": "摘要模型",
+          "desc": "选择用于生成摘要的 AI 模型",
+          "placeholder": "使用主模型"
+        },
+        "threshold": {
+          "title": "触发阈值",
+          "desc": "AI 消息超过此数量时检查压缩"
+        },
+        "minToken": {
+          "title": "最小 Token 数",
+          "desc": "单条消息超过此 token 数才进行压缩"
+        },
+        "keepLatest": {
+          "title": "保留最新条数",
+          "desc": "保留最新的 N 条 AI 消息不进行压缩"
+        },
+        "maxLength": {
+          "title": "摘要长度限制",
+          "desc": "控制生成摘要的最大字数"
+        },
+        "prompt": {
+          "title": "自定义摘要提示词",
+          "desc": "自定义生成摘要时使用的提示词模板",
+          "label": "提示词模板",
+          "placeholder": "输入自定义提示词...",
+          "help": "使用 {content} 作为原始内容的占位符",
+          "save": "保存",
+          "reset": "重置为默认"
+        }
+      },
+      "conversationTitle": {
+        "title": "会话标题",
+        "model": {
+          "title": "标题生成模型",
+          "desc": "选择用于生成会话标题的 AI 模型"
+        }
+      },
+      "inspiration": {
+        "title": "灵感模型",
+        "model": {
+          "title": "灵感生成模型",
+          "desc": "用于生成快速提示词建议，帮助用户快速开始对话"
+        }
+      }
+    },
     "ai": {
       "title": "模型配置",
       "desc": "在这里，你可以添加和管理各种自定义模型提供服务，配置后将解锁 AI 相关功能，例如整理和对话功能。",
@@ -1150,7 +1369,8 @@
             }
           },
           "messageControl": {
-            "words": "字"
+            "words": "字",
+            "summary": "摘要"
           },
           "mcp": {
             "maxIterationsReached": "达到最大工具调用次数限制",
@@ -1268,6 +1488,10 @@
       }
     },
     "chat": {
+      "condensing": "正在压缩上下文...",
+      "condensed": {
+        "message": "已压缩 {count} 条历史消息"
+      },
       "empty": {
         "title": "开始与 AI 对话",
         "subtitle": "使用 Chat 或 Agent 模式与 AI 互动",
@@ -1276,7 +1500,22 @@
         "currentMode": "对话模式",
         "noModel": "未设置模型",
         "noPrompt": "未设置 Prompt",
-        "configureModel": "配置模型"
+        "configureModel": "配置模型",
+        "recentConversations": "最近对话",
+        "deleteConversation": "删除对话",
+        "conversationHistory": "历史对话",
+        "viewMore": "查看更多",
+        "messages": "条消息",
+        "searchPlaceholder": "搜索对话...",
+        "noMatchingConversations": "没有找到匹配的对话",
+        "noConversationHistory": "暂无历史对话",
+        "quickPrompts": {
+          "title": "快速开始",
+          "writeNote": "帮我写一篇笔记",
+          "summarize": "帮我总结这段内容",
+          "brainstorm": "帮我头脑风暴一些想法",
+          "explain": "帮我解释这个概念"
+        }
       },
       "newChat": "使用新标签开始对话",
       "removeChat": "删除当前标签对话",
@@ -1324,10 +1563,7 @@
           "tooltip": "选择 Prompt",
           "placeholder": "搜索 Prompt"
         },
-        "clearChat": "清空对话",
-        "clearContext": {
-          "tooltip": "清除上下文"
-        },
+        "newChat": "开始新对话",
         "chatLanguage": {
           "tooltip": "选择对话语言",
           "placeholder": "搜索语言"
@@ -1408,6 +1644,7 @@
       },
       "messageControl": {
         "words": "字",
+        "summary": "摘要",
         "readAloud": "朗读",
         "playing": "播放中",
         "loading": "准备中",
@@ -1416,7 +1653,8 @@
         "copied": "已复制"
       },
       "ragSources": {
-        "label": "引用文件"
+        "label": "知识库检索到 {count} 篇笔记",
+        "openFile": "打开文件"
       },
       "preview": {
         "close": "关闭",
@@ -1432,6 +1670,11 @@
       },
       "content": {
         "organize": "将你的记录整理为文章："
+      },
+      "quote": {
+        "lineSingle": "引用自 {fileName} 第 {line} 行",
+        "lineRange": "引用自 {fileName} 第 {startLine}-{endLine} 行",
+        "noLine": "引用自 {fileName}"
       },
       "note": {
         "organize": "整理",
@@ -1587,9 +1830,10 @@
         "sortAsc": "升序排列",
         "sortDesc": "降序排列",
         "sort": "排序",
+        "hideCloudFiles": "隐藏云端文件",
+        "showCloudFiles": "显示云端文件",
         "processingVectors": "正在处理向量数据",
         "calculateVectors": "知识库计算（全量）",
-        "enableVectorDb": "启用向量数据库",
         "importMarkdown": "导入",
         "importing": "正在导入...",
         "importSuccess": "导入成功",
@@ -1651,6 +1895,7 @@
       },
       "folderView": {
         "vectorDbNotEnabled": "向量数据库未启用",
+        "calculateVectors": "计算向量",
         "indexed": "已计算",
         "vectorCount": "向量数",
         "databaseSize": "数据库大小",
@@ -1667,7 +1912,10 @@
         "globalSkills": "全局 Skills",
         "workspaceSkills": "工作区 Skills",
         "instructions": "指令",
-        "examples": "示例"
+        "examples": "示例",
+        "scripts": "脚本",
+        "references": "参考文档",
+        "assets": "静态资源"
       },
       "error": {
         "fileExists": "文件名已存在"
@@ -1812,11 +2060,8 @@
         },
         "tools": {
           "title": "工具",
-          "clearContext": "清除上下文",
-          "clearContextDesc": "清除对话上下文，保留聊天记录",
-          "clearChat": "清空对话",
-          "clearChatDesc": "删除所有聊天记录",
-          "clear": "清除"
+          "newChat": "开始新对话",
+          "start": "开始"
         },
         "attachments": {
           "title": "附件",

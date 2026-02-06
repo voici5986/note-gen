@@ -2,7 +2,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuSeparator, ContextMenuTrigg
 import { Input } from "@/components/ui/input";
 import useArticleStore, { DirTree } from "@/stores/article";
 import { BaseDirectory, exists, mkdir, rename } from "@tauri-apps/plugin-fs";
-import { ChevronRight, Cloud, Folder, FolderDot, FolderDown, FolderOpen, FolderOpenDot, Loader2, LoaderCircle, Database, Sparkles } from "lucide-react"
+import { ChevronRight, Folder, FolderDot, FolderDown, FolderOpen, FolderOpenDot, FolderUp, Loader2, LoaderCircle, Database, Sparkles } from "lucide-react"
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
@@ -16,9 +16,11 @@ import { NewFolder } from './new-folder'
 import { ViewDirectory } from './view-directory'
 import { CutFolder } from './cut-folder'
 import { CopyFolder } from './copy-folder'
+import { DuplicateFolder } from './duplicate-folder'
 import { PasteInFolder } from './paste-in-folder'
 import { RenameFolder } from './rename-folder'
 import { DeleteFolder } from './delete-folder'
+import useClipboardStore from "@/stores/clipboard"
 import { MobileActionMenu, MobileMenuItem, MobileSeparator } from "../mobile-action-menu"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useTranslations } from "next-intl"
@@ -26,7 +28,7 @@ import { FolderVectorMenu } from './folder-vector-menu'
 import emitter from '@/lib/emitter'
 import { LinkedFolder } from '@/lib/files'
 
-export function FolderItem({ item }: { item: DirTree }) {
+export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar?: () => void }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
   const [name, setName] = useState(item.name)
   const [isComposing, setIsComposing] = useState(false)
@@ -68,11 +70,15 @@ export function FolderItem({ item }: { item: DirTree }) {
     setFileTree,
     vectorIndexedFiles
   } = useArticleStore()
+  const { setClipboardItem, clipboardItem, clipboardOperation } = useClipboardStore()
 
   const path = computedParentPath(item)
   const cacheTree = cloneDeep(fileTree)
   const currentFolder = getCurrentFolder(path, cacheTree)
   const parentFolder = currentFolder?.parent
+
+  // 检查文件夹是否被剪切
+  const isCut = clipboardOperation === 'cut' && clipboardItem?.path === path
 
   // 计算文件夹的向量状态
   const folderVectorStatus = useCallback(() => {
@@ -197,8 +203,185 @@ export function FolderItem({ item }: { item: DirTree }) {
   }
 
   function handleStartRename() {
-    setIsEditing(true)
-    setTimeout(() => inputRef.current?.focus(), 0);
+    // 延迟执行，确保上下文菜单完全关闭
+    setTimeout(() => {
+      setIsEditing(true)
+      setTimeout(() => {
+        const input = inputRef.current
+        if (input) {
+          input.focus()
+          // 只选中文件名，不包含扩展名
+          const lastDotIndex = item.name.lastIndexOf('.')
+          if (lastDotIndex > 0) {
+            input.setSelectionRange(0, lastDotIndex)
+          } else {
+            input.select()
+          }
+        }
+      }, 100)
+    }, 300)
+  }
+
+  // 粘贴到文件夹
+  async function handlePasteInFolder() {
+    if (!clipboardItem) {
+      toast({ title: t('clipboard.empty'), variant: 'destructive' })
+      return
+    }
+
+    try {
+      const { BaseDirectory, mkdir, readDir, readTextFile, remove, writeTextFile } = await import('@tauri-apps/plugin-fs')
+      const { generateCopyFilename, generateCopyFoldername } = await import('@/lib/default-filename')
+
+      const sourcePath = `article/${clipboardItem.path}`
+
+      // 粘贴目标：当前文件夹的父目录（同级粘贴）
+      const targetDir = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
+
+      // 生成唯一的目标名称（文件或文件夹）
+      const targetName = clipboardItem.isDirectory
+        ? await generateCopyFoldername(targetDir, clipboardItem.name)
+        : await generateCopyFilename(targetDir, clipboardItem.name)
+
+      const targetPath = targetDir ? `article/${targetDir}/${targetName}` : `article/${targetName}`
+
+      if (clipboardItem.isDirectory) {
+        // For directories, need to copy recursively
+        // Create target directory
+        await mkdir(targetPath, { baseDir: BaseDirectory.AppData })
+
+        // Copy recursively using readDir, readTextFile, and writeTextFile
+        const copyDirRecursively = async (src: string, dest: string) => {
+          const entries = await readDir(src, { baseDir: BaseDirectory.AppData })
+
+          for (const entry of entries) {
+            const srcPath = `${src}/${entry.name}`
+            const destPath = `${dest}/${entry.name}`
+
+            if (entry.isDirectory) {
+              // It's a directory
+              await mkdir(destPath, { baseDir: BaseDirectory.AppData })
+              await copyDirRecursively(srcPath, destPath)
+            } else {
+              // It's a file
+              try {
+                const content = await readTextFile(srcPath, { baseDir: BaseDirectory.AppData })
+                await writeTextFile(destPath, content, { baseDir: BaseDirectory.AppData })
+              } catch (err) {
+                console.error(`Error copying file ${srcPath}:`, err)
+              }
+            }
+          }
+        }
+
+        await copyDirRecursively(sourcePath, targetPath)
+      } else {
+        // For files, just copy the file
+        try {
+          const content = await readTextFile(sourcePath, { baseDir: BaseDirectory.AppData })
+          await writeTextFile(targetPath, content, { baseDir: BaseDirectory.AppData })
+        } catch (err) {
+          console.error(`Error copying file ${sourcePath}:`, err)
+          throw err
+        }
+      }
+
+      // If cut operation, delete the original
+      if (clipboardOperation === 'cut') {
+        await remove(sourcePath, { baseDir: BaseDirectory.AppData })
+        // Clear clipboard after cut & paste operation
+        setClipboardItem(null, 'none')
+      }
+
+      // Refresh file tree
+      loadFileTree()
+      toast({ title: t('clipboard.pasted') })
+    } catch (error) {
+      console.error('Paste operation failed:', error)
+      toast({ title: t('clipboard.pasteFailed'), variant: 'destructive' })
+    }
+  }
+
+  // 删除文件夹
+  async function handleDeleteFolder() {
+    try {
+      // 获取工作区路径信息
+      const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
+      const workspace = await getWorkspacePath()
+      const { ask } = await import('@tauri-apps/plugin-dialog')
+      const { remove } = await import('@tauri-apps/plugin-fs')
+
+      // 确认删除操作
+      const confirmed = await ask(t('context.confirmDelete', { name: item.name }), {
+        title: item.name,
+        kind: 'warning',
+      })
+
+      if (!confirmed) return
+
+      // 根据工作区类型确定正确的路径
+      const pathOptions = await getFilePathOptions(path)
+
+      if (workspace.isCustom) {
+        await remove(pathOptions.path, { recursive: true })
+      } else {
+        await remove(pathOptions.path, { baseDir: pathOptions.baseDir, recursive: true })
+      }
+
+      // 如果删除的文件夹包含当前活动文件，清除活动文件路径
+      if (activeFilePath && activeFilePath.startsWith(path)) {
+        setActiveFilePath('')
+      }
+
+      // 从文件树中移除该文件夹
+      const cacheTree = cloneDeep(fileTree)
+      const parentFolder = currentFolder?.parent
+
+      if (parentFolder && parentFolder.children) {
+        const index = parentFolder.children.findIndex(child => child.name === item.name)
+        if (index !== -1) {
+          parentFolder.children.splice(index, 1)
+        }
+      } else {
+        const index = cacheTree.findIndex(child => child.name === item.name)
+        if (index !== -1) {
+          cacheTree.splice(index, 1)
+        }
+      }
+
+      setFileTree(cacheTree)
+
+      // 删除向量数据库中该文件夹下所有文件的记录
+      try {
+        const { getAllMarkdownFiles } = await import('@/lib/files')
+        const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+        const allFiles = await getAllMarkdownFiles()
+
+        // 找出该文件夹下的所有 Markdown 文件
+        const folderPrefix = path.endsWith('/') ? path : path + '/'
+        const filesInFolder = allFiles.filter(file => file.relativePath.startsWith(folderPrefix))
+
+        // 删除这些文件的向量数据
+        for (const file of filesInFolder) {
+          const filename = file.name
+          try {
+            await deleteVectorDocumentsByFilename(filename)
+          } catch (error) {
+            console.error(`删除文件 ${filename} 的向量数据失败:`, error)
+          }
+        }
+      } catch (error) {
+        console.error('删除文件夹向量数据失败:', error)
+      }
+
+      toast({ title: t('context.deleteSuccess') })
+    } catch (error) {
+      console.error('Delete folder failed:', error)
+      toast({
+        title: t('context.deleteFailed'),
+        variant: 'destructive'
+      })
+    }
   }
 
   // 优化的输入处理，支持输入法
@@ -262,11 +445,11 @@ export function FolderItem({ item }: { item: DirTree }) {
     // 统一处理：将空格替换为下划线，确保本地和远程文件名一致
     const sanitizedName = name.replace(/\s+/g, '_')
     setName(sanitizedName)
-  
+
     // 获取工作区路径信息
     const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
     const workspace = await getWorkspacePath()
-  
+
     // 修改文件夹名称
     if (sanitizedName && sanitizedName !== item.name && item.name !== '') {
       // 更新缓存树中的名称
@@ -296,6 +479,12 @@ export function FolderItem({ item }: { item: DirTree }) {
         })
       }
     } else {
+      // 已有文件夹但名称未改变，直接取消编辑
+      if (item.name !== '' && sanitizedName === item.name) {
+        setIsEditing(false)
+        return
+      }
+
       // 新建文件夹
       if (sanitizedName !== '') {
         // 检查文件夹是否已存在
@@ -401,6 +590,13 @@ export function FolderItem({ item }: { item: DirTree }) {
   }
 
   async function handleSelectFolder() {
+    // 检查是否真的是目录（防止误将文件当作目录处理）
+    if (!item.isDirectory) {
+      return
+    }
+
+    // 让文件管理器获得焦点，以便响应快捷键
+    focusSidebar?.()
     // 设置选中状态
     await setActiveFilePath(path)
 
@@ -466,10 +662,73 @@ export function FolderItem({ item }: { item: DirTree }) {
 
   useEffect(() => {
     if (item.isEditing) {
+      setIsEditing(true)
       setName(name)
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [item])
+
+  // 监听文件管理器统一快捷键触发的自定义事件
+  useEffect(() => {
+    const handleRenameEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ path: string }>
+      if (customEvent.detail.path === path) {
+        handleStartRename()
+      }
+    }
+
+    const handleDeleteEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ item: { path: string } }>
+      if (customEvent.detail.item.path === path) {
+        handleDeleteFolder()
+      }
+    }
+
+    const handlePasteEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ targetPath: string }>
+      // 粘贴到文件所在目录（同级粘贴）
+      if (customEvent.detail.targetPath === path) {
+        handlePasteInFolder()
+      }
+    }
+
+    window.addEventListener('filemanager-rename', handleRenameEvent)
+    window.addEventListener('filemanager-delete', handleDeleteEvent)
+    window.addEventListener('filemanager-paste', handlePasteEvent)
+
+    return () => {
+      window.removeEventListener('filemanager-rename', handleRenameEvent)
+      window.removeEventListener('filemanager-delete', handleDeleteEvent)
+      window.removeEventListener('filemanager-paste', handlePasteEvent)
+    }
+  }, [path, handleStartRename, handleDeleteFolder, handlePasteInFolder])
+
+  // 获取当前平台（用于显示快捷键）
+  const [currentPlatform, setCurrentPlatform] = useState<'macos' | 'windows' | 'linux' | 'unknown'>('unknown')
+
+  useEffect(() => {
+    const detectPlatform = async () => {
+      try {
+        const { platform } = await import('@tauri-apps/plugin-os')
+        const p = platform()
+        if (p === 'macos') {
+          setCurrentPlatform('macos')
+        } else if (p === 'windows') {
+          setCurrentPlatform('windows')
+        } else if (p === 'linux') {
+          setCurrentPlatform('linux')
+        }
+      } catch {
+        setCurrentPlatform('unknown')
+      }
+    }
+    detectPlatform()
+  }, [])
+
+  // 快捷键显示文本
+  const modKey = currentPlatform === 'macos' ? '⌘' : 'Ctrl'
+  const deleteKey = currentPlatform === 'macos' ? '⌫' : 'Del'
+  const renameKey = currentPlatform === 'macos' ? '↩' : 'F2'
 
   return (
     <CollapsibleTrigger className="w-full select-none">
@@ -501,6 +760,10 @@ export function FolderItem({ item }: { item: DirTree }) {
                     onCompositionStart={handleCompositionStart}
                     onCompositionEnd={handleCompositionEnd}
                     onKeyDown={(e) => {
+                      // 阻止删除快捷键冒泡到全局快捷键处理器
+                      if (e.key === 'Backspace' || e.key === 'Delete') {
+                        e.stopPropagation()
+                      }
                       if (e.code === 'Enter' && !e.nativeEvent.isComposing) {
                         handleRename()
                       } else if (e.code === 'Escape') {
@@ -513,21 +776,18 @@ export function FolderItem({ item }: { item: DirTree }) {
                   onDrop={(e) => handleDrop(e)}
                   onDragOver={e => handleDragOver(e)}
                   onDragLeave={(e) => handleDragleave(e)}
-                  className={`${item.isLocale ? '' : 'opacity-50'} flex gap-1 items-center flex-1 select-none`}
+                  className={`${!item.isLocale || isCut ? 'opacity-50' : ''} flex gap-1 items-center flex-1 select-none`}
                 >
                   <div className="flex flex-1 gap-1 select-none relative items-center">
-                    <div className="relative flex items-center">
-                      {item.loading ? (
-                        <Loader2 className={`${iconSize} animate-spin text-primary`} />
-                      ) : isSkillsFolder(item.name) ? (
-                        <Sparkles className={`${iconSize} text-primary`} />
-                      ) : collapsibleList.includes(path) ? (
-                        assetsPath === item.name ? <FolderOpenDot className={iconSize} /> : <FolderOpen className={iconSize} />
-                      ) : (
-                        assetsPath === item.name ? <FolderDot className={iconSize} /> : <Folder className={iconSize} />
-                      )}
-                      {!item.loading && item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" />}
-                    </div>
+                    {item.loading ? (
+                      <Loader2 className={`${iconSize} animate-spin text-primary`} />
+                    ) : isSkillsFolder(item.name) ? (
+                      <Sparkles className={`${iconSize} text-primary`} />
+                    ) : collapsibleList.includes(path) ? (
+                      assetsPath === item.name ? <FolderOpenDot className={iconSize} /> : (!item.isLocale ? <FolderDown className={iconSize} /> : (item.sha ? <FolderUp className={iconSize} /> : <FolderOpen className={iconSize} />))
+                    ) : (
+                      assetsPath === item.name ? <FolderDot className={iconSize} /> : (!item.isLocale ? <FolderDown className={iconSize} /> : (item.sha ? <FolderUp className={iconSize} /> : <Folder className={iconSize} />))
+                    )}
                     <span className={`text-${fileManagerTextSize} line-clamp-1 ${item.loading ? 'text-muted-foreground' : ''}`}>{item.name}</span>
                   </div>
                   {/* 向量状态指示器 - 放在最右侧，skills 文件夹及其子内容不显示 */}
@@ -590,14 +850,15 @@ export function FolderItem({ item }: { item: DirTree }) {
               <ContextMenuSeparator />
             </>
           )}
-          <CutFolder item={item} />
-          <CopyFolder item={item} />
-          <PasteInFolder item={item} />
+          <CutFolder item={item} shortcut={`${modKey}X`} />
+          <CopyFolder item={item} shortcut={`${modKey}C`} />
+          <DuplicateFolder item={item} />
+          <PasteInFolder item={item} shortcut={`${modKey}V`} />
           <ContextMenuSeparator />
           <SyncFolder item={item} />
           <ContextMenuSeparator />
-          <RenameFolder item={item} onStartRename={handleStartRename} />
-          <DeleteFolder item={item} />
+          <RenameFolder item={item} onStartRename={handleStartRename} shortcut={renameKey} />
+          <DeleteFolder item={item} shortcut={deleteKey} />
         </ContextMenuContent>
       </ContextMenu>
     </CollapsibleTrigger>

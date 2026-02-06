@@ -190,7 +190,7 @@ export function MdEditor() {
         // 保存编辑器实例到全局，供其他组件使用
         (window as any).vditorInstance = vditor;
         emitter.emit('vditor:ready', vditor);
-        emitter.emit('editor-mode-changed', localMode);
+        emitter.emit('editor-mode-changed', localMode ?? defaultMode);
 
         // 切换记录编辑模式
         const editModeButtons = vditor.vditor.element.querySelectorAll('.edit-mode-button .vditor-hint button')
@@ -295,15 +295,34 @@ export function MdEditor() {
         }
         editorElement?.addEventListener('click', handleClick)
         
-        // 监听失焦事件，隐藏浮动工具栏
+        // 监听失焦事件，隐藏浮动工具栏并取消正在进行的补全
+        let isClickingFloatBar = false
         const handleBlur = (e: FocusEvent) => {
+          // 如果正在点击浮动工具栏，不隐藏
+          if (isClickingFloatBar) {
+            return
+          }
           // 检查失焦是否不是因为点击了浮动工具栏本身
           const floatBarElement = document.querySelector('[data-float-bar="true"]')
           if (floatBarElement && floatBarElement.contains(e.relatedTarget as Node)) {
             return // 如果焦点移动到浮动工具栏，不隐藏
           }
           resetSelectedText()
+          // 取消正在进行的补全
+          cancelCompletion()
         }
+
+        // 监听浮动工具栏的点击事件
+        const handleFloatBarMouseDown = () => {
+          isClickingFloatBar = true
+        }
+        const handleFloatBarMouseUp = () => {
+          isClickingFloatBar = false
+        }
+
+        emitter.on('floatbar-mousedown', handleFloatBarMouseDown)
+        emitter.on('floatbar-mouseup', handleFloatBarMouseUp)
+
         editorElement?.addEventListener('blur', handleBlur, true)
         
         // 监听 beforeinput 事件，在输入前就清除补全预览
@@ -322,6 +341,8 @@ export function MdEditor() {
           editorElement?.removeEventListener('click', handleClick)
           editorElement?.removeEventListener('blur', handleBlur, true)
           editorElement?.removeEventListener('beforeinput', handleBeforeInput)
+          emitter.off('floatbar-mousedown', handleFloatBarMouseDown)
+          emitter.off('floatbar-mouseup', handleFloatBarMouseUp)
         }
       },
       input: async (value) => {
@@ -740,10 +761,140 @@ export function MdEditor() {
     }
   }, [editor])
 
+  // 监听搜索并滚动事件
+  useEffect(() => {
+    const handleSearchAndScroll = async (searchQuery: string) => {
+      if (!editor || !searchQuery) return
+
+      // 清除旧高亮
+      const vditorElement = editor.vditor.element
+      if (!vditorElement) return
+
+      // 清除所有可能的旧高亮
+      const oldHighlights = vditorElement.querySelectorAll('.rag-search-highlight')
+      oldHighlights.forEach(h => {
+        const parent = h.parentNode
+        if (parent) {
+          parent.replaceChild(document.createTextNode(h.textContent || ''), h)
+          parent.normalize()
+        }
+      })
+
+      // 获取编辑器内容区域
+      const irElement = vditorElement.querySelector('.vditor-ir') as HTMLElement
+      const wysiwygElement = vditorElement.querySelector('.vditor-wysiwyg') as HTMLElement
+      const svElement = vditorElement.querySelector('.vditor-sv') as HTMLElement
+
+      const searchElement: HTMLElement | null = irElement || wysiwygElement || svElement
+      if (!searchElement) return
+
+      // 搜索文本并高亮第一个匹配项
+      const searchRegex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+      let scrollToElement: HTMLElement | null = null
+
+      // 使用 TreeWalker 遍历文本节点
+      const walker = document.createTreeWalker(
+        searchElement,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: (node) => {
+            if (!node.textContent || node.textContent.trim().length === 0) {
+              return NodeFilter.FILTER_REJECT
+            }
+            if (node.parentElement?.closest('.rag-search-highlight')) {
+              return NodeFilter.FILTER_REJECT
+            }
+            const parent = node.parentElement
+            if (parent?.closest('input, textarea, .vditor-toolbar, .vditor-hint')) {
+              return NodeFilter.FILTER_REJECT
+            }
+            return NodeFilter.FILTER_ACCEPT
+          }
+        }
+      )
+
+      const textNodes: Text[] = []
+      while (walker.nextNode()) {
+        textNodes.push(walker.currentNode as Text)
+      }
+
+      // 查找第一个匹配并高亮
+      for (const textNode of textNodes) {
+        if (scrollToElement) break // 已经找到第一个匹配
+
+        const text = textNode.textContent || ''
+        searchRegex.lastIndex = 0
+        const match = searchRegex.exec(text)
+
+        if (match) {
+          const fragment = document.createDocumentFragment()
+
+          // 添加匹配前的文本
+          if (match.index > 0) {
+            fragment.appendChild(document.createTextNode(text.substring(0, match.index)))
+          }
+
+          // 添加高亮
+          const highlight = document.createElement('span')
+          highlight.textContent = match[0]
+          highlight.className = 'rag-search-highlight'
+          highlight.style.cssText = `
+            background-color: hsl(var(--primary) / 0.5);
+            border-radius: 2px;
+            padding: 0 2px;
+            display: inline;
+          `
+          scrollToElement = highlight
+          fragment.appendChild(highlight)
+
+          // 添加剩余文本
+          if (match.index + match[0].length < text.length) {
+            fragment.appendChild(document.createTextNode(text.substring(match.index + match[0].length)))
+          }
+
+          textNode.parentNode?.replaceChild(fragment, textNode)
+        }
+      }
+
+      // 滚动到匹配位置
+      if (scrollToElement) {
+        setTimeout(() => {
+          scrollToElement!.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 150)
+      }
+
+      // 3秒后清除高亮
+      setTimeout(() => {
+        const highlights = vditorElement.querySelectorAll('.rag-search-highlight')
+        highlights.forEach(h => {
+          const parent = h.parentNode
+          if (parent) {
+            parent.replaceChild(document.createTextNode(h.textContent || ''), h)
+            parent.normalize()
+          }
+        })
+      }, 3000)
+    }
+
+    emitter.on('searchAndScroll', handleSearchAndScroll)
+    return () => {
+      emitter.off('searchAndScroll', handleSearchAndScroll)
+    }
+  }, [editor])
+
   useEffect(() => {
     if (!editor) {
       init()
     } else {
+      // 切换文件时让编辑器失去焦点
+      // 移除焦点并清除选区
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
+      const selection = window.getSelection()
+      if (selection) {
+        selection.removeAllRanges()
+      }
       // 如果文件被删除或取消选中，清空编辑器
       if (!activeFilePath) {
         editor.setValue('', true)

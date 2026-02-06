@@ -7,7 +7,19 @@ import { FileItem } from './file-item'
 import { FolderItem } from "./folder-item"
 import { computedParentPath } from "@/lib/path"
 
-function Tree({ item }: { item: DirTree }) {
+// 递归过滤文件树，移除云端文件（如果 showCloudFiles 为 false）
+function filterFileTree(tree: DirTree[], showCloud: boolean): DirTree[] {
+  if (showCloud) return tree
+
+  return tree
+    .filter(item => item.isLocale)
+    .map(item => ({
+      ...item,
+      children: item.children ? filterFileTree(item.children, showCloud) : undefined
+    }))
+}
+
+function Tree({ item, focusSidebar }: { item: DirTree; focusSidebar: () => void }) {
   const { collapsibleList, setCollapsibleList, loadCollapsibleFiles } = useArticleStore()
   const path = computedParentPath(item)
 
@@ -19,19 +31,19 @@ function Tree({ item }: { item: DirTree }) {
   }
 
   return (
-    item.isFile ? 
-    <FileItem item={item} /> :
+    item.isFile ?
+    <FileItem item={item} focusSidebar={focusSidebar} /> :
     <li>
       <Collapsible
         onOpenChange={handleCollapse}
         className="group/collapsible [&[data-state=open]>button>.file-manange-item>svg:first-child]:rotate-90"
         open={collapsibleList.includes(path)}
       >
-        <FolderItem item={item} />
+        <FolderItem item={item} focusSidebar={focusSidebar} />
         <CollapsibleContent className="pl-1">
           <ul className="pl-2">
             {item.children?.map((subItem) => (
-              <Tree key={subItem.name} item={subItem} />
+              <Tree key={`${subItem.name}-${subItem.parent?.name}-${subItem.sha || ''}-${subItem.isLocale}`} item={subItem} focusSidebar={focusSidebar} />
             ))}
           </ul>
         </CollapsibleContent>
@@ -40,9 +52,9 @@ function Tree({ item }: { item: DirTree }) {
   )
 }
 
-export function FileManager() {
+export function FileManager({ focusSidebar }: { focusSidebar: () => void }) {
   const [isDragging, setIsDragging] = useState(false)
-  const { activeFilePath, fileTree, loadFileTree, setActiveFilePath, addFile } = useArticleStore()
+  const { activeFilePath, fileTree, loadFileTree, setActiveFilePath, addFile, showCloudFiles } = useArticleStore()
 
   async function handleDrop (e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -129,6 +141,9 @@ export function FileManager() {
     }
   }, [loadFileTree])
 
+  // 根据开关状态过滤文件树
+  const filteredFileTree = filterFileTree(fileTree, showCloudFiles)
+
   return (
     <div className={`flex-1 overflow-y-auto ${isDragging && 'outline-2 outline-black outline-dotted -outline-offset-4'}`}>
       <div className="flex-1 p-0">
@@ -141,8 +156,8 @@ export function FileManager() {
               onDragLeave={(e) => handleDragleave(e)}
             >
             </div>
-            {fileTree.map((item) => (
-              <Tree key={item.name + item.parent?.name} item={item} />
+            {filteredFileTree.map((item) => (
+              <Tree key={`${item.name}-${item.parent?.name || ''}-${item.sha || ''}-${item.isLocale}`} item={item} focusSidebar={focusSidebar} />
             ))}
             <div
               className="flex-1 min-h-1"

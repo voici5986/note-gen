@@ -1,23 +1,23 @@
 "use client"
 import * as React from "react"
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import useSettingStore from "@/stores/setting"
 import { Textarea } from "@/components/ui/textarea"
 import useChatStore from "@/stores/chat"
 import useMarkStore from "@/stores/mark"
 import useArticleStore from "@/stores/article"
-import { fetchAiPlaceholder } from "@/lib/ai/placeholder"
+import { fetchAiQuickPrompts } from "@/lib/ai/placeholder"
 import { useTranslations } from 'next-intl'
 import { useLocalStorage } from 'react-use';
 import { ModelSelect } from "./model-select"
 import { getWorkspacePath } from "@/lib/workspace"
 import { PromptSelect } from "./prompt-select"
-import { ChatLanguage } from "./chat-language"
 import { ChatSend } from "./chat-send"
 import { LinkedFileDisplay } from "./file-link"
-import { FileSelector } from "./file-selector"
-import { ChatModeSelect } from "./chat-mode-select"
 import { LinkedResource, MarkdownFile, LinkedFolder } from "@/lib/files"
+import { McpButton } from "./mcp-button"
+import { RagSwitch } from "./rag-switch"
+import { ClipboardMonitor } from "./clipboard-monitor"
 import emitter from "@/lib/emitter"
 import { ChatSettingsDrawer } from "@/app/mobile/chat/components/chat-settings-drawer"
 import { ChatToolsDrawer } from "@/app/mobile/chat/components/chat-tools-drawer"
@@ -49,11 +49,10 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 
 
-export function ChatInput() {
+export const ChatInput = React.memo(function ChatInput() {
   const [text, setText] = useState("")
   const { primaryModel, chatToolbarConfigPc, setChatToolbarConfigPc } = useSettingStore()
-  const { chats, loading, isLinkMark } = useChatStore()
-  const [showFileSelector, setShowFileSelector] = useState(false)
+  const { chats, loading, setLinkedResource: setChatLinkedResource } = useChatStore()
   const { marks, trashState } = useMarkStore()
   const { activeFilePath } = useArticleStore()
   const [isComposing, setIsComposing] = useState(false)
@@ -133,6 +132,7 @@ export function ChatInput() {
   // 移除关联文件
   function removeLinkedFile() {
     setLinkedResource(null)
+    setChatLinkedResource(null)
   }
 
   function removeImage(id: string) {
@@ -307,24 +307,20 @@ export function ChatInput() {
   async function genInputPlaceholder() {
     if (!primaryModel) return
     if (trashState) return
-    const scanMarks = isLinkMark ? marks.filter(item => item.type === 'scan') : []
-    const textMarks = isLinkMark ? marks.filter(item => item.type === 'text') : []
-    const imageMarks = isLinkMark ? marks.filter(item => item.type === 'image') : []
-    const fileMarks = isLinkMark ? marks.filter(item => item.type === 'file') : []
-    const linkMarks = isLinkMark ? marks.filter(item => item.type === 'link') : []
     const lastClearIndex = chats.findLastIndex(item => item.type === 'clear')
     const chatsAfterClear = chats.slice(lastClearIndex + 1)
     const request_content = `
-      ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks]
-        .slice(0, 5)
-        .map(item => item.content?.slice(0, 60))
-        .join(';\n\n')}
       ${chatsAfterClear.slice(0, 5).map(item => item.content?.slice(0, 60)).join(';\n\n')}
     `.trim()
-    // 使用非流式请求获取placeholder内容
-    const content = await fetchAiPlaceholder(request_content)
-    if (content) {
-      setPlaceholder(content + ' [Tab]')
+    // 使用 fetchAiQuickPrompts 获取4条提示词
+    const prompts = await fetchAiQuickPrompts(request_content)
+    // 发送事件给 chat-empty 组件，显示前3条
+    if (prompts.length >= 3) {
+      emitter.emit('ai-prompts-generated', prompts)
+    }
+    // 取第4条作为 placeholder
+    if (prompts.length >= 4 && prompts[3]?.text) {
+      setPlaceholder(prompts[3].text + ' [Tab]')
     }
   }
 
@@ -339,7 +335,7 @@ export function ChatInput() {
     placeholderTimerRef.current = setTimeout(() => {
       genInputPlaceholder()
     }, 1500) // 1.5秒延迟
-  }, [primaryModel, marks, isLinkMark, chats, trashState, t])
+  }, [primaryModel, marks, chats, trashState, t])
 
 
   // 插入占位符
@@ -350,41 +346,44 @@ export function ChatInput() {
     }
   }
 
-  // 处理拖拽结束（仅 PC 端底部工具栏）
-  function handleDragEnd(event: DragEndEvent) {
+  // 处理拖拽结束（底部工具栏）
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      const bottomTools = ['modelSelect', 'promptSelect', 'chatLanguage']
-      const bottomItems = chatToolbarConfigPc.filter(item => bottomTools.includes(item.id))
-      const oldIndex = bottomItems.findIndex((item) => item.id === active.id)
-      const newIndex = bottomItems.findIndex((item) => item.id === over.id)
-      
-      const reorderedItems = arrayMove(bottomItems, oldIndex, newIndex)
+      const enabledItems = chatToolbarConfigPc.filter(item => item.enabled)
+      const oldIndex = enabledItems.findIndex((item) => item.id === active.id)
+      const newIndex = enabledItems.findIndex((item) => item.id === over.id)
+
+      const reorderedItems = arrayMove(enabledItems, oldIndex, newIndex)
       const allItems = [...chatToolbarConfigPc]
-      
+
       reorderedItems.forEach((item, index) => {
         const globalIndex = allItems.findIndex(i => i.id === item.id)
         if (globalIndex !== -1) {
-          allItems[globalIndex] = { ...item, order: bottomItems[0].order + index }
+          allItems[globalIndex] = { ...item, order: enabledItems[0].order + index }
         }
       })
-      
+
       setChatToolbarConfigPc(allItems)
     }
-  }
+  }, [chatToolbarConfigPc, setChatToolbarConfigPc])
+
+  // 使用 useMemo 优化工具栏项过滤 - 显示底部工具栏（排除 newChat）
+  const bottomToolbarItems = useMemo(() => {
+    return chatToolbarConfigPc
+      .filter(item => item.enabled && item.id !== 'newChat')
+      .sort((a, b) => a.order - b.order)
+  }, [chatToolbarConfigPc])
 
   useEffect(() => {
-    if (!primaryModel) {
-      setPlaceholder(t('record.chat.input.placeholder.noPrimaryModel'))
-      return
-    }
-    if (marks.length === 0) {
+    // 如果有 marks，生成 AI 提示词作为 placeholder
+    if (marks.length > 0) {
+      genInputPlaceholder()
+    } else {
       setPlaceholder(t('record.chat.input.placeholder.default'))
-      return
     }
-    genInputPlaceholder()
-  }, [primaryModel, marks, isLinkMark, t])
+  }, [primaryModel, marks, t])
 
   useEffect(() => {
     emitter.on('revertChat', (event: unknown) => {
@@ -392,9 +391,11 @@ export function ChatInput() {
     })
     emitter.on('fileSelected', (event: unknown) => {
       setLinkedResource(event as MarkdownFile)
+      setChatLinkedResource(event as MarkdownFile)
     })
     emitter.on('folderSelected', (event: unknown) => {
       setLinkedResource(event as LinkedFolder)
+      setChatLinkedResource(event as LinkedFolder)
     })
     emitter.on('insert-quote', (event: unknown) => {
       const data = event as {
@@ -412,11 +413,23 @@ export function ChatInput() {
       // 触发防抖的 placeholder 重新生成
       debouncedGenPlaceholder()
     })
+    emitter.on('quick-prompt-insert', (prompt: string) => {
+      setText(prompt)
+      textareaRef.current?.focus()
+    })
+    emitter.on('ai-placeholder-generated', (event: unknown) => {
+      const promptText = event as string
+      if (promptText) {
+        setPlaceholder(promptText)
+      }
+    })
     return () => {
       emitter.off('revertChat')
       emitter.off('fileSelected')
       emitter.off('folderSelected')
       emitter.off('insert-quote')
+      emitter.off('quick-prompt-insert')
+      emitter.off('ai-placeholder-generated')
     }
   }, [debouncedGenPlaceholder])
 
@@ -425,12 +438,14 @@ export function ChatInput() {
     async function linkCurrentResource() {
       if (!activeFilePath) {
         setLinkedResource(null)
+        setChatLinkedResource(null)
         return
       }
 
       const workspace = await getWorkspacePath()
 
-      if (activeFilePath.endsWith('.md')) {
+      // 检查是否是支持的文件类型（包括 markdown、代码文件等）
+      if (activeFilePath.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template)$/i)) {
         // 文件关联逻辑
         const fileName = activeFilePath.split('/').pop() || activeFilePath
 
@@ -443,11 +458,13 @@ export function ChatInput() {
           fullPath = activeFilePath
         }
 
-        setLinkedResource({
+        const resource = {
           name: fileName,
           path: fullPath,
           relativePath: activeFilePath
-        })
+        }
+        setLinkedResource(resource)
+        setChatLinkedResource(resource)
       } else {
         // 文件夹关联逻辑 - 只有在有索引文件时才关联
         const folderName = activeFilePath.split('/').pop() || activeFilePath
@@ -471,16 +488,19 @@ export function ChatInput() {
 
         // 只有在有索引文件时才关联文件夹
         if (indexedCount > 0) {
-          setLinkedResource({
+          const resource = {
             name: folderName,
             path: fullPath,
             relativePath: activeFilePath,
             fileCount: files.length,
             indexedCount: indexedCount
-          })
+          }
+          setLinkedResource(resource)
+          setChatLinkedResource(resource)
         } else {
           // 没有索引文件，清除关联
           setLinkedResource(null)
+          setChatLinkedResource(null)
         }
       }
     }
@@ -494,6 +514,59 @@ export function ChatInput() {
       debouncedGenPlaceholder()
     }
   }, [linkedResource, debouncedGenPlaceholder])
+
+  // 可排序的工具栏项组件
+  interface SortableToolbarItemProps {
+    id: string
+  }
+
+  const SortableToolbarItem = React.memo(function SortableToolbarItem({ id }: SortableToolbarItemProps) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
+
+    // 渲染对应的工具栏组件
+    const renderToolbarItem = useMemo(() => {
+      switch (id) {
+        case 'modelSelect':
+          return <ModelSelect />
+        case 'promptSelect':
+          return <PromptSelect />
+        case 'mcpButton':
+          return <McpButton />
+        case 'ragSwitch':
+          return <RagSwitch />
+        case 'clipboardMonitor':
+          return <ClipboardMonitor />
+        default:
+          return null
+      }
+    }, [id, primaryModel, loading])
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing"
+      >
+        {renderToolbarItem}
+      </div>
+    )
+  })
+  SortableToolbarItem.displayName = 'SortableToolbarItem'
 
   return (
     <footer className="flex flex-col w-full p-1 justify-between items-center">
@@ -597,19 +670,16 @@ export function ChatInput() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={chatToolbarConfigPc.filter(item => ['modelSelect', 'promptSelect', 'chatLanguage'].includes(item.id) && item.enabled).map(item => item.id)}
+                  items={bottomToolbarItems.map(item => item.id)}
                   strategy={horizontalListSortingStrategy}
                 >
                   <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
-                    {chatToolbarConfigPc
-                      .filter(item => ['modelSelect', 'promptSelect', 'chatLanguage'].includes(item.id) && item.enabled)
-                      .sort((a, b) => a.order - b.order)
-                      .map(item => (
-                        <SortableToolbarItem
-                          key={item.id}
-                          id={item.id}
-                        />
-                      ))}
+                    {bottomToolbarItems.map(item => (
+                      <SortableToolbarItem
+                        key={item.id}
+                        id={item.id}
+                      />
+                    ))}
                   </div>
                 </SortableContext>
               </DndContext>
@@ -636,72 +706,12 @@ export function ChatInput() {
                 disabled={!primaryModel || loading}
               />
             )}
-            <ChatModeSelect />
             <ChatSend inputValue={text} onSent={handleSent} linkedResource={linkedResource} attachedImages={attachedImages} quoteData={quoteData} ref={chatSendRef} />
           </div>
         </div>
 
-        {/* 文件选择器（移动端） */}
-        {showFileSelector && (
-          <FileSelector
-            isOpen={showFileSelector}
-            onClose={() => setShowFileSelector(false)}
-            onFileSelect={(file) => {
-              setLinkedResource(file)
-              setShowFileSelector(false)
-            }}
-          />
-        )}
-        
       </div>
     </footer>
   )
-}
-
-// 可排序的工具栏项组件
-interface SortableToolbarItemProps {
-  id: string
-}
-
-function SortableToolbarItem({ id }: SortableToolbarItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  // 渲染对应的工具栏组件
-  const renderToolbarItem = () => {
-    switch (id) {
-      case 'modelSelect':
-        return <ModelSelect />
-      case 'promptSelect':
-        return <PromptSelect />
-      case 'chatLanguage':
-        return <ChatLanguage />
-      default:
-        return null
-    }
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="cursor-grab active:cursor-grabbing"
-    >
-      {renderToolbarItem()}
-    </div>
-  )
-}
+})
+ChatInput.displayName = 'ChatInput'

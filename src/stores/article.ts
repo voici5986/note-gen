@@ -68,6 +68,10 @@ interface NoteState {
   initHtml2md: () => Promise<void>
   setHtml2md: (html2md: boolean) => Promise<void>
 
+  showCloudFiles: boolean
+  initShowCloudFiles: () => Promise<void>
+  setShowCloudFiles: (show: boolean) => Promise<void>
+
   sortType: SortType
   sortDirection: SortDirection
   initSortSettings: () => Promise<void>
@@ -180,16 +184,23 @@ const useArticleStore = create<NoteState>((set, get) => ({
   sortFileTree: (tree: DirTree[]) => {
     const sortType = get().sortType
     const sortDirection = get().sortDirection
-    if (sortType === 'none') return tree
 
+    // 复制树结构，避免直接修改原始数据
     const sortedTree = cloneDeep(tree)
 
+    // skills 文件夹始终置顶（在任何排序方式下，包括 sortType 为 'none' 时）
     const sortFunction = (a: DirTree, b: DirTree) => {
-      // skills 文件夹始终置顶（在任何排序方式下）
       const aIsSkills = a.isDirectory && isSkillsFolder(a.name)
       const bIsSkills = b.isDirectory && isSkillsFolder(b.name)
       if (aIsSkills && !bIsSkills) return -1
       if (!aIsSkills && bIsSkills) return 1
+
+      // 如果排序类型为 'none'，在 skills 置顶后，文件夹在文件上方
+      if (sortType === 'none') {
+        if (a.isDirectory && !b.isDirectory) return -1
+        if (!a.isDirectory && b.isDirectory) return 1
+        return 0
+      }
 
       // 文件夹始终在文件上方
       if (a.isDirectory && !b.isDirectory) return -1
@@ -258,6 +269,18 @@ const useArticleStore = create<NoteState>((set, get) => ({
     set({ html2md })
     const store = await Store.load('store.json');
     store.set('html2md', html2md)
+  },
+
+  showCloudFiles: true,
+  initShowCloudFiles: async () => {
+    const store = await Store.load('store.json');
+    const res = await store.get<boolean>('showCloudFiles')
+    set({ showCloudFiles: res ?? true })
+  },
+  setShowCloudFiles: async (show: boolean) => {
+    set({ showCloudFiles: show })
+    const store = await Store.load('store.json');
+    await store.set('showCloudFiles', show)
   },
 
   fileTree: [],
@@ -354,7 +377,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
     if (workspace.isCustom) {
       // 自定义工作区
       dirs = (await readDir(workspace.path))
-        .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.endsWith('.md') || file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i))).map(file => ({
+        .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i))).map(file => ({
           ...file,
           isEditing: false,
           isLocale: true,
@@ -367,7 +390,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
     } else {
       // 默认工作区
       dirs = (await readDir('article', { baseDir: BaseDirectory.AppData }))
-        .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.endsWith('.md') || file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i))).map(file => ({
+        .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i))).map(file => ({
           ...file,
           isEditing: false,
           isLocale: true,
@@ -415,7 +438,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
         try {
           if (workspace.isCustom) {
             children = (await readDir(fullPath))
-              .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.endsWith('.md') || file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
+              .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
               .map(file => ({
                 ...file,
                 parent: folder,
@@ -430,7 +453,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
             const dirRelative = await toWorkspaceRelativePath(fullPath)
             const pathOptions = await getFilePathOptions(dirRelative)
             children = (await readDir(pathOptions.path, { baseDir: pathOptions.baseDir }))
-              .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.endsWith('.md') || file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
+              .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
               .map(file => ({
                 ...file,
                 parent: folder,
@@ -629,11 +652,16 @@ const useArticleStore = create<NoteState>((set, get) => ({
   loadCollapsibleFiles: async (fullpath: string) => {
     const cacheTree: DirTree[] = get().fileTree
     const currentFolder = getCurrentFolder(fullpath, cacheTree)
-    
+
     if (!currentFolder) {
       return
     }
-    
+
+    // 检查是否是目录（防止误将文件当作目录处理）
+    if (!currentFolder.isDirectory) {
+      return
+    }
+
     // 如果已经加载过子内容，则跳过
     if (currentFolder.children && currentFolder.children.length > 0) {
       // 仅异步更新远程同步状态
@@ -691,7 +719,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
       try {
         if (workspace.isCustom) {
           children = (await readDir(fullFolderPath))
-            .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.endsWith('.md') || file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
+            .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
             .map(file => ({
               ...file,
               parent: currentFolder,
@@ -706,7 +734,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
           const dirRelative = await toWorkspaceRelativePath(fullFolderPath)
           const pathOptions = await getFilePathOptions(dirRelative)
           children = (await readDir(pathOptions.path, { baseDir: pathOptions.baseDir }))
-            .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.endsWith('.md') || file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
+            .filter(file => file.name !== '.DS_Store' && !file.name.startsWith('.') && (file.isDirectory || file.name.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i)))
             .map(file => ({
               ...file,
               parent: currentFolder,
@@ -998,15 +1026,15 @@ const useArticleStore = create<NoteState>((set, get) => ({
     const res = await store.get<string[]>('collapsibleList')
     const activeFilePath = await store.get<string>('activeFilePath')
     set({
-      collapsibleList: res ? uniq(res.filter(item => !item.includes('.md'))) : [],
+      collapsibleList: res ? uniq(res.filter(item => !item.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i))) : [],
       collapsibleListInitialized: true
     })
 
     if (activeFilePath) {
       set({ activeFilePath })
 
-      // 检查是否是文件夹（没有 .md 扩展名）
-      if (!activeFilePath.endsWith('.md') && !activeFilePath.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i)) {
+      // 检查是否是文件夹（所有支持的文件扩展名都是文件，不是文件夹）
+      if (!activeFilePath.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i)) {
         // 文件夹：确保展开并加载内容
         if (!get().collapsibleList.includes(activeFilePath)) {
           await get().setCollapsibleList(activeFilePath, true)
@@ -1031,7 +1059,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
     }
     const store = await Store.load('store.json');
     await store.set('collapsibleList', collapsibleList)
-    set({ collapsibleList: uniq(collapsibleList).filter(item => !item.includes('.md')) })
+    set({ collapsibleList: uniq(collapsibleList).filter(item => !item.match(/\.(md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template|jpg|jpeg|png|gif|bmp|webp|svg)$/i)) })
   },
   
   expandAllFolders: async () => {
@@ -1427,16 +1455,14 @@ const useArticleStore = create<NoteState>((set, get) => ({
       
       const { path, content } = state.pendingVectorContent
       const vectorStore = useVectorStore.getState()
-      
-      // 如果向量数据库已启用，执行向量计算
-      if (vectorStore.isVectorDbEnabled) {
-        await vectorStore.processDocument(path, content)
-        // 更新向量索引状态
-        const filename = path.split('/').pop() || path
-        const newMap = new Map(get().vectorIndexedFiles)
-        newMap.set(filename, Date.now())
-        set({ vectorIndexedFiles: newMap })
-      }
+
+      // 执行向量计算
+      await vectorStore.processDocument(path, content)
+      // 更新向量索引状态
+      const filename = path.split('/').pop() || path
+      const newMap = new Map(get().vectorIndexedFiles)
+      newMap.set(filename, Date.now())
+      set({ vectorIndexedFiles: newMap })
 
       // 清除待处理内容和定时器
       if (state.vectorCalcTimer) {

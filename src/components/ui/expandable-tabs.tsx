@@ -47,7 +47,7 @@ const spanVariants = {
   exit: { width: 0, opacity: 0 },
 };
 
-const transition = { delay: 0.1, type: "spring", bounce: 0, duration: 0.6 };
+const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export function ExpandableTabs({
   tabs,
@@ -84,7 +84,7 @@ export function ExpandableTabs({
     <div
       ref={outsideClickRef}
       className={cn(
-        "flex flex-wrap items-center gap-1.5 rounded-xl border bg-background p-0.5",
+        "flex flex-wrap items-center gap-0.5 rounded-xl border bg-background p-0.5",
         className
       )}
     >
