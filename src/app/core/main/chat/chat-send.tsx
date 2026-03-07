@@ -36,7 +36,7 @@ interface ChatSendProps {
 export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ inputValue, onSent, linkedResource, attachedImages = [], quoteData = null }, ref) => {
   const { primaryModel } = useSettingStore()
   const { currentTagId } = useTagStore()
-  const { insert, loading, setLoading, saveChat, setAgentState, maybeCondense } = useChatStore()
+  const { insert, loading, setLoading, saveChat, setAgentState, maybeCondense, linkedResourcePreview } = useChatStore()
   const { isRagEnabled } = useVectorStore()
   const abortControllerRef = useRef<AbortController | null>(null)
   const agentHandlerRef = useRef<AgentHandler | null>(null)
@@ -135,6 +135,13 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
     // 每次都创建新的 AgentHandler，使用当前的 placeholderMessage
     const agentHandler = new AgentHandler({
       requestConfirmation,
+      onFinalAnswerRender: (markdownContent) => {
+        // 检测到 Final Answer 时触发渲染
+        setAgentState({
+          isFinalAnswerMode: true,
+          finalAnswerContent: markdownContent
+        })
+      },
       onComplete: async (result, steps, stopped) => {
         // 获取 Agent 执行历史，保存完整的 ReAct 步骤
         const { agentState } = useChatStore.getState()
@@ -182,6 +189,12 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
           agentHistory: JSON.stringify(agentHistory),
         }, true)
 
+        // 清空 Final Answer 模式状态
+        setAgentState({
+          isFinalAnswerMode: false,
+          finalAnswerContent: undefined
+        })
+
         // 清空 ref
         agentHandlerRef.current = null
       },
@@ -204,6 +217,12 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
           ragSourceDetails: currentMessage?.ragSourceDetails,
           content: `Error: ${error}`,
         }, true)
+
+        // 清空 Final Answer 模式状态
+        setAgentState({
+          isFinalAnswerMode: false,
+          finalAnswerContent: undefined
+        })
 
         // 清空 ref
         agentHandlerRef.current = null
@@ -288,23 +307,29 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
         }, true)
       }
 
-      // 3. 如果有关联文件（非文件夹），读取文件内容
+      // 3. 如果有关联文件（非文件夹），使用行号预览
       if (linkedResource && !isLinkedFolder(linkedResource)) {
-        try {
-          const workspace = await getWorkspacePath()
-          let linkedFileContent = ''
-          if (workspace.isCustom) {
-            linkedFileContent = await readTextFile(linkedResource.path)
-          } else {
-            const { path, baseDir } = await getFilePathOptions(linkedResource.path)
-            linkedFileContent = await readTextFile(path, { baseDir })
-          }
+        if (linkedResourcePreview) {
+          // 使用预生成的行号预览
+          context += `\n${linkedResourcePreview}\n`
+        } else {
+          // 回退：读取完整文件内容
+          try {
+            const workspace = await getWorkspacePath()
+            let linkedFileContent = ''
+            if (workspace.isCustom) {
+              linkedFileContent = await readTextFile(linkedResource.path)
+            } else {
+              const { path, baseDir } = await getFilePathOptions(linkedResource.path)
+              linkedFileContent = await readTextFile(path, { baseDir })
+            }
 
-          if (linkedFileContent) {
-            context += `\n## 关联文件内容\n\nThe following is the content of the linked file "${linkedResource.name}" (${linkedResource.relativePath}):\n${linkedFileContent}\n`
+            if (linkedFileContent) {
+              context += `\n## 关联文件内容\n\nThe following is the content of the linked file "${linkedResource.name}" (${linkedResource.relativePath}):\n${linkedFileContent}\n`
+            }
+          } catch (error) {
+            console.error('Failed to read linked file in Agent mode:', error)
           }
-        } catch (error) {
-          console.error('Failed to read linked file in Agent mode:', error)
         }
       }
 
@@ -312,7 +337,9 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
       if (quoteData) {
         const { fileName, startLine, endLine, fullContent } = quoteData
         let lineInfo = ''
-        if (startLine !== -1 && endLine !== -1) {
+        const hasValidLineNumbers = startLine !== -1 && endLine !== -1
+
+        if (hasValidLineNumbers) {
           if (startLine === endLine) {
             lineInfo = `第 ${startLine} 行`
           } else {
@@ -328,9 +355,15 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
 ${fullContent}
 ---
 
-**重要**: 如果用户要求修改引用的内容，你必须使用上述确切的行号。
+${hasValidLineNumbers ? `**🚨 必须使用行号修改**: 当用户引用内容并要求修改时，你必须使用 replace_editor_content 工具的 line-based 模式，传入精确的行号：
 - 单行修改: startLine: ${startLine}, endLine: ${endLine}
 - 多行范围: startLine: ${startLine}, endLine: ${endLine}
+- 必须使用 replaceContent 参数传入新内容
+
+**禁止**:
+- 禁止使用 from/to 位置参数
+- 禁止使用 searchContent 文本搜索模式
+- 禁止获取整个文档内容后再操作` : `**注意**: 此引用内容没有有效的行号信息。如果需要修改，请先使用 get_editor_selection 工具获取当前选中的行号信息。`}
 
 请基于这段引用内容回答用户的问题。
 

@@ -112,6 +112,13 @@ interface SettingState {
   autoSync: string
   setAutoSync: (autoSync: string) => Promise<void>
 
+  // 自动拉取相关设置
+  autoPullOnOpen: boolean
+  setAutoPullOnOpen: (autoPullOnOpen: boolean) => Promise<void>
+
+  autoPullOnSwitch: boolean
+  setAutoPullOnSwitch: (autoPullOnSwitch: boolean) => Promise<void>
+
   // Gitee 相关设置
   giteeAccessToken: string
   setGiteeAccessToken: (giteeAccessToken: string) => void
@@ -229,6 +236,10 @@ interface SettingState {
   recordToolbarConfig: RecordToolbarItem[]
   setRecordToolbarConfig: (config: RecordToolbarItem[]) => Promise<void>
 
+  // 编辑器撤销/重做按钮显示设置
+  showEditorUndoRedo: boolean
+  setShowEditorUndoRedo: (show: boolean) => Promise<void>
+
   // 摘要设置
   enableCondense: boolean
   setEnableCondense: (enabled: boolean) => Promise<void>
@@ -255,7 +266,13 @@ const useSettingStore = create<SettingState>((set, get) => ({
   initSettingData: async () => {
     const store = await Store.load('store.json');
     await get().setVersion()
-    
+
+    // 初始化图床配置
+    const savedUseImageRepo = await store.get<boolean>('useImageRepo')
+    if (savedUseImageRepo !== undefined && savedUseImageRepo !== null) {
+      set({ useImageRepo: savedUseImageRepo })
+    }
+
     // 初始化默认的NoteGen模型配置
     const existingAiModelList = (await store.get('aiModelList') as AiConfig[]) || []
     const hasNoteGenModels = existingAiModelList.some(config => 
@@ -709,6 +726,39 @@ const useSettingStore = create<SettingState>((set, get) => ({
     await store.set('autoSync', autoSync)
   },
 
+  // 自动拉取相关设置 - 默认关闭
+  autoPullOnOpen: false,
+  setAutoPullOnOpen: async (autoPullOnOpen: boolean) => {
+    set({ autoPullOnOpen })
+    const store = await Store.load('store.json');
+    await store.set('autoPullOnOpen', autoPullOnOpen)
+
+    // 同步更新 sync-manager 的配置
+    try {
+      const { getSyncManager } = await import('@/lib/sync/sync-manager')
+      const manager = getSyncManager()
+      await manager.updateConfig({ autoPullOnOpen })
+    } catch {
+      // 静默处理
+    }
+  },
+
+  autoPullOnSwitch: false,
+  setAutoPullOnSwitch: async (autoPullOnSwitch: boolean) => {
+    set({ autoPullOnSwitch })
+    const store = await Store.load('store.json');
+    await store.set('autoPullOnSwitch', autoPullOnSwitch)
+
+    // 同步更新 sync-manager 的配置
+    try {
+      const { getSyncManager } = await import('@/lib/sync/sync-manager')
+      const manager = getSyncManager()
+      await manager.updateConfig({ autoPullOnSwitch })
+    } catch {
+      // 静默处理
+    }
+  },
+
   lastSettingPage: 'ai',
   setLastSettingPage: async (page: string) => {
     set({ lastSettingPage: page })
@@ -1134,6 +1184,15 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ condenseMaxLength: length })
     const store = await Store.load('store.json');
     await store.set('condenseMaxLength', length)
+    await store.save()
+  },
+
+  // 编辑器撤销/重做按钮显示设置 - 默认开启
+  showEditorUndoRedo: true,
+  setShowEditorUndoRedo: async (show: boolean) => {
+    set({ showEditorUndoRedo: show })
+    const store = await Store.load('store.json');
+    await store.set('showEditorUndoRedo', show)
     await store.save()
   },
 }))

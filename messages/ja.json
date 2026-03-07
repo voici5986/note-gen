@@ -38,7 +38,8 @@
     "warning": "警告",
     "info": "情報",
     "unsaved": "未保存",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "configureSync": "同期を構成"
   },
   "settings": {
     "defaultModels": {
@@ -309,8 +310,8 @@
       "title": "エディター設定",
       "interfaceSettings": "インターフェース設定",
       "desc": "ここでは、エディターをカスタマイズして、より適した書き込み体験を提供できます。",
-      "typewriterMode": "打字機モード",
-      "typewriterModeDesc": "打字機モード下、エディタは打字機の効果を模倣し、より深く浸かる書き込み体験を提供します。",
+      "centeredContent": "コンテンツを中央に表示",
+      "centeredContentDesc": "有効にすると、コンテンツを中央に表示し、両側に余白を設けます。",
       "outlineEnable": "アウトラインを有効にする",
       "outlineEnableDesc": "アウトラインを有効にすると、アウトラインが表示されます。",
       "outlinePosition": "アウトライン位置",
@@ -319,14 +320,8 @@
         "left": "左側",
         "right": "右側"
       },
-      "pageView": "ページビュー",
-      "pageViewDesc": "沉浸視图下、編集器の両側に大量の空白が残され、全景モード下、編集器の内容は編集領域を占めます。",
-      "pageViewOptions": {
-        "immersiveView": "沉浸視图",
-        "panoramaView": "全景視图"
-      },
-      "enableLineNumber": "コードブロック行番号",
-      "enableLineNumberDesc": "コードブロックに行番号を表示します。",
+      "showUndoRedo": "元に戻す/やり直しボタン",
+      "showUndoRedoDesc": "エディターのタブバーに元に戻すボタンとやり直しボタンを表示します。",
       "completion": {
         "title": "自動補完",
         "model": {
@@ -339,6 +334,36 @@
         "model": {
           "title": "コミットモデル",
           "desc": "ファイルの変更に基づいて Git コミットメッセージを自動生成するためのモデル"
+        }
+      },
+      "mermaid": {
+        "title": " диаграмма",
+        "rendering": "レンダリング中...",
+        "renderError": "レンダリングエラー",
+        "clickToEdit": "クリックしてソースを編集",
+        "clickToAdd": "クリックして диаграммаを追加",
+        "placeholder": "Mermaid диаграммаコードを入力...",
+        "preview": "プレビュー",
+        "done": "完了",
+        "diagramTypes": {
+          "flowchart": "フローチャート",
+          "sequence": "シーケンス",
+          "classDiagram": "クラス図",
+          "stateDiagram": "ステート図",
+          "er": "ER図",
+          "gantt": "ガントチャート",
+          "pie": "円グラフ",
+          "journey": "ジャーニー"
+        },
+        "templates": {
+          "flowchart": "graph TD\n    A[開始] --> B[処理]\n    B --> C[終了]",
+          "sequence": "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->>Bob: こんにちは\n    Bob-->>Alice: 返信",
+          "classDiagram": "classDiagram\n    Animal <|-- Duck\n    Animal <|-- Fish\n    Animal : +int age\n    Animal : +String gender",
+          "stateDiagram": "stateDiagram-v2\n    [*] --> Active\n    Active --> [*]",
+          "er": "erDiagram\n    CUSTOMER ||--o{ ORDER : places\n    CUSTOMER ||--o{ DELIVERY-ADDRESS : uses",
+          "gantt": "gantt\n    title プロジェクト計画\n    dateFormat YYYY-MM-DD\n    section 第一フェーズ\n    タスク1 :a1, 2024-01-01, 30d\n    section 第二フェーズ\n    タスク2 :after a1, 20d",
+          "pie": "pie title リソース割り当て\n    \"CPU\" : 45\n    \"メモリ\" : 30\n    \"ストレージ\" : 25",
+          "journey": "journey\n    title 私の日常工作\n    section 午前\n    通勤 : 7:00, 5\n    仕事 : 9:00, 8"
         }
       }
     },
@@ -570,6 +595,11 @@
     "sync": {
       "title": "同期",
       "desc": "ここでは、同期リポジトリを設定することができます。ログ、markdownファイル、システム設定などの情報を同期するのに役立ちます。",
+      "selectPlatform": "同期プラットフォームを選択",
+      "platformSettings": "プラットフォームを選択",
+      "settings": "同期設定",
+      "platformDesc": "Tokenとリポジトリ情報を設定して同期を有効にします",
+      "moreSettings": "その他の設定",
       "repoStatus": "リポジトリの状態",
       "syncRepo": "同期リポジトリ",
       "syncRepoDesc": "執筆中のMarkdownファイルを同期",
@@ -582,7 +612,7 @@
       "newToken": "作成 access token",
       "newTokenDesc": "新しいトークンを作成する際は必ずrepo権限を選択してください。設定後、自動的にプライベートリポジトリと画像ホスティングリポジトリが作成されます。",
       "giteeTokenDesc": "Giteeの個人アクセストークンはデータ同期に使用されます。リポジトリの読み書き権限が必要です。設定後、自動的にファイルリポジトリ（プライベート）と画像リポジトリが作成されます。",
-      "imageRepoSetting": "ローカル/クラウドストレージ",
+      "imageRepoSetting": "画像ホスティングを有効化",
       "imageRepoSettingDesc": "画像ホスティングリポジトリが設定されています。有効にすると画像はそちらに保存され、無効の場合はローカル保存となります。",
       "jsdelivrSetting": "jsDelivr",
       "jsdelivrSettingDesc": "jsdelivrを利用して画像アクセスを高速化します。",
@@ -595,12 +625,12 @@
       "customImageRepoDesc": "空白の場合はデフォルトのリポジトリ名を使用",
       "backupMethod": "バックアップ方法",
       "backupMethodDesc": "主要バックアップ方法として設定すると、文章作成中のすべての同期関連機能が現在のバックアップ方法を使用します（画像ホスティング機能を除く）",
-      "isPrimaryBackup": "現在の {type} 主要バックアップ方法",
-      "setPrimaryBackup": "主要バックアップ方法として設定",
       "createRepo": "リポジトリを作成",
       "creating": "作成中",
       "checkRepo": "リポジトリを確認",
       "checking": "確認中",
+      "enterToken": "Access Tokenを入力してください",
+      "enterTokenHint": "リポジトリ的状态を確認するには、先にAccess Tokenを入力してください",
       "gitlabInstanceType": "GitLab インスタンスタイプ",
       "gitlabInstanceTypeDesc": "接続する GitLab インスタンスタイプを選択してください",
       "gitlabInstanceTypePlaceholder": "GitLab インスタンスタイプを選択してください",
@@ -612,12 +642,19 @@
       "autoSyncOptions": {
         "placeholder": "自動同期時間",
         "disabled": "無効",
+        "2s": "2 秒",
+        "3s": "3 秒",
+        "5s": "5 秒",
         "10s": "10 秒",
+        "20s": "20 秒",
         "30s": "30 秒",
         "1m": "1 分",
-        "5m": "5 分",
-        "30m": "30 分"
+        "2m": "2 分"
       },
+      "autoPullOnOpen": "ファイルを開く時に自動プル",
+      "autoPullOnOpenDesc": "ファイルを開く時、リモートに新しいバージョンがある場合は自動的にプルしてローカルを上書き",
+      "autoPullOnSwitch": "ファイルを切り替える時に自動プル",
+      "autoPullOnSwitchDesc": "他のファイルに切り替える時、リモートに新しいバージョンがある場合は自動的にプルしてローカルを上書き",
       "exclusions": {
         "title": "同期除外設定",
         "desc": "以下の設定はデバイス固有のものであるため、デバイス間で同期されません",
@@ -649,6 +686,8 @@
     "imageHosting": {
       "title": "画像ホスティング",
       "desc": "ここでは、画像の保存と管理のための画像ホスティングサービスを設定できます。",
+      "type": "プラットフォームを選択",
+      "typeDesc": "画像ホスティングサービスを選択",
       "customRepoName": "カスタムリポジトリ名",
       "customRepoNameDesc": "空白の場合はデフォルトのリポジトリ名を使用",
       "isPrimaryBackup": "現在の {type} 主要バックアップ方法",
@@ -795,6 +834,7 @@
           "title": "バックアップのエクスポート",
           "desc": "アプリケーションデータを .zip ファイルにパッケージし、指定した場所に保存します。",
           "button": "場所を選択してエクスポート",
+          "simpleButton": "エクスポート",
           "exporting": "エクスポート中..."
         },
         "import": {
@@ -1972,7 +2012,8 @@
   "article": {
     "sync": {
       "syncingRemote": "リモートファイルをプル中...",
-      "syncComplete": "同期完了"
+      "syncComplete": "同期完了",
+      "pullingRemote": "リモートサーバーから最新コンテンツを取得中..."
     },
     "syncConfirm": {
       "title": "リモートファイルの更新を検出",
@@ -2007,6 +2048,17 @@
           "desc": "ワークスペースディレクトリを選択または切り替え"
         }
       }
+    },
+    "unsupportedFile": {
+      "title": "このファイルをプレビューできません",
+      "fileName": "ファイル名",
+      "filePath": "ファイルパス",
+      "fileSize": "ファイルサイズ",
+      "modifiedTime": "更新日時",
+      "createdTime": "作成日時",
+      "pathCopied": "パスをコピーしました",
+      "openExternal": "外部アプリで開く",
+      "openDirectory": "ファイルのディレクトリを開く"
     },
     "file": {
       "toolbar": {
@@ -2192,7 +2244,17 @@
           "tooltip": "翻訳",
           "description": "選択したテキストを翻訳します",
           "selectContent": "まず内容を選択してください",
-          "promptTemplate": "このテキスト：\n{content}\nを{language}に翻訳してください。翻訳結果のみを返してください。"
+          "promptTemplate": "このテキスト：\n{content}\nを{language}に翻訳してください。翻訳結果のみを返してください。",
+          "fail": "翻訳に失敗しました",
+          "failNoSelection": "翻訳するテキストを選択してください",
+          "translating": "翻訳中",
+          "translatingTo": "{language}に翻訳中...",
+          "success": "翻訳完了",
+          "successTo": "{language}に翻訳されました",
+          "customLanguage": "カスタム言語...",
+          "customLanguagePlaceholder": "目標言語を入力、例：英語、日本語など",
+          "customLanguageEmpty": "目標言語を入力してください",
+          "customLanguageExample": "例：英語、日本語、フランス語など"
         }
       },
       "saveDialog": {
@@ -2317,5 +2379,188 @@
   },
   "quickRecord": {
     "description": "記録ツールを選択して、素早く記録を作成"
+  },
+  "editor": {
+    "placeholder": "「/」を入力してメニューを開くか、直接書き始める...",
+    "outline": {
+      "title": "アウトライン",
+      "open": "アウトラインを開く",
+      "close": "アウトラインを閉じる"
+    },
+    "translation": {
+      "fail": "翻訳に失敗しました",
+      "failNoSelection": "翻訳するテキストを選択してください",
+      "translating": "翻訳中...",
+      "translatingTo": "{language}に翻訳中...",
+      "success": "翻訳完了",
+      "successTo": "{language}に翻訳されました",
+      "customLanguageEmpty": "目標言語を入力してください",
+      "customLanguageExample": "例：英語、日本語、フランス語など"
+    },
+    "quoteDisplay": {
+      "fromFile": "{fileName}から引用",
+      "line": "{fileName}の{line}行目から引用",
+      "lines": "{fileName}の{start}-{end}行目から引用"
+    },
+    "bubbleMenu": {
+      "ai": "AI",
+      "polish": "添削",
+      "concise": "簡潔に",
+      "expand": "拡張",
+      "translate": "翻訳",
+      "translateSubtitle": "翻訳先",
+      "quoteToChat": "チャットに引用",
+      "link": "リンク",
+      "linkPlaceholder": "リンクURLを入力",
+      "confirm": "確認",
+      "cancel": "キャンセル",
+      "bold": "太字",
+      "italic": "斜体",
+      "strike": "取り消し線",
+      "underline": "下線",
+      "inlineCode": "インラインコード",
+      "highlight": "ハイライト",
+      "blockquote": "引用",
+      "bulletList": "箇条書き",
+      "orderedList": "番号付きリスト",
+      "taskList": "タスクリスト",
+      "codeBlock": "コードブロック",
+      "languages": {
+        "English": "英語",
+        "Japanese": "日本語",
+        "Korean": "韓国語",
+        "French": "フランス語",
+        "German": "ドイツ語",
+        "Spanish": "スペイン語",
+        "Portuguese": "ポルトガル語",
+        "Russian": "ロシア語",
+        "Arabic": "アラビア語"
+      },
+      "customLanguagePlaceholder": "カスタム言語..."
+    },
+    "aiSuggestion": {
+      "accept": "受け入れ",
+      "reject": "拒否",
+      "generating": "生成中...",
+      "abort": "中止"
+    },
+    "image": {
+      "insert": "画像を挿入",
+      "uploading": "アップロード中...",
+      "uploadSuccess": "画像は画像ホスティングにアップロードされました",
+      "saveSuccess": "画像はローカルに保存されました",
+      "uploadFailed": "画像の挿入に失敗しました",
+      "sizeSmall": "小 (25%)",
+      "sizeMedium": "中 (50%)",
+      "sizeLarge": "大 (75%)",
+      "sizeOriginal": "元のサイズ",
+      "editAlt": "代替テキストを編集",
+      "editSrc": "URLを編集",
+      "altPlaceholder": "代替テキストを入力...",
+      "srcPlaceholder": "画像URLを入力...",
+      "delete": "画像を削除",
+      "confirm": "確認",
+      "cancel": "キャンセル"
+    },
+    "mermaid": {
+      "rendering": "レンダリング中...",
+      "renderError": "レンダリングエラー",
+      "clickToEdit": "クリックしてソースを編集",
+      "clickToAdd": "クリックして диаграммаを追加",
+      "placeholder": "Mermaid диаграммаコードを入力...",
+      "preview": "プレビュー",
+      "done": "完了",
+      "diagramTypes": {
+        "flowchart": "フローチャート",
+        "sequence": "シーケンス",
+        "classDiagram": "クラス図",
+        "stateDiagram": "ステート図",
+        "er": "ER図",
+        "gantt": "ガントチャート",
+        "pie": "円グラフ",
+        "journey": "ジャーニー"
+      },
+      "templates": {
+        "flowchart": "graph TD\n    A[開始] --> B[処理]\n    B --> C[終了]",
+        "sequence": "sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->>Bob: こんにちは\n    Bob-->>Alice: 返信",
+        "classDiagram": "classDiagram\n    Animal <|-- Duck\n    Animal <|-- Fish\n    Animal : +int age\n    Animal : +String gender",
+        "stateDiagram": "stateDiagram-v2\n    [*] --> Active\n    Active --> [*]",
+        "er": "erDiagram\n    CUSTOMER ||--o{ ORDER : places\n    CUSTOMER ||--o{ DELIVERY-ADDRESS : uses",
+        "gantt": "gantt\n    title プロジェクト計画\n    dateFormat YYYY-MM-DD\n    section 第一フェーズ\n    タスク1 :a1, 2024-01-01, 30d\n    section 第二フェーズ\n    タスク2 :after a1, 20d",
+        "pie": "pie title リソース割り当て\n    \"CPU\" : 45\n    \"メモリ\" : 30\n    \"ストレージ\" : 25",
+        "journey": "journey\n    title 私の日常\n    section 午前\n    通勤 : 7:00, 5\n    仕事 : 9:00, 8"
+      }
+    },
+    "slashCommand": {
+      "groups": {
+        "ai": "AI",
+        "heading": "見出し",
+        "list": "リスト",
+        "block": "ブロック",
+        "align": "整列",
+        "embed": "埋め込み",
+        "math": "数式",
+        "chart": "図"
+      },
+      "items": {
+        "continue": "続ける",
+        "continueDesc": "AIが内容を続きます",
+        "heading1": "見出し1",
+        "heading1Desc": "大見出し",
+        "heading2": "見出し2",
+        "heading2Desc": "中見出し",
+        "heading3": "見出し3",
+        "heading3Desc": "小見出し",
+        "bulletList": "箇条書き",
+        "bulletListDesc": "シンプルな箇条書きリストを作成",
+        "orderedList": "番号付きリスト",
+        "orderedListDesc": "番号付きのリストを作成",
+        "taskList": "タスクリスト",
+        "taskListDesc": "チェックボックス付きタスクリストを作成",
+        "image": "画像",
+        "imageDesc": "ローカル画像または画像ホスティングを挿入",
+        "table": "表",
+        "tableDesc": "表を挿入",
+        "blockquote": "引用",
+        "blockquoteDesc": "引用内容をキャプチャ",
+        "codeBlock": "コードブロック",
+        "codeBlockDesc": "コードスニペットをキャプチャ",
+        "divider": "区切り線",
+        "dividerDesc": "要素の間に区切り線を作成",
+        "inlineMath": "インライン数式",
+        "inlineMathDesc": "インラインLaTeX数式を挿入",
+        "blockMath": "ブロック数式",
+        "blockMathDesc": "ブロックLaTeX数式を挿入",
+        "flowchart": "フローチャート",
+        "flowchartDesc": "フローチャートを挿入",
+        "sequence": "シーケンス図",
+        "sequenceDesc": "シーケンス図を挿入",
+        "gantt": "ガントチャート",
+        "ganttDesc": "ガントチャートを挿入",
+        "classDiagram": "クラス図",
+        "classDiagramDesc": "クラス図を挿入",
+        "stateDiagram": "状態図",
+        "stateDiagramDesc": "状態図を挿入",
+        "pie": "円グラフ",
+        "pieDesc": "円グラフを挿入",
+        "erDiagram": "ER図",
+        "erDiagramDesc": "エンティティ関係図を挿入",
+        "journey": "ジャーニーマップ",
+        "journeyDesc": "ユーザージャーニーマップを挿入"
+      },
+      "imageUpload": {
+        "success": "アップロード成功",
+        "saveSuccess": "保存成功",
+        "savePath": "保存先: {path}",
+        "failed": "画像の挿入に失敗しました"
+      }
+    }
+  },
+  "tabContext": {
+    "close": "閉じる",
+    "closeOthers": "その他を閉じる",
+    "closeAll": "すべて閉じる",
+    "closeLeft": "左を閉じる",
+    "closeRight": "右を閉じる"
   }
 }

@@ -77,6 +77,10 @@ interface ChatState {
   linkedResource: LinkedResource | null
   setLinkedResource: (resource: LinkedResource | null) => void
 
+  // 关联文件的行号预览（用于 AI 对话时快速了解文件结构）
+  linkedResourcePreview: string | null
+  setLinkedResourcePreview: (preview: string | null) => void
+
   // === 新增：会话管理 ===
   // 当前会话
   currentConversationId: number | null
@@ -110,6 +114,10 @@ const useChatStore = create<ChatState>((set, get) => ({
       return
     }
 
+    // 添加版本号引用，防止竞态条件
+    const versionRef = { current: 0 }
+    const currentVersion = ++versionRef.current
+
     const { chats } = state
 
     // 获取最后一次清除后的消息
@@ -121,7 +129,17 @@ const useChatStore = create<ChatState>((set, get) => ({
       // 动态导入 condense 模块（避免循环依赖）
       const { shouldCondense, condenseChats } = await import('@/lib/ai/condense')
 
+      // 版本号检查：防止被新版本覆盖
+      if (currentVersion !== versionRef.current) {
+        return
+      }
+
       if (!(await shouldCondense(chatsAfterClear))) {
+        return
+      }
+
+      // 再次检查版本号
+      if (currentVersion !== versionRef.current) {
         return
       }
 
@@ -131,6 +149,11 @@ const useChatStore = create<ChatState>((set, get) => ({
       try {
         // 为每条消息生成摘要并存储
         const condensedResults = await condenseChats(chatsAfterClear)
+
+        // 版本号检查：防止在压缩过程中被新版本覆盖
+        if (currentVersion !== versionRef.current) {
+          return
+        }
 
         for (const result of condensedResults) {
           if (result.summary) {
@@ -202,6 +225,9 @@ const useChatStore = create<ChatState>((set, get) => ({
         // 保留 RAG 字段，因为它们应该在整个 Agent 执行期间显示
         ragSources: currentState.ragSources,
         ragSourceDetails: currentState.ragSourceDetails,
+        // 重置 Final Answer 模式
+        isFinalAnswerMode: false,
+        finalAnswerContent: undefined,
       }
     })
   },
@@ -236,6 +262,11 @@ const useChatStore = create<ChatState>((set, get) => ({
   linkedResource: null,
   setLinkedResource: (resource: LinkedResource | null) => {
     set({ linkedResource: resource })
+  },
+
+  linkedResourcePreview: null,
+  setLinkedResourcePreview: (preview: string | null) => {
+    set({ linkedResourcePreview: preview })
   },
 
   chats: [],
@@ -429,28 +460,25 @@ const useChatStore = create<ChatState>((set, get) => ({
     let result = false
     let files: any;
     let res;
+    const fullPath = `${path}/${filename}`;
     switch (primaryBackupMethod) {
       case 'github':
         const githubRepo = await getSyncRepoName('github')
-        files = await githubGetFiles({ path: `${path}/${filename}`, repo: githubRepo })
+        files = await githubGetFiles({ path: fullPath, repo: githubRepo })
         res = await uploadGithubFile({
-          ext: 'json',
           file: jsonToBase64(chats),
           repo: githubRepo,
-          path,
-          filename,
+          path: fullPath,
           sha: files?.sha,
         })
         break;
       case 'gitee':
         const giteeRepo = await getSyncRepoName('gitee')
-        files = await giteeGetFiles({ path: `${path}/${filename}`, repo: giteeRepo })
+        files = await giteeGetFiles({ path: fullPath, repo: giteeRepo })
         res = await uploadGiteeFile({
-          ext: 'json',
           file: jsonToBase64(chats),
           repo: giteeRepo,
-          path,
-          filename,
+          path: fullPath,
           sha: files?.sha,
         })
         break;
@@ -461,7 +489,6 @@ const useChatStore = create<ChatState>((set, get) => ({
           ? files.find(file => file.name === filename)
           : (files?.name === filename ? files : undefined)
         res = await uploadGitlabFile({
-          ext: 'json',
           file: jsonToBase64(chats),
           repo: gitlabRepo,
           path,
@@ -476,7 +503,6 @@ const useChatStore = create<ChatState>((set, get) => ({
           ? files.find(file => file.name === filename)
           : (files?.name === filename ? files : undefined)
         res = await uploadGiteaFile({
-          ext: 'json',
           file: jsonToBase64(chats),
           repo: giteaRepo,
           path,

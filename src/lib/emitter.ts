@@ -7,7 +7,7 @@ interface Events {
   'ai-completion-loading': boolean;
   'auto-completion-enabled-changed': boolean;
   'editor-input': unknown;
-  'vditor:ready': unknown;
+  'editor:ready': unknown;
   'editor-mode-changed': string;
   'external-content-update': string;
   'toolbar-text-number': number;
@@ -41,6 +41,9 @@ interface Events {
     deletions?: number;
   };
   'sync-success': unknown;
+  'sync-content-updated': { path: string; content: string };
+  'sync-push-completed': { path: string; success: boolean; sha?: string };
+  'sync-sha-mismatch': { path: string; localSha?: string; remoteSha?: string; force?: boolean };
   'revertChat': unknown;
   'fileSelected': {
     name: string;
@@ -68,10 +71,54 @@ interface Events {
   'quick-prompt-send': string;
   'ai-placeholder-generated': string;
   'ai-prompts-generated': QuickPrompt[];
-  [key: string]: unknown; // 添加索引签名以支持动态事件名
-  [key: symbol]: unknown; // 添加 symbol 索引签名以满足 Record 约束
+  'start-ai-streaming': {
+    originalText: string;
+    type: string;
+    position: { top: number; left: number; right: number; bottom: number };
+    controller?: AbortController;
+  };
+  'update-ai-streaming-content': {
+    suggestedText: string;
+    position: { top: number; left: number; right: number; bottom: number };
+  };
+  'ai-streaming-complete': {
+    originalText: string;
+    suggestedText: string;
+    type: string;
+    position: { top: number; left: number; right: number; bottom: number };
+    generatedRange?: { from: number; to: number };
+  } | undefined;
+  'show-ai-suggestion': {
+    originalText: string;
+    suggestedText: string;
+    type: string;
+    position: { top: number; left: number; right: number; bottom: number };
+    generatedRange?: { from: number; to: number };
+  };
+  'abort-ai-streaming': void;
+  // Agent 编辑器工具事件 - 内联定义避免重复
+  'editor-get-selection': { resolve: (data: { text: string; from: number; to: number; html?: string; startLine?: number; endLine?: number }) => void };
+  'editor-get-content': { resolve: (data: { markdown: string; html?: string; text: string; wordCount: number; charCount: number; totalLines?: number; version: number }) => void };
+  'editor-insert': { content: string; resolve: (result: { success: boolean; insertedLength: number; newCursorPosition?: number }) => void };
+  'editor-undo': void;
+  'editor-redo': void;
+  'editor-can-undo-redo': { resolve: (can: { undo: boolean; redo: boolean }) => void };
+  'editor-undo-redo-changed': { undo: boolean; redo: boolean };
+  'editor-replace': {
+    content?: string;
+    range?: { from: number; to: number };
+    searchContent?: string;
+    occurrence?: number;
+    startLine?: number;
+    endLine?: number;
+    expectedVersion?: number;
+    resolve: (result: { success: boolean; insertedLength: number; message?: string; error?: string; newCursorPosition?: number; versionMismatch?: boolean }) => void;
+  };
+  [key: string]: unknown;
+  [key: symbol]: unknown;
 }
 
 const emitter = mitt<Events>()
 
+export type { Events }
 export default emitter;
