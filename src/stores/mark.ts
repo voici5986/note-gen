@@ -3,9 +3,13 @@ import { uploadFile as uploadGithubFile, getFiles as githubGetFiles, decodeBase6
 import { uploadFile as uploadGiteeFile, getFiles as giteeGetFiles } from '@/lib/sync/gitee';
 import { uploadFile as uploadGitlabFile, getFiles as gitlabGetFiles, getFileContent as gitlabGetFileContent } from '@/lib/sync/gitlab';
 import { uploadFile as uploadGiteaFile, getFiles as giteaGetFiles, getFileContent as giteaGetFileContent } from '@/lib/sync/gitea';
+import { s3Upload, s3Delete, s3HeadObject, s3Download } from '@/lib/sync/s3'
+import { webdavUpload, webdavDelete, webdavHeadObject, webdavDownload } from '@/lib/sync/webdav'
+import { WebDAVConfig } from '@/types/sync'
 import { getSyncRepoName } from '@/lib/sync/repo-utils';
 import { Store } from '@tauri-apps/plugin-store';
 import { create } from 'zustand'
+import { S3Config } from '@/types/sync'
 
 export interface MarkQueue {
   queueId: string
@@ -192,12 +196,15 @@ const useMarkStore = create<MarkState>((set, get) => ({
     const path = '.data'
     const filename = 'marks.json'
     const marks = await getAllMarks()
+    console.log('[mark store] uploadMarks - marks count:', marks.length)
     const store = await Store.load('store.json');
     const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github';
+    console.log('[mark store] uploadMarks - primaryBackupMethod:', primaryBackupMethod)
     let result = false
     let files: any;
     let res;
     const fullPath = `${path}/${filename}`;
+    try {
     switch (primaryBackupMethod) {
       case 'github':
         const githubRepoName = await getSyncRepoName('github')
@@ -211,31 +218,68 @@ const useMarkStore = create<MarkState>((set, get) => ({
         break;
       case 'gitee':
         const giteeRepoName = await getSyncRepoName('gitee')
-        files = await giteeGetFiles({ path: fullPath, repo: giteeRepoName })
-        res = await uploadGiteeFile({
-          file: JSON.stringify(marks),
-          repo: giteeRepoName,
-          path: fullPath,
-          sha: files?.sha,
-        })
+        try {
+          files = await giteeGetFiles({ path: fullPath, repo: giteeRepoName })
+          const sha = files?.sha
+          res = await uploadGiteeFile({
+            file: JSON.stringify(marks),
+            repo: giteeRepoName,
+            path: fullPath,
+            sha: sha,
+          })
+        } catch (err) {
+          console.error('[mark store] Gitee upload error:', err)
+        }
         if (res) {
           result = true
         }
         break;
-      case 'gitlab':
+      case 'gitlab': {
         const gitlabRepoName = await getSyncRepoName('gitlab')
-        files = await gitlabGetFiles({ path, repo: gitlabRepoName })
+        console.log('[mark store] GitLab upload - path:', path, 'filename:', filename, 'repo:', gitlabRepoName)
+        try {
+          files = await gitlabGetFiles({ path, repo: gitlabRepoName })
+        } catch (e) {
+          console.error('[mark store] GitLab getFiles error:', e)
+        }
+        console.log('[mark store] GitLab files:', files)
+
+        // 如果目录不存在（files 为 null），先创建目录标记文件
+        if (!files) {
+          console.log('[mark store] GitLab directory does not exist, creating .gitkeep')
+          try {
+            await uploadGitlabFile({
+              file: '',
+              repo: gitlabRepoName,
+              path,
+              filename: '.gitkeep',
+              sha: '',
+            })
+          } catch (e) {
+            console.log('[mark store] GitLab create .gitkeep error:', e)
+          }
+          // 重新获取文件列表
+          files = await gitlabGetFiles({ path, repo: gitlabRepoName })
+        }
+
         const markFile = Array.isArray(files)
           ? files.find(file => file.name === filename)
           : (files?.name === filename ? files : undefined)
-        res = await uploadGitlabFile({
-          file: JSON.stringify(marks),
-          repo: gitlabRepoName,
-          path,
-          filename,
-          sha: markFile?.sha || '',
-        })
+        console.log('[mark store] GitLab markFile:', markFile)
+        try {
+          res = await uploadGitlabFile({
+            file: JSON.stringify(marks),
+            repo: gitlabRepoName,
+            path,
+            filename,
+            sha: markFile?.sha || '',
+          })
+        } catch (e) {
+          console.error('[mark store] GitLab uploadFile error:', e)
+        }
+        console.log('[mark store] GitLab upload result:', res)
         break;
+      }
       case 'gitea':
         const giteaRepoName = await getSyncRepoName('gitea')
         files = await giteaGetFiles({ path, repo: giteaRepoName })
@@ -249,7 +293,34 @@ const useMarkStore = create<MarkState>((set, get) => ({
           filename,
           sha: giteaMarkFile?.sha || '',
         })
-      break;
+        break;
+      case 's3': {
+        const s3Config = await store.get<S3Config>('s3SyncConfig')
+        if (s3Config) {
+          const s3Key = `${path}/${filename}`
+          const existingFile = await s3HeadObject(s3Config, s3Key)
+          if (existingFile) {
+            await s3Delete(s3Config, s3Key)
+          }
+          res = await s3Upload(s3Config, s3Key, JSON.stringify(marks))
+        }
+        break;
+      }
+      case 'webdav': {
+        const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+        if (webdavConfig) {
+          const webdavKey = `${path}/${filename}`
+          const existingFile = await webdavHeadObject(webdavConfig, webdavKey)
+          if (existingFile) {
+            await webdavDelete(webdavConfig, webdavKey)
+          }
+          res = await webdavUpload(webdavConfig, webdavKey, JSON.stringify(marks))
+        }
+        break;
+      }
+    }
+    } catch (error) {
+      console.error('[mark store] uploadMarks error:', error)
     }
     if (res) {
       result = true
@@ -281,13 +352,39 @@ const useMarkStore = create<MarkState>((set, get) => ({
         const giteaRepoName = await getSyncRepoName('gitea')
         files = await giteaGetFileContent({ path: `${path}/${filename}`, ref: 'main', repo: giteaRepoName })
         break;
+      case 's3': {
+        const s3Config = await store.get<S3Config>('s3SyncConfig')
+        if (s3Config) {
+          const s3Key = `${path}/${filename}`
+          const s3Result = await s3Download(s3Config, s3Key)
+          if (s3Result) {
+            // S3 返回的 content 是字符串，直接解析
+            result = JSON.parse(s3Result.content)
+          }
+        }
+        break;
+      }
+      case 'webdav': {
+        const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+        if (webdavConfig) {
+          const webdavKey = `${path}/${filename}`
+          const webdavResult = await webdavDownload(webdavConfig, webdavKey)
+          if (webdavResult) {
+            result = JSON.parse(webdavResult.content)
+          }
+        }
+        break;
+      }
     }
+    // S3 已经直接解析到 result 了，这里处理 Git 平台
     if (files) {
       const configJson = decodeBase64ToString(files.content)
       result = JSON.parse(configJson)
     }
-    await deleteAllMarks()
-    await insertMarks(result)
+    if (result.length > 0) {
+      await deleteAllMarks()
+      await insertMarks(result)
+    }
     set({ syncState: false })
     return result
   },

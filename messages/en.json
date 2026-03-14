@@ -39,6 +39,9 @@
     "import": "Import",
     "refresh": "Refresh",
     "loading": "Loading...",
+    "all": "All",
+    "today": "Today",
+    "yesterday": "Yesterday",
     "warning": "Warning",
     "info": "Info",
     "configureSync": "Configure Sync"
@@ -672,6 +675,16 @@
       "syncRepoDesc": "Sync markdown files in writing",
       "imageRepo": "Image Repository",
       "imageRepoDesc": "Sync your images to repository, using jsdelivr for acceleration",
+      "status": {
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "failed": "Connection Failed",
+        "unconfigured": "Not Configured"
+      },
+      "uploadRecords": "Upload Records & Config",
+      "downloadConfig": "Download Records & Config",
+      "cloudSync": "Records & Config Sync",
+      "localBackupAll": "Local Backup (All)",
       "private": "Private",
       "public": "Public",
       "createdAt": "Created {time}",
@@ -713,6 +726,52 @@
         "selfHostedDesc": "Enter your self-hosted Gitea server address (e.g., https://gitea.example.com)"
       },
       "giteaAccessTokenDesc": "Create a personal access token at {instanceDisplayName}, requires full repository permission",
+      "s3": {
+        "title": "S3 Sync",
+        "description": "Sync your notes using S3-compatible storage",
+        "status": "Connection Status",
+        "connected": "Connected",
+        "connecting": "Connecting",
+        "disconnected": "Disconnected",
+        "accessKeyId": "Access Key ID",
+        "accessKeyIdPlaceholder": "Please enter Access Key ID",
+        "secretAccessKey": "Secret Access Key",
+        "secretAccessKeyPlaceholder": "Please enter Secret Access Key",
+        "region": "Region",
+        "bucket": "Bucket",
+        "bucketPlaceholder": "Please enter bucket name",
+        "endpoint": "Endpoint",
+        "pathPrefix": "Path Prefix",
+        "pathPrefixPlaceholder": "Please enter path prefix",
+        "pathPrefixDesc": "Used to differentiate files between different users, similar to repository name",
+        "customDomain": "Custom Domain",
+        "testConnection": "Test Connection",
+        "testing": "Testing",
+        "saveConfig": "Save Config",
+        "saving": "Saving"
+      },
+      "webdav": {
+        "title": "WebDAV Sync",
+        "description": "Sync your notes using WebDAV protocol",
+        "status": "Connection Status",
+        "connected": "Connected",
+        "connecting": "Connecting",
+        "disconnected": "Disconnected",
+        "url": "Server URL",
+        "urlPlaceholder": "Please enter WebDAV server URL",
+        "urlDesc": "Supports Synology, QNAP, Nextcloud and other WebDAV services",
+        "username": "Username",
+        "usernamePlaceholder": "Please enter username",
+        "password": "Password",
+        "passwordPlaceholder": "Please enter password",
+        "pathPrefix": "Path Prefix",
+        "pathPrefixPlaceholder": "Please enter path prefix",
+        "pathPrefixDesc": "Used to differentiate files between different users",
+        "testConnection": "Test Connection",
+        "testing": "Testing",
+        "saveConfig": "Save Config",
+        "saving": "Saving"
+      },
       "autoSync": "Auto Sync",
       "autoSyncOptions": {
         "placeholder": "Select auto sync time",
@@ -857,44 +916,6 @@
     "backupSync": {
       "title": "Backup Data",
       "desc": "Here, you can use other methods to backup your data, you can regularly backup to ensure data security.",
-      "webdav": {
-        "connectionState": {
-          "success": "Connected",
-          "checking": "Connecting",
-          "failed": "Not Connected"
-        },
-        "description": "WebDAV is only used as a backup solution and does not support auto-sync, history rollback, and other features.",
-        "backupTo": "Backup to WebDAV",
-        "syncFrom": "Sync from WebDAV",
-        "serverUrl": "WebDAV Server URL",
-        "serverUrlDesc": "Enter the URL of the WebDAV server No path included, e.g: https://dav.example.com http://192.8.8.88:9999",
-        "serverUrlPlaceholder": "https://dav.example.com",
-        "username": "Username",
-        "usernameDesc": "WebDAV server username",
-        "usernamePlaceholder": "Username",
-        "password": "Password",
-        "passwordDesc": "WebDAV server password",
-        "passwordPlaceholder": "Password",
-        "backupPath": "Backup Path",
-        "backupPathDesc": "Backup path on the WebDAV server, e.g: /backup/notes",
-        "backupPathPlaceholder": "/backup/notes",
-        "backupSuccess": "Backup Successful",
-        "backupSuccessDesc": "Backed up {count} files to WebDAV.",
-        "syncSuccess": "Sync Successful",
-        "syncSuccessDesc": "Synced {count} files from WebDAV to local.",
-        "syncFailed": "Sync Failed",
-        "backupFailed": "Backup Failed",
-        "directoryCreated": "Directory Created",
-        "directoryCreatedDesc": "Directory {path} created successfully.",
-        "createDir": "Create Directory",
-        "success": "Success",
-        "failed": "Failed",
-        "error": {
-          "pathNotFound": "Path not found or server inaccessible.",
-          "createDirFailed": "Failed to create directory",
-          "connectionTimeOut": "Connection timed out, please check network or server."
-        }
-      },
       "localBackup": {
         "tabTitle": "Local Backup",
         "export": {
@@ -1251,6 +1272,7 @@
       "confirm": "Are you sure to empty the trash?",
       "records": "{count} records can be restored",
       "empty": "Empty",
+      "restoreAll": "Restore All",
       "close": "Close Trash"
     },
     "queue": {
@@ -2074,6 +2096,22 @@
           "promptTemplate": "Translate this text: \n{content}\n, into {language}, directly return the translated result."
         },
         "notSupported": "Operation not supported"
+      },
+      "mobile": {
+        "cancel": "Cancel",
+        "create": "Create",
+        "save": "Save",
+        "emptyDir": "This folder is empty",
+        "root": "Root",
+        "openFiles": "Open files",
+        "remote": "Remote file",
+        "remoteFileNotPulled": "Cloud only · Tap to pull",
+        "remoteFolderOnly": "Cloud-only folder",
+        "file": "File",
+        "folder": "Folder",
+        "folderChildren": "{files} files · {folders} folders",
+        "filePlaceholder": "example.md",
+        "folderPlaceholder": "example-folder"
       },
       "deleteConfirm": "Are you sure you want to delete this file?"
     },

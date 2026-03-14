@@ -22,16 +22,20 @@ import { common, createLowlight } from 'lowlight'
 import { Markdown } from '@tiptap/markdown'
 import { SearchAndReplace } from '@sereneinserenade/tiptap-search-and-replace'
 import UniqueId from '@tiptap/extension-unique-id'
-import { Extension } from '@tiptap/core'
+import { Extension, nodeInputRule } from '@tiptap/core'
 import { Plugin } from '@tiptap/pm/state'
 import { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import 'katex/dist/katex.min.css'
 import { InlineMath, BlockMath } from './math-extension'
 import { MermaidDiagram } from './mermaid-extension'
 import { MathEditorDialog } from './math-editor-dialog'
+import { SearchReplacePanel } from './search-replace-panel'
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { Store } from '@tauri-apps/plugin-store'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { handleImageUpload } from '@/lib/image-handler'
+import useArticleStore from '@/stores/article'
+import { convertImageByWorkspace } from '@/lib/utils'
 import { isMobileDevice } from '@/lib/check'
 import { useTranslations } from 'next-intl'
 import { BubbleMenu as BubbleMenuComponent } from './bubble-menu'
@@ -48,38 +52,43 @@ import { AISuggestionFloating } from './ai-suggestion-floating'
 import emitter from '@/lib/emitter'
 import { QuoteMark } from './quote-mark'
 import useSettingStore from '@/stores/setting'
+import { Loader2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import './style.css'
 
 const lowlight = createLowlight(common)
 
 // Helper function to convert 1-based line number to document position
 function lineToPosition(doc: ProseMirrorNode, line: number): number {
-  let pos = 0
+  if (line <= 1) {
+    return 0
+  }
+
+  let pos = doc.content.size
   let currentLine = 1
 
   doc.descendants((node, nodePos) => {
-    if (currentLine >= line) return false
-
-    if (node.isText && node.text) {
-      const lineBreaks = node.text.split('\n').length - 1
-      if (currentLine + lineBreaks >= line) {
-        const targetInNode = line - currentLine
-        // Include the target line plus newlines before it
-        const textBeforeTarget = node.text.split('\n').slice(0, targetInNode + 1).join('\n')
-        pos = nodePos + textBeforeTarget.length
-        return false
-      }
-      currentLine += lineBreaks
-    } else if (!node.isInline) {
-      currentLine++
+    if (!node.isTextblock) {
+      return true
     }
+
+    if (currentLine === line) {
+      pos = nodePos + 1
+      return false
+    }
+
+    const blockText = node.textContent || ''
+    const lineBreaks = blockText.split('\n').length - 1
+    currentLine += lineBreaks + 1
+
+    if (currentLine === line) {
+      pos = nodePos + 1
+      return false
+    }
+
     return true
   })
 
-  // 如果行号超出范围，返回文档末尾
-  if (pos === 0 && line > 1) {
-    return doc.content.size
-  }
   return pos
 }
 
@@ -143,6 +152,9 @@ interface TipTapEditorProps {
   onEditorReady?: (editor: any) => void
   outlineOpen?: boolean
   onToggleOutline?: () => void
+  autoScroll?: boolean
+  showOverlay?: boolean
+  onTerminate?: () => void
 }
 
 export function TipTapEditor({
@@ -156,12 +168,19 @@ export function TipTapEditor({
   onEditorReady,
   outlineOpen,
   onToggleOutline,
+  autoScroll = false,
+  showOverlay = false,
+  onTerminate,
 }: TipTapEditorProps) {
   const t = useTranslations('editor')
   const tMermaid = useTranslations('editor.mermaid.templates')
   const tImage = useTranslations('editor.image')
 
   const placeholderText = placeholder || t('placeholder')
+
+  // Use ref for autoScroll to avoid infinite re-render loop
+  const autoScrollRef = useRef(autoScroll)
+  autoScrollRef.current = autoScroll
 
   // 获取正文缩放设置
   const { contentTextScale } = useSettingStore()
@@ -175,6 +194,9 @@ export function TipTapEditor({
   // Math dialog state
   const [mathDialogOpen, setMathDialogOpen] = useState(false)
   const [mathType, setMathType] = useState<'inline' | 'block'>('inline')
+
+  // Search and replace panel state
+  const [searchReplaceOpen, setSearchReplaceOpen] = useState(false)
 
   const isInitializedRef = useRef(false)
   const initializedForPathRef = useRef<string | null>(null)
@@ -274,7 +296,81 @@ export function TipTapEditor({
       InlineMath,
       BlockMath,
       MermaidDiagram,
-      Image.configure({
+      Image.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            relativeSrc: {
+              default: null,
+              parseHTML: (element) => element.getAttribute('data-relative-src'),
+              renderHTML: (attributes) => {
+                return {
+                  'data-relative-src': attributes.relativeSrc,
+                }
+              },
+            },
+          }
+        },
+        parseHTML() {
+          return [
+            {
+              tag: 'img[src]',
+              getAttrs: (element) => {
+                const src = element.getAttribute('src')
+                const relativeSrc = element.getAttribute('data-relative-src') || src
+                const uploading = element.getAttribute('data-uploading') === 'true'
+                // 如果是相对路径（非 http/https/asset://），转换为 asset://
+                if (src && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
+                  // 这里不能直接调用 async 函数，需要在后续处理
+                  return {
+                    src, // 先保持原样，后续通过其他方式处理
+                    relativeSrc: src,
+                    alt: element.getAttribute('alt') || '',
+                    uploading,
+                  }
+                }
+                return {
+                  src,
+                  relativeSrc,
+                  alt: element.getAttribute('alt') || '',
+                  uploading,
+                }
+              },
+            },
+          ]
+        },
+        renderHTML({ node }) {
+          return ['img', {
+            src: node.attrs.src,
+            alt: node.attrs.alt || '',
+            class: 'max-w-full h-auto rounded-lg',
+            'data-relative-src': node.attrs.relativeSrc,
+          }]
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        renderMarkdown(node, _helpers) {
+          // 优先使用 relativeSrc，其次使用 src
+          const attrs = node.attrs || {}
+          let src = attrs.relativeSrc || attrs.src || ''
+          // 如果是 asset:// 或 tauri:// 路径，提取实际路径
+          src = src.replace(/^(tauri|asset|http):\/\/localhost\//, '')
+          return `![${attrs.alt || ''}](${src})`
+        },
+        addInputRules() {
+          return [
+            nodeInputRule({
+              find: /!\[(.*?)\]\((.*?)(?:\s+"(.*?)")?\)$/,
+              type: this.type,
+              getAttributes: (match) => {
+                const [, alt, src, title] = match
+                // 规范化路径：去掉 ./ 前缀
+                const normalizedSrc = src.replace(/^\.\//, '')
+                return { src: normalizedSrc, alt, title, relativeSrc: normalizedSrc }
+              },
+            }),
+          ]
+        },
+              }).configure({
         inline: true,
         allowBase64: false,
         HTMLAttributes: {
@@ -291,7 +387,9 @@ export function TipTapEditor({
       // Bug fix: Only trigger onChange if editor is ready (not during initialization)
       // Using counter to handle rapid successive updates
       if (externalUpdateCounterRef.current === 0 && isReadyRef.current) {
-        const markdown = editor.getMarkdown()
+        let markdown = editor.getMarkdown()
+        // 修复表格空单元格中的 &nbsp; 问题 - 替换为空格
+        markdown = markdown.replace(/&nbsp;/g, ' ')
         onChange?.(markdown)
         // Mark that we've processed the first update
         isFirstUpdateRef.current = false
@@ -304,6 +402,148 @@ export function TipTapEditor({
       }
     },
   })
+
+  // 处理编辑器内链接点击
+  useEffect(() => {
+    if (!editor || !editorContainerRef.current) return
+
+    const editorElement = editorContainerRef.current
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      const anchor = target.closest('a')
+
+      if (!anchor) return
+
+      let href = anchor.getAttribute('href')
+      if (!href) return
+
+      // 阻止默认行为
+      event.preventDefault()
+      // 阻止事件冒泡，防止其他处理器触发
+      event.stopPropagation()
+
+      // 处理 file:// 协议
+      if (href.startsWith('file://')) {
+        href = href.replace(/^file:\/\//, '')
+        // Windows 路径处理
+        if (href.startsWith('/') && !href.match(/^[A-Z]:/)) {
+          href = href.substring(1)
+        }
+        openUrl(`file://${href}`).catch(console.error)
+        return
+      }
+
+      // 检查是否是本地开发服务器的 URL (localhost 或 127.0.0.1)
+      const isLocalUrl = href.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//)
+
+      // 根据链接类型执行不同操作
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        if (isLocalUrl) {
+          // 本地开发服务器 URL，提取路径部分作为本地文件
+          const url = new URL(href)
+          let filePath = url.pathname
+          // 移除开头的斜杠（如果是 Unix 风格路径）
+          if (filePath.startsWith('/')) {
+            filePath = filePath.substring(1)
+          }
+          // Windows 路径处理
+          if (filePath.match(/^[A-Z]:/)) {
+            // 已经是 Windows 绝对路径
+          } else if (filePath.startsWith('/')) {
+            filePath = filePath.substring(1)
+          }
+          // URL 解码
+          filePath = decodeURIComponent(filePath)
+
+          // 获取当前文件的父目录，计算相对路径
+          const currentFilePath = useArticleStore.getState().activeFilePath
+          let fullPath: string
+
+          if (filePath.startsWith('/') || filePath.match(/^[A-Z]:/)) {
+            // 绝对路径
+            fullPath = filePath
+          } else {
+            // 相对路径，基于当前文件所在目录
+            const parentDir = currentFilePath.includes('/')
+              ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
+              : ''
+            fullPath = parentDir ? `${parentDir}/${filePath}` : filePath
+          }
+
+          // 在软件内部打开文件
+          useArticleStore.getState().setActiveFilePath(fullPath)
+          return
+        } else {
+          // 外部 HTTP/HTTPS 链接：用浏览器打开
+          openUrl(href).catch(console.error)
+          return
+        }
+      } else if (href.startsWith('mailto:') || href.startsWith('tel:')) {
+        // 邮件和电话链接，用默认应用打开
+        openUrl(href).catch(console.error)
+        return
+      } else {
+        // 本地路径相对路径，基于当前文件所在目录
+        const currentFilePath = useArticleStore.getState().activeFilePath
+        let fullPath: string
+
+        if (href.startsWith('/') || href.match(/^[A-Z]:/)) {
+          // 绝对路径
+          fullPath = href
+        } else {
+          // 相对路径
+          const parentDir = currentFilePath.includes('/')
+            ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
+            : ''
+          fullPath = parentDir ? `${parentDir}/${href}` : href
+        }
+
+        // 在软件内部打开文件
+        useArticleStore.getState().setActiveFilePath(fullPath)
+        return
+      }
+    }
+
+    editorElement.addEventListener('click', handleClick)
+
+    return () => {
+      editorElement.removeEventListener('click', handleClick)
+    }
+  }, [editor])
+
+  // Auto scroll to bottom when content changes and autoScroll is enabled
+  useEffect(() => {
+    if (!editor) return
+
+    // Use requestAnimationFrame to avoid infinite loop
+    let isScrolling = false
+
+    const scrollToBottom = () => {
+      if (!autoScrollRef.current || isScrolling) return
+      isScrolling = true
+
+      requestAnimationFrame(() => {
+        try {
+          if (editorContainerRef.current) {
+            const proseMirror = editorContainerRef.current.querySelector('.ProseMirror') as HTMLElement
+            if (proseMirror) {
+              proseMirror.scrollTop = proseMirror.scrollHeight
+            }
+          }
+        } finally {
+          isScrolling = false
+        }
+      })
+    }
+
+    // Listen to editor updates
+    editor.on('update', scrollToBottom)
+
+    return () => {
+      editor.off('update', scrollToBottom)
+    }
+  }, [editor])
 
   // 应用正文文字大小缩放
   useEffect(() => {
@@ -330,9 +570,6 @@ export function TipTapEditor({
     activeFilePathRef.current = activeFilePath
   }, [activeFilePath])
 
-  // Track uploading images for loading state
-  const uploadingImagesRef = useRef<Map<string, boolean>>(new Map())
-
   // Handle image paste and drop
   useEffect(() => {
     // Check if editor is fully initialized
@@ -346,34 +583,59 @@ export function TipTapEditor({
       if (imageFiles.length === 0) return
 
       const imageFile = imageFiles[0]
-      const uploadId = `paste-${Date.now()}`
-
-      // Show loading state
-      uploadingImagesRef.current.set(uploadId, true)
 
       // Prevent default to avoid base64 image being inserted
       event.preventDefault()
 
+      // Insert "Uploading..." text as placeholder
+      const { from } = editor.state.selection
+
+      editor.chain()
+        .focus()
+        .insertContentAt(from, {
+          type: 'text',
+          text: 'Uploading... ',
+        })
+        .run()
+
+      // Get the position range of the placeholder
+      const placeholderStart = from
+      const placeholderEnd = from + 'Uploading... '.length
+
       handleImageUpload(imageFile, activeFilePathRef.current)
         .then(result => {
-          editor.commands.insertContent({
-            type: 'image',
-            attrs: {
-              src: result.src,
-              alt: imageFile.name,
-              relativeSrc: result.relativePath,
-            },
-          })
-          toast({
-            title: result.useImageHosting ? tImage('uploadSuccess') : tImage('saveSuccess'),
-          })
+          // Delete the placeholder text
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Insert the actual image
+          editor.chain()
+            .insertContentAt(placeholderStart, {
+              type: 'image',
+              attrs: {
+                src: result.src,
+                alt: imageFile.name,
+                relativeSrc: result.relativePath,
+              },
+            })
+            .run()
         })
         .catch(error => {
-          // 不插入任何内容，只显示错误提示
+          // Remove the placeholder on error
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Show error toast
           console.error('Image upload failed:', error)
-        })
-        .finally(() => {
-          uploadingImagesRef.current.delete(uploadId)
+          toast({
+            title: tImage('failed'),
+            description: error instanceof Error ? error.message : undefined,
+            variant: 'destructive',
+          })
         })
     }
 
@@ -385,36 +647,61 @@ export function TipTapEditor({
       if (imageFiles.length === 0) return
 
       const imageFile = imageFiles[0]
-      const uploadId = `drop-${Date.now()}`
-
-      // Show loading state
-      uploadingImagesRef.current.set(uploadId, true)
 
       // Prevent default to avoid base64 image being inserted
       event.preventDefault()
 
+      // Get drop position
+      const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
+      const insertPos = pos?.pos || editor.state.selection.from
+
+      // Insert "Uploading..." text as placeholder
+      editor.chain()
+        .focus()
+        .insertContentAt(insertPos, {
+          type: 'text',
+          text: 'Uploading... ',
+        })
+        .run()
+
+      // Get the position range of the placeholder
+      const placeholderStart = insertPos
+      const placeholderEnd = insertPos + 'Uploading... '.length
+
       handleImageUpload(imageFile, activeFilePathRef.current)
         .then(result => {
-          // Get drop position
-          const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
-          editor.commands.insertContentAt(pos?.pos || editor.state.selection.from, {
-            type: 'image',
-            attrs: {
-              src: result.src,
-              alt: imageFile.name,
-              relativeSrc: result.relativePath,
-            },
-          })
-          toast({
-            title: result.useImageHosting ? tImage('uploadSuccess') : tImage('saveSuccess'),
-          })
+          // Delete the placeholder text
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Insert the actual image
+          editor.chain()
+            .insertContentAt(placeholderStart, {
+              type: 'image',
+              attrs: {
+                src: result.src,
+                alt: imageFile.name,
+                relativeSrc: result.relativePath,
+              },
+            })
+            .run()
         })
         .catch(error => {
-          // 不插入任何内容，只显示错误提示
+          // Remove the placeholder on error
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Show error toast
           console.error('Image upload failed:', error)
-        })
-        .finally(() => {
-          uploadingImagesRef.current.delete(uploadId)
+          toast({
+            title: tImage('failed'),
+            description: error instanceof Error ? error.message : undefined,
+            variant: 'destructive',
+          })
         })
     }
 
@@ -752,6 +1039,73 @@ export function TipTapEditor({
     }
   }, [editor, initialContent, onReady, onEditorReady, activeFilePath])
 
+  // 处理编辑器中图片的相对路径，转换为 asset:// URL
+  useEffect(() => {
+    if (!editor || !editor.view) return
+
+    const transformImagePaths = () => {
+      // 获取编辑器 DOM 中的所有图片
+      const editorDom = editor.view.dom
+      const images = editorDom.querySelectorAll('img')
+
+      // 获取当前文件的父目录，用于计算相对路径
+      const currentFilePath = useArticleStore.getState().activeFilePath
+      const parentDir = currentFilePath?.includes('/')
+        ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
+        : ''
+
+      for (const img of images) {
+        const src = img.getAttribute('src')
+        // 如果是相对路径，转换为 asset://
+        if (src && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
+          // 计算完整的相对路径（基于当前文件所在目录）
+          const fullRelativePath = parentDir ? `${parentDir}/${src}` : src
+          // 异步转换路径
+          convertImageByWorkspace(fullRelativePath).then((assetUrl: string) => {
+            // 只有当 src 仍然是相对路径时才更新（避免覆盖已转换的）
+            const currentSrc = img.getAttribute('src')
+            if (currentSrc === src || !currentSrc?.startsWith('asset://')) {
+              img.setAttribute('src', assetUrl)
+            }
+          })
+        }
+        // 添加 onerror 处理：如果加载失败，尝试转换路径
+        if (img && !img.onerror) {
+          img.onerror = async () => {
+            const currentSrc = img.getAttribute('src')
+            if (currentSrc && !currentSrc.startsWith('http') && !currentSrc.startsWith('asset://') && !currentSrc.startsWith('tauri://')) {
+              // 计算完整的相对路径（基于当前文件所在目录）
+              const fullRelativePath = parentDir ? `${parentDir}/${currentSrc}` : currentSrc
+              const assetUrl = await convertImageByWorkspace(fullRelativePath)
+              img.setAttribute('src', assetUrl)
+            }
+          }
+        }
+      }
+    }
+
+    // 监听 transaction 事件 - 在文档更新时立即转换
+    const handleTransaction = () => {
+      transformImagePaths()
+    }
+
+    // 监听 selectionUpdate 事件
+    const handleSelectionUpdate = () => {
+      transformImagePaths()
+    }
+
+    editor.on('transaction', handleTransaction)
+    editor.on('selectionUpdate', handleSelectionUpdate)
+
+    // 初始执行
+    transformImagePaths()
+
+    return () => {
+      editor.off('transaction', handleTransaction)
+      editor.off('selectionUpdate', handleSelectionUpdate)
+    }
+  }, [editor])
+
   // Listen to editor updates and notify TabBar about undo/redo state
   useEffect(() => {
     if (!editor) return
@@ -769,37 +1123,50 @@ export function TipTapEditor({
     }
   }, [editor, activeFilePath])
 
-  // Handle remote file pull updates - update content when initialContent changes
+  // Listen for search trigger from layout (Ctrl+F / Cmd+F)
   useEffect(() => {
-    if (!editor || !isInitializedRef.current) return
+    const handleSearchTrigger = () => {
+      setSearchReplaceOpen(true)
+    }
 
-    // Bug fix: Only update if content actually changed (from remote pull)
-    // and if the initialContent belongs to the current file path
-    const currentContent = editor.getMarkdown()
-    const newContent = initialContent || ''
+    emitter.on('editor-search-trigger' as any, handleSearchTrigger)
+    return () => {
+      emitter.off('editor-search-trigger' as any, handleSearchTrigger)
+    }
+  }, [])
 
-    // Bug fix: Use activeFilePath directly instead of ref to avoid race conditions
-    // Also handle the case where initialContent changed from empty to non-empty
-    if (activeFilePath) {
-      // Update if content changed, including empty to non-empty transitions
-      // But skip if both are empty (no meaningful change)
-      if (newContent !== currentContent && (newContent || currentContent)) {
-        // Bug fix: Mark editor as not ready during update to prevent onUpdate from firing
+  // Handle remote file pull updates via event (instead of initialContent change)
+  // This fixes cursor jump issue caused by unnecessary setContent during local saves
+  useEffect(() => {
+    const handleRemoteContentUpdate = (event: { content: string }) => {
+      if (!editor || !event?.content) return
+
+      const currentContent = editor.getMarkdown()
+      const newContent = event.content
+
+      // Only update if content actually changed
+      if (newContent !== currentContent) {
         isReadyRef.current = false
         externalUpdateCounterRef.current++
-        // Use setTimeout to avoid flushSync conflict during React render
         setTimeout(() => {
           editor.commands.setContent(newContent, { contentType: 'markdown' })
-          // Bug fix: Mark editor as ready after content is set
           isReadyRef.current = true
-          // Reset the counter after a short delay
           setTimeout(() => {
             externalUpdateCounterRef.current = Math.max(0, externalUpdateCounterRef.current - 1)
           }, 100)
         }, 0)
       }
     }
-  }, [initialContent, editor, activeFilePath])
+
+    emitter.on('editor-content-from-remote', handleRemoteContentUpdate as any)
+    return () => {
+      emitter.off('editor-content-from-remote', handleRemoteContentUpdate as any)
+    }
+  }, [editor, activeFilePath])
+
+  // NOTE: Removed initialContent useEffect that caused cursor jump during local edits
+  // Remote pull is now handled via 'editor-content-from-remote' event
+  // Sync and external updates are handled by their respective events
 
   // Handle sync content updated from auto-sync
   useEffect(() => {
@@ -1036,10 +1403,10 @@ export function TipTapEditor({
       const text = editor.state.doc.textBetween(from, to)
 
       // Calculate line numbers (1-indexed) by counting newlines before position
-      const textBeforeFrom = editor.state.doc.textBetween(0, from)
+      const textBeforeFrom = editor.state.doc.textBetween(0, from, '\n', '\n')
       const startLine = (textBeforeFrom.match(/\n/g)?.length || 0) + 1
 
-      const textBeforeTo = editor.state.doc.textBetween(0, to)
+      const textBeforeTo = editor.state.doc.textBetween(0, to, '\n', '\n')
       const endLine = (textBeforeTo.match(/\n/g)?.length || 0) + 1
 
       resolve({
@@ -1059,7 +1426,9 @@ export function TipTapEditor({
         return
       }
 
-      const markdown = editor.getMarkdown()
+      let markdown = editor.getMarkdown()
+      // 修复表格空单元格中的 &nbsp; 问题 - 替换为空格
+      markdown = markdown.replace(/&nbsp;/g, ' ')
       const text = editor.getText()
       const html = editor.getHTML()
 
@@ -1242,12 +1611,22 @@ export function TipTapEditor({
       if (from !== to) {
         const quote = editor.state.doc.textBetween(from, to)
         const fileName = activeFilePath?.split('/').pop() || ''
+        const textBeforeFrom = editor.state.doc.textBetween(0, from, '\n', '\n')
+        const startLine = (textBeforeFrom.match(/\n/g)?.length || 0) + 1
+
+        const textBeforeTo = editor.state.doc.textBetween(0, to, '\n', '\n')
+        const endLine = (textBeforeTo.match(/\n/g)?.length || 0) + 1
+        const markdownLines = editor.getMarkdown().split('\n')
+        const quotedMarkdown = markdownLines.slice(startLine - 1, endLine).join('\n')
+
         emitter.emit('insert-quote', {
           quote,
-          fullContent: quote,
+          fullContent: quotedMarkdown || quote,
           fileName,
-          startLine: -1,
-          endLine: -1,
+          startLine,
+          endLine,
+          from,
+          to,
           articlePath: activeFilePath || '',
         })
         // Mark the selected text as quoted - use setTimeout to defer execution
@@ -1361,7 +1740,7 @@ export function TipTapEditor({
   }
 
   return (
-    <div ref={editorContainerRef} className="tiptap-editor relative flex flex-col h-full">
+    <div ref={editorContainerRef} id="aritcle-md-editor" className="tiptap-editor relative flex flex-col h-full">
       {/* Editor content - scrollable area */}
       <div
         className="flex-1 overflow-x-hidden overflow-y-auto relative"
@@ -1369,23 +1748,49 @@ export function TipTapEditor({
         onDrop={handleEditorDrop}
       >
         <div className={centeredContent ? 'max-w-3xl mx-auto px-4' : ''}>
-        <BubbleMenuComponent
+        <EditorContent editor={editor} className="h-full relative">
+          <ImageBubbleMenu editor={editor} />
+
+          <AISuggestionFloating editor={editor} />
+
+          <FloatingTableMenu editor={editor} />
+
+          <BubbleMenuComponent
+            editor={editor}
+            onAIPolish={handleAIPolish}
+            onAIConcise={handleAIConcise}
+            onAIExpand={handleAIExpand}
+            onQuoteToChat={onQuoteToChat}
+          />
+        </EditorContent>
+
+        <SearchReplacePanel
           editor={editor}
-          onAIPolish={handleAIPolish}
-          onAIConcise={handleAIConcise}
-          onAIExpand={handleAIExpand}
-          onQuoteToChat={onQuoteToChat}
+          open={searchReplaceOpen}
+          onOpenChange={setSearchReplaceOpen}
         />
-
-        <ImageBubbleMenu editor={editor} />
-
-        <AISuggestionFloating editor={editor} />
-
-        <FloatingTableMenu editor={editor} />
-
-        <EditorContent editor={editor} className="h-full" />
         </div>
       </div>
+
+      {/* AI Generation Overlay */}
+      {showOverlay && (
+        <div className="absolute inset-0 z-50 flex items-start justify-end p-4 bg-background/20 pointer-events-none">
+          <div className="flex items-center gap-2 bg-background/90 border rounded-md px-3 py-2 shadow-md pointer-events-auto">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">AI 整理中</span>
+            {onTerminate && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={onTerminate}
+              >
+                <X className="size-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bottom toolbar - always visible */}
       <FooterBar

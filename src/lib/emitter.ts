@@ -10,6 +10,7 @@ interface Events {
   'editor:ready': unknown;
   'editor-mode-changed': string;
   'external-content-update': string;
+  'editor-content-from-remote': { content: string };
   'toolbar-text-number': number;
   'toolbar-reset-selected-text': unknown;
   'quickRecordText': unknown;
@@ -23,11 +24,14 @@ interface Events {
     fileName: string;
     startLine: number;
     endLine: number;
+    from: number;
+    to: number;
     articlePath: string;
   };
   'toolbar-shortcut-image': unknown;
   'toolbar-shortcut-file': unknown;
   'toolbar-shortcut-todo': unknown;
+  'editor-ai-streaming': { isStreaming: boolean; targetFilePath?: string; terminate?: () => void };
   'toolbar-shortcut-recording': unknown;
   'toolbar-shortcut-scan': unknown;
   'toolbar-shortcut-text': unknown;

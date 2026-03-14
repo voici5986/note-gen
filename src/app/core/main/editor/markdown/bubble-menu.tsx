@@ -61,6 +61,8 @@ export function BubbleMenu({
   const [customTranslateLang, setCustomTranslateLang] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
   const [showLinkInput, setShowLinkInput] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isInteractingWithMenu, setIsInteractingWithMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const aiSubmenuRef = useRef<HTMLDivElement>(null)
   const translateSubmenuRef = useRef<HTMLDivElement>(null)
@@ -99,7 +101,17 @@ export function BubbleMenu({
     const { selection } = editor.state
     const { from, to } = selection
 
-    if (from === to) {
+    // 检查选区是否有效（空选区、光标位置、无效位置都不显示）
+    if (from === to || from < 0 || to < 0 || from > editor.state.doc.content.size || to > editor.state.doc.content.size) {
+      setShow(false)
+      return
+    }
+
+    // 检查编辑器是否有焦点（没有焦点时不显示）
+    // 但如果选区有文本内容（from !== to），即使失去焦点也保持显示
+    // 这样可以避免点击工具栏按钮时菜单被隐藏
+    const hasSelection = from !== to
+    if (!hasSelection && !editor.view.hasFocus()) {
       setShow(false)
       return
     }
@@ -211,6 +223,18 @@ export function BubbleMenu({
 
   useEffect(() => {
     const updateHandler = () => updatePosition()
+
+    // 初始化时检查是否有有效的选区
+    const { selection } = editor.state
+    const { from, to } = selection
+
+    // 只有在有选中文本时才显示工具栏
+    if (from !== to) {
+      updatePosition()
+    } else {
+      setShow(false)
+    }
+
     editor.on('selectionUpdate', updateHandler)
     editor.on('transaction', updatePosition)
 
@@ -226,6 +250,7 @@ export function BubbleMenu({
         setShow(false)
         setShowAISubmenu(false)
         setShowTranslateSubmenu(false)
+        setIsInteractingWithMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)

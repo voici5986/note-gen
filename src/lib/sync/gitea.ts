@@ -88,21 +88,53 @@ export async function uploadFile({
   try {
     const store = await Store.load('store.json');
     const giteaUsername = await store.get<string>('giteaUsername');
-    
+
     if (!giteaUsername) {
       throw new Error('Gitea 用户名未配置');
     }
 
     const id = uuid();
-    let _filename = filename || id;
+    // path 可能是完整路径（如 "视频文案/03_免费的笔记同步方案.md"）
+    // 也可能是目录路径（如 "视频文案"）
+    // filename 是文件名（如 "03_免费的笔记同步方案.md"）
+
+    // 从 path 中分离目录和文件名
+    let dirPath: string;
+    let _filename: string;
+
+    if (path) {
+      const lastSlashIndex = path.lastIndexOf('/');
+      if (lastSlashIndex > 0) {
+        // path 包含目录和文件名
+        dirPath = path.substring(0, lastSlashIndex);
+        _filename = filename || path.substring(lastSlashIndex + 1);
+      } else if (lastSlashIndex === -1 && path) {
+        // path 是纯目录名（如 .settings），filename 单独传
+        dirPath = path;
+        _filename = filename || id;
+      } else {
+        // path 为空
+        dirPath = '';
+        _filename = filename || id;
+      }
+    } else {
+      dirPath = '';
+      _filename = filename || id;
+    }
+
     // 将空格转换成下划线
     _filename = _filename.replace(/\s/g, '_');
+    // 对文件名进行编码
+    const encodedFilename = encodeURIComponent(_filename);
 
-    // path 是完整路径（如 notes/test.md），需要分离出目录和文件名
-    // 参考 Gitee 的处理方式
-    const _path = path ? `/${path}` : '';
-    const encodedPath = _path.split('/').slice(0, -1).map(p => encodeURIComponent(p.replace(/\s/g, '_'))).join('/');
-    const normalizedPath = _path ? `${encodedPath}/${_filename}` : _filename;
+    // 组合完整路径
+    let normalizedPath: string;
+    if (dirPath) {
+      const encodedDir = dirPath.split('/').map(p => encodeURIComponent(p.replace(/\s/g, '_'))).join('/');
+      normalizedPath = `${encodedDir}/${encodedFilename}`;
+    } else {
+      normalizedPath = encodedFilename;
+    }
 
     // 将内容转换为 Base64（Gitea API 要求）
     const base64Content = Buffer.from(file, 'utf-8').toString('base64')
@@ -145,6 +177,36 @@ export async function uploadFile({
 
     if (response.status === 400) {
       return null;
+    }
+
+    // 422 表示文件已存在（需要 SHA 才能更新），返回 null 以便触发重试
+    if (response.status === 422) {
+      return null;
+    }
+
+    // 404 表示文件不存在，尝试用 POST 创建新文件
+    if (response.status === 404) {
+      const postMethod = 'POST';
+      const postBody = { ...requestBody };
+      delete postBody.sha; // POST 不需要 sha
+
+      const postResponse = await fetch(url, {
+        method: postMethod,
+        headers,
+        body: JSON.stringify(postBody),
+        proxy
+      });
+
+      if (postResponse.status >= 200 && postResponse.status < 300) {
+        const data = await postResponse.json();
+        return { data } as GiteaResponse<any>;
+      }
+
+      const postErrorData = await postResponse.json();
+      throw {
+        status: postResponse.status,
+        message: postErrorData.message || '同步失败'
+      } as GiteaError;
     }
 
     const errorData = await response.json();
@@ -494,26 +556,16 @@ export async function getFileContent({ path, ref, repo }: { path: string; ref: s
     const proxy = await getProxyConfig();
 
     // 获取特定 commit 的文件内容，对 path 进行编码
-    // 先将空格替换为下划线，与 getFiles 保持一致
-    const safePath = path.replace(/\s/g, '_');
-    const encodedPath = encodeURIComponent(safePath);
+    // 与 getFiles 保持一致：对每个路径部分分别进行编码
+    const encodedPath = path.replace(/\s/g, '_').split('/').map(encodeURIComponent).join('/');
     // Gitea API 使用 sha 参数而不是 ref 参数来获取特定 commit 的文件内容
     const url = `${baseUrl}/repos/${giteaUsername}/${repo}/contents/${encodedPath}?sha=${ref}`;
-
-    console.log('[Gitea getFileContent] URL:', url);
 
     const response = await encodeFetch(url, {
       method: 'GET',
       headers,
       proxy
     });
-
-    console.log('[Gitea getFileContent] Response status:', response.status);
-
-    if (response.status === 404) {
-      const errorText = await response.text();
-      console.log('[Gitea getFileContent] 404 响应:', errorText);
-    }
 
     if (response.status >= 200 && response.status < 300) {
       const data = await response.json() as GiteaFileContent;

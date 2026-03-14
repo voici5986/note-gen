@@ -6,6 +6,9 @@ import { getFiles as getGitlabFiles } from '@/lib/sync/gitlab'
 import { GiteeFile } from '@/lib/sync/gitee'
 import { GiteaDirectoryItem } from '@/lib/sync/gitea.types'
 import { getSyncRepoName } from '@/lib/sync/repo-utils'
+import { s3ListObjects } from '@/lib/sync/s3'
+import { webdavListObjects } from '@/lib/sync/webdav'
+import { S3Config, WebDAVConfig } from '@/types/sync'
 import { hasNetworkConnection, ensureDirectoryExists, pullRemoteFile, saveLocalFile } from '@/lib/sync/auto-sync'
 import { syncOnOpen } from '@/lib/sync/sync-manager'
 import { sanitizeFilePath, hasInvalidFileNameChars } from '@/lib/sync/filename-utils'
@@ -36,6 +39,7 @@ export interface DirTree extends DirEntry {
   children?: DirTree[]
   parent?: DirTree
   sha?: string
+  size?: number
   isEditing?: boolean
   isLocale: boolean
   createdAt?: string
@@ -62,6 +66,117 @@ export const findFolderInTree = (path: string, tree: DirTree[]): DirTree | null 
     }
   }
   return null
+}
+
+function isLikelyFilePath(path: string): boolean {
+  const name = path.split('/').pop() || path
+  return name.includes('.')
+}
+
+function getFolderPathsToExpand(path: string): string[] {
+  const segments = path.split('/').filter(Boolean)
+  const folderSegments = isLikelyFilePath(path) ? segments.slice(0, -1) : segments
+
+  return folderSegments.map((_, index) => folderSegments.slice(0, index + 1).join('/'))
+}
+
+function createLocalTreeNode(name: string, isDirectory: boolean, parent?: DirTree): DirTree {
+  return {
+    name,
+    isDirectory,
+    isFile: !isDirectory,
+    isSymlink: false,
+    children: isDirectory ? [] : undefined,
+    parent,
+    isEditing: false,
+    isLocale: true,
+    sha: '',
+    createdAt: undefined,
+    modifiedAt: undefined,
+  }
+}
+
+function insertNodeIntoTree(tree: DirTree[], relativePath: string, isDirectory: boolean): boolean {
+  const parentPath = relativePath.split('/').slice(0, -1).join('/')
+  const name = relativePath.split('/').pop() || relativePath
+
+  if (!parentPath) {
+    if (tree.some(item => item.name === name)) {
+      return true
+    }
+    tree.unshift(createLocalTreeNode(name, isDirectory))
+    return true
+  }
+
+  const parentFolder = getCurrentFolder(parentPath, tree)
+  if (!parentFolder || !parentFolder.isDirectory) {
+    return false
+  }
+
+  if (!parentFolder.children) {
+    parentFolder.children = []
+  }
+
+  if (parentFolder.children.some(item => item.name === name)) {
+    return true
+  }
+
+  parentFolder.children.unshift(createLocalTreeNode(name, isDirectory, parentFolder))
+  return true
+}
+
+function removeNodeFromTree(tree: DirTree[], relativePath: string): DirTree | null {
+  const parentPath = relativePath.split('/').slice(0, -1).join('/')
+  const name = relativePath.split('/').pop() || relativePath
+
+  if (!parentPath) {
+    const index = tree.findIndex(item => item.name === name)
+    if (index === -1) {
+      return null
+    }
+    return tree.splice(index, 1)[0] || null
+  }
+
+  const parentFolder = getCurrentFolder(parentPath, tree)
+  if (!parentFolder?.children) {
+    return null
+  }
+
+  const index = parentFolder.children.findIndex(item => item.name === name)
+  if (index === -1) {
+    return null
+  }
+
+  return parentFolder.children.splice(index, 1)[0] || null
+}
+
+function attachNodeToTree(tree: DirTree[], relativePath: string, node: DirTree): boolean {
+  const parentPath = relativePath.split('/').slice(0, -1).join('/')
+  const name = relativePath.split('/').pop() || relativePath
+  node.name = name
+
+  if (!parentPath) {
+    node.parent = undefined
+    if (!tree.some(item => item.name === name)) {
+      tree.unshift(node)
+    }
+    return true
+  }
+
+  const parentFolder = getCurrentFolder(parentPath, tree)
+  if (!parentFolder || !parentFolder.isDirectory) {
+    return false
+  }
+
+  if (!parentFolder.children) {
+    parentFolder.children = []
+  }
+
+  node.parent = parentFolder
+  if (!parentFolder.children.some(item => item.name === name)) {
+    parentFolder.children.unshift(node)
+  }
+  return true
 }
 
 interface NoteState {
@@ -114,6 +229,11 @@ interface NoteState {
   fileTreeLoading: boolean
   setFileTree: (tree: DirTree[]) => void
   addFile: (file: DirTree) => void
+  ensurePathExpanded: (path: string) => Promise<void>
+  insertLocalEntry: (relativePath: string, isDirectory: boolean) => boolean
+  removeLocalEntry: (relativePath: string) => boolean
+  moveLocalEntry: (oldPath: string, newPath: string) => boolean
+  syncOpenTabsForPathChange: (oldPath: string, newPath: string) => Promise<void>
   loadFileTree: () => Promise<void>
   loadRemoteSyncFiles: () => Promise<void>
   loadCollapsibleFiles: (folderName: string) => Promise<void>
@@ -135,10 +255,16 @@ interface NoteState {
   currentArticle: string
   isPulling: boolean // 新增：拉取状态
   justPulledFile: boolean // 标记是否刚从远程拉取文件（用于避免立即推送）
+  skipSyncOnSave: boolean // 标记是否跳过同步（用于程序写入时）
+  aiGeneratingFilePath: string | null // 标记当前正在 AI 生成的文件路径
+  aiTerminateFn: (() => void) | null // AI 生成的终止函数
   readArticle: (path: string, sha?: string, isLocale?: boolean, autoSync?: boolean) => Promise<void>
   setCurrentArticle: (content: string) => void
   setIsPulling: (pulling: boolean) => void
   setJustPulledFile: (justPulled: boolean) => void
+  setSkipSyncOnSave: (skip: boolean) => void
+  setAiGeneratingFilePath: (path: string | null) => void
+  setAiTerminateFn: (fn: (() => void) | null) => void
   saveCurrentArticle: (content: string) => Promise<void>
   // 防抖保存相关
   debounceSaveTimer: NodeJS.Timeout | null
@@ -471,6 +597,79 @@ const useArticleStore = create<NoteState>((set, get) => ({
   addFile: (file: DirTree) => {
     set({ fileTree: [file, ...get().fileTree] })
   },
+  ensurePathExpanded: async (path: string) => {
+    const folderPaths = getFolderPathsToExpand(path)
+    if (folderPaths.length === 0) {
+      return
+    }
+
+    const collapsibleList = uniq([...get().collapsibleList, ...folderPaths])
+    const store = await getStore()
+    await store.set('collapsibleList', collapsibleList)
+    set({ collapsibleList })
+  },
+  insertLocalEntry: (relativePath: string, isDirectory: boolean) => {
+    const cacheTree = cloneDeep(get().fileTree)
+    const inserted = insertNodeIntoTree(cacheTree, relativePath, isDirectory)
+
+    if (!inserted) {
+      return false
+    }
+
+    get().setFileTree(cacheTree)
+    return true
+  },
+  removeLocalEntry: (relativePath: string) => {
+    const cacheTree = cloneDeep(get().fileTree)
+    const removed = removeNodeFromTree(cacheTree, relativePath)
+
+    if (!removed) {
+      return false
+    }
+
+    get().setFileTree(cacheTree)
+    return true
+  },
+  moveLocalEntry: (oldPath: string, newPath: string) => {
+    const cacheTree = cloneDeep(get().fileTree)
+    const removedNode = removeNodeFromTree(cacheTree, oldPath)
+
+    if (!removedNode) {
+      return false
+    }
+
+    const attached = attachNodeToTree(cacheTree, newPath, removedNode)
+    if (!attached) {
+      return false
+    }
+
+    get().setFileTree(cacheTree)
+    return true
+  },
+  syncOpenTabsForPathChange: async (oldPath: string, newPath: string) => {
+    const currentTabs = get().openTabs
+    const currentActiveTabId = get().activeTabId
+    const newTabs = currentTabs.map(tab => {
+      if (tab.path !== oldPath) {
+        return tab
+      }
+
+      return {
+        ...tab,
+        path: newPath,
+        name: newPath.split('/').pop() || newPath,
+      }
+    })
+
+    const nextActiveTabId = currentTabs.some(tab => tab.path === oldPath)
+      ? currentActiveTabId
+      : get().activeTabId
+
+    set({ openTabs: newTabs, activeTabId: nextActiveTabId })
+    const store = await getStore()
+    await store.set('openTabs', newTabs)
+    await store.set('activeTabId', nextActiveTabId)
+  },
   fileTreeLoading: false,
   updateFileStats: async (basePath: string, tree: DirTree[]) => {
     const workspace = await getWorkspacePath()
@@ -492,6 +691,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
           }
           entry.createdAt = fileStat.birthtime?.toISOString()
           entry.modifiedAt = fileStat.mtime?.toISOString()
+          entry.size = fileStat.size
         } catch {
           // 静默失败，不阻塞排序功能
         }
@@ -698,19 +898,29 @@ const useArticleStore = create<NoteState>((set, get) => ({
         if (!giteaAccessToken) {
           return
         }
+      } else if (primaryBackupMethod === 's3') {
+        const s3Config = await store.get<S3Config>('s3SyncConfig')
+        if (!s3Config || !s3Config.accessKeyId || !s3Config.secretAccessKey || !s3Config.region || !s3Config.bucket) {
+          return
+        }
+      } else if (primaryBackupMethod === 'webdav') {
+        const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+        if (!webdavConfig || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+          return
+        }
       }
-    
+
     // 只为根目录和本地存在的已展开文件夹加载远程文件
     // 云端文件夹默认折叠，不加载其子内容
     const workspace = await getWorkspacePath()
     const collapsibleList = get().collapsibleList
     const pathsToLoad: string[] = [''] // 总是加载根目录
     
-    // 检查 collapsibleList 中的路径是否在本地存在
+    // 检查 collapsibleList 中的路径是否在本地存在，或者尝试加载远程文件夹
     for (const path of collapsibleList) {
       const fullPath = await join(workspace.path, path)
       let dirExists = false
-      
+
       try {
         if (workspace.isCustom) {
           dirExists = await exists(fullPath)
@@ -722,9 +932,14 @@ const useArticleStore = create<NoteState>((set, get) => ({
       } catch {
         dirExists = false
       }
-      
-      // 只有本地存在的文件夹才加载远程同步状态
-      if (dirExists) {
+
+      // 本地存在的文件夹，或者对于云同步（GitHub/Gitee/GitLab/Gitea/S3/WebDAV），即使本地不存在也尝试加载远程
+      // 这样可以显示仅存在于云端的文件夹
+      if (dirExists || primaryBackupMethod !== 'github') {
+        // 对于非 Git 平台，总是尝试加载
+        pathsToLoad.push(path)
+      } else if (dirExists) {
+        // 对于 Git 平台，只加载本地存在的
         pathsToLoad.push(path)
       }
     }
@@ -750,68 +965,177 @@ const useArticleStore = create<NoteState>((set, get) => ({
             const giteaRepo = await getSyncRepoName('gitea');
             files = await getGiteaFiles({ path, repo: giteaRepo });
             break;
+          case 's3': {
+            const s3Config = await store.get<S3Config>('s3SyncConfig')
+            if (s3Config) {
+              files = await s3ListObjects(s3Config, path)
+            }
+            break;
+          }
+          case 'webdav': {
+            const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+            if (webdavConfig) {
+              files = await webdavListObjects(webdavConfig, path)
+            }
+            break;
+          }
         }
 
         if (files) {
           const dirs = get().fileTree
-          files.forEach((file: GithubContent | GiteeFile | GiteaDirectoryItem) => {
-            // 过滤以"."开头的文件和文件夹
-            if (file.name.startsWith('.')) {
-              return;
-            }
-            
-            // 只加载直接子项，不加载孙子项
-            const relativePath = path ? file.path.substring(path.length + 1) : file.path
-            const isDirectChild = !relativePath.includes('/')
-            
-            if (!isDirectChild) {
-              return // 跳过非直接子项
-            }
-            
-            const itemPath = file.path;
-            let currentFolder: DirTree | undefined
-            if (file.type === 'dir') {
-              currentFolder = getCurrentFolder(itemPath, dirs)?.parent
+
+          // S3 或 WebDAV 文件处理
+          if (primaryBackupMethod === 's3' || primaryBackupMethod === 'webdav') {
+            const s3Files = files as Array<{ key: string; etag: string; lastModified: string; size: number }>
+            let prefix = ''
+            if (primaryBackupMethod === 's3') {
+              const config = await store.get<S3Config>('s3SyncConfig')
+              prefix = config?.pathPrefix ? config.pathPrefix.trim().replace(/\/+$/, '') : ''
             } else {
-              const filePath = itemPath.split('/').slice(0, -1).join('/')
-              currentFolder = getCurrentFolder(filePath, dirs)
+              const config = await store.get<WebDAVConfig>('webdavSyncConfig')
+              prefix = config?.pathPrefix ? config.pathPrefix.trim().replace(/\/+$/, '') : ''
             }
-            if (itemPath.includes('/')) {
-              const index = currentFolder?.children?.findIndex(item => item.name === file.name)
-              if (index !== -1 && index !== undefined && currentFolder?.children) {
-                currentFolder.children[index].sha = file.sha
-              } else {
-                currentFolder?.children?.push({
-                  name: file.name,
-                  isFile: file.type === 'file',
-                  isSymlink: false,
-                  parent: currentFolder,
-                  isEditing: false,
-                  isDirectory: file.type === 'dir',
-                  sha: file.sha,
-                  isLocale: false,
-                  children: file.type === 'dir' ? [] : undefined
-                })
+            const fullPrefix = prefix ? `${prefix}/${path}` : path
+
+            s3Files.forEach((file) => {
+              const fileName = file.key.split('/').pop() || file.key
+              if (fileName.startsWith('.')) {
+                return;
               }
-            } else {
-              const index = dirs.findIndex(item => item.name === file.name)
-              if (index !== -1 && index !== undefined) {
-                dirs[index].sha = file.sha
-              } else {
-                (dirs as any).push({
-                  name: file.name,
-                  isFile: file.type === 'file',
-                  isSymlink: false,
-                  parent: undefined,
-                  isEditing: false,
-                  isDirectory: file.type === 'dir',
-                  sha: file.sha,
-                  isLocale: false,
-                  children: file.type === 'dir' ? [] : undefined
-                })
+
+              // 计算相对路径
+              const relativePath = fullPrefix ? file.key.substring(fullPrefix.length + 1) : file.key
+              const isDirectChild = !relativePath.includes('/')
+
+              if (!isDirectChild) {
+                return
               }
-            }
-          });
+
+              const isDirectory = file.key.endsWith('/')
+
+              // 移除 pathPrefix 前缀，转换为本地相对路径
+              let localItemPath = file.key
+              if (prefix && localItemPath.startsWith(prefix + '/')) {
+                localItemPath = localItemPath.substring(prefix.length + 1)
+              }
+
+              let currentFolder: DirTree | undefined
+              if (isDirectory) {
+                currentFolder = getCurrentFolder(localItemPath, dirs)?.parent
+              } else {
+                const filePath = localItemPath.split('/').slice(0, -1).join('/')
+                currentFolder = getCurrentFolder(filePath, dirs)
+              }
+
+              if (localItemPath.includes('/')) {
+                const index = currentFolder?.children?.findIndex(item => item.name === fileName)
+                if (index !== -1 && index !== undefined && currentFolder?.children) {
+                  currentFolder.children[index].sha = file.etag
+                  currentFolder.children[index].size = file.size
+                  currentFolder.children[index].modifiedAt = file.lastModified
+                } else {
+                  currentFolder?.children?.push({
+                    name: fileName,
+                    isFile: !isDirectory,
+                    isSymlink: false,
+                    parent: currentFolder,
+                    isEditing: false,
+                    isDirectory: isDirectory,
+                    sha: file.etag,
+                    size: file.size,
+                    isLocale: false,
+                    modifiedAt: file.lastModified,
+                    children: isDirectory ? [] : undefined
+                  })
+                }
+              } else {
+                const index = dirs.findIndex(item => item.name === fileName)
+                if (index !== -1 && index !== undefined) {
+                  dirs[index].sha = file.etag
+                  dirs[index].size = file.size
+                  dirs[index].modifiedAt = file.lastModified
+                } else {
+                  (dirs as any).push({
+                    name: fileName,
+                    isFile: !isDirectory,
+                    isSymlink: false,
+                    parent: undefined,
+                    isEditing: false,
+                    isDirectory: isDirectory,
+                    sha: file.etag,
+                    size: file.size,
+                    isLocale: false,
+                    modifiedAt: file.lastModified,
+                    children: isDirectory ? [] : undefined
+                  })
+                }
+              }
+            })
+          } else {
+            // Git 平台处理逻辑
+            files.forEach((file: GithubContent | GiteeFile | GiteaDirectoryItem) => {
+              // 过滤以"."开头的文件和文件夹
+              if (file.name.startsWith('.')) {
+                return;
+              }
+
+              // 只加载直接子项，不加载孙子项
+              const relativePath = path ? file.path.substring(path.length + 1) : file.path
+              const isDirectChild = !relativePath.includes('/')
+
+              if (!isDirectChild) {
+                return // 跳过非直接子项
+              }
+
+              const itemPath = file.path;
+              let currentFolder: DirTree | undefined
+              if (file.type === 'dir') {
+                currentFolder = getCurrentFolder(itemPath, dirs)?.parent
+              } else {
+                const filePath = itemPath.split('/').slice(0, -1).join('/')
+                currentFolder = getCurrentFolder(filePath, dirs)
+              }
+              if (itemPath.includes('/')) {
+                const index = currentFolder?.children?.findIndex(item => item.name === file.name)
+                if (index !== -1 && index !== undefined && currentFolder?.children) {
+                  currentFolder.children[index].sha = file.sha
+                  currentFolder.children[index].size = (file as any).size
+                } else {
+                  currentFolder?.children?.push({
+                    name: file.name,
+                    isFile: file.type === 'file',
+                    isSymlink: false,
+                    parent: currentFolder,
+                    isEditing: false,
+                    isDirectory: file.type === 'dir',
+                    sha: file.sha,
+                    size: (file as any).size,
+                    isLocale: false,
+                    children: file.type === 'dir' ? [] : undefined
+                  })
+                }
+              } else {
+                const index = dirs.findIndex(item => item.name === file.name)
+                if (index !== -1 && index !== undefined) {
+                  dirs[index].sha = file.sha
+                  dirs[index].size = (file as any).size
+                } else {
+                  (dirs as any).push({
+                    name: file.name,
+                    isFile: file.type === 'file',
+                    isSymlink: false,
+                    parent: undefined,
+                    isEditing: false,
+                    isDirectory: file.type === 'dir',
+                    sha: file.sha,
+                    size: (file as any).size,
+                    isLocale: false,
+                    children: file.type === 'dir' ? [] : undefined
+                  })
+                }
+              }
+            });
+          }
           set({ fileTree: dirs })
         }
       } catch {
@@ -861,8 +1185,14 @@ const useArticleStore = create<NoteState>((set, get) => ({
     } else if (primaryBackupMethod === 'gitea') {
       const giteaAccessToken = await store.get<string>('giteaAccessToken')
       hasCloudSync = !!giteaAccessToken
+    } else if (primaryBackupMethod === 's3') {
+      const s3Config = await store.get<S3Config>('s3SyncConfig')
+      hasCloudSync = !!(s3Config && s3Config.accessKeyId && s3Config.secretAccessKey && s3Config.region && s3Config.bucket)
+    } else if (primaryBackupMethod === 'webdav') {
+      const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+      hasCloudSync = !!(webdavConfig && webdavConfig.url && webdavConfig.username && webdavConfig.password)
     }
-    
+
     // 只有在配置了云同步时才设置加载状态
     if (hasCloudSync) {
       currentFolder.loading = true
@@ -953,8 +1283,14 @@ const useArticleStore = create<NoteState>((set, get) => ({
     } else if (primaryBackupMethod === 'gitea') {
       const giteaAccessToken = await store.get<string>('giteaAccessToken')
       if (!giteaAccessToken) return
+    } else if (primaryBackupMethod === 's3') {
+      const s3Config = await store.get<S3Config>('s3SyncConfig')
+      if (!s3Config || !s3Config.accessKeyId || !s3Config.secretAccessKey || !s3Config.region || !s3Config.bucket) return
+    } else if (primaryBackupMethod === 'webdav') {
+      const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+      if (!webdavConfig || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password) return
     }
-    
+
     try {
       let files;
       switch (primaryBackupMethod) {
@@ -974,47 +1310,121 @@ const useArticleStore = create<NoteState>((set, get) => ({
           const giteaRepo1 = await getSyncRepoName('gitea');
           files = await getGiteaFiles({ path: fullpath, repo: giteaRepo1 });
           break;
+        case 's3': {
+          const s3Config = await store.get<S3Config>('s3SyncConfig')
+          if (s3Config) {
+            files = await s3ListObjects(s3Config, fullpath)
+          }
+          break;
+        }
+        case 'webdav': {
+          const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+          if (webdavConfig) {
+            files = await webdavListObjects(webdavConfig, fullpath)
+          }
+          break;
+        }
       }
-      
+
       if (files) {
         const cacheTree = get().fileTree
         const currentFolder = getCurrentFolder(fullpath, cacheTree)
-        
+
         if (currentFolder) {
-          files.forEach((file: GithubContent | GiteeFile | GiteaDirectoryItem) => {
-            // 过滤以"."开头的文件和文件夹
-            if (file.name.startsWith('.')) {
-              return;
-            }
-            
-            // 只加载直接子项，不加载孙子项
-            // 例如: fullpath='test', file.path='test/file.md' → 加载
-            //      fullpath='test', file.path='test/sub/file.md' → 跳过
-            const relativePath = fullpath ? file.path.substring(fullpath.length + 1) : file.path
-            const isDirectChild = !relativePath.includes('/')
-            
-            if (!isDirectChild) {
-              return // 跳过非直接子项
-            }
-            
-            const index = currentFolder.children?.findIndex(item => item.name === file.name)
-            if (index !== undefined && index !== -1 && currentFolder.children) {
-              currentFolder.children[index].sha = file.sha
+          // S3 和 WebDAV 返回的文件格式相同，需要特殊处理
+          if (primaryBackupMethod === 's3' || primaryBackupMethod === 'webdav') {
+            const s3Files = files as Array<{ key: string; etag: string; lastModified: string; size: number }>
+            let prefix = ''
+            if (primaryBackupMethod === 's3') {
+              const config = await store.get<S3Config>('s3SyncConfig')
+              prefix = config?.pathPrefix ? config.pathPrefix.trim().replace(/\/+$/, '') : ''
             } else {
-              currentFolder.children?.push({
-                name: file.name,
-                isFile: file.type === 'file',
-                isSymlink: false,
-                parent: currentFolder,
-                isEditing: false,
-                isDirectory: file.type === 'dir',
-                sha: file.sha,
-                isLocale: false,
-                children: file.type === 'file' ? undefined : []
-              })
+              const config = await store.get<WebDAVConfig>('webdavSyncConfig')
+              prefix = config?.pathPrefix ? config.pathPrefix.trim().replace(/\/+$/, '') : ''
             }
-          });
-          
+            const fullPrefix = prefix ? `${prefix}/${fullpath}` : fullpath
+
+            s3Files.forEach((file) => {
+              // 提取文件名（key 的最后一部分）
+              const fileName = file.key.split('/').pop() || file.key
+              // 过滤以"."开头的文件和文件夹
+              if (fileName.startsWith('.')) {
+                return;
+              }
+
+              // 只加载直接子项，不加载孙子项
+              // 例如: fullPrefix='test', file.key='test/file.md' → 加载
+              //      fullPrefix='test', file.key='test/sub/file.md' → 跳过
+              const relativePath = fullPrefix ? file.key.substring(fullPrefix.length + 1) : file.key
+              const isDirectChild = !relativePath.includes('/')
+
+              if (!isDirectChild) {
+                return // 跳过非直接子项
+              }
+
+              // S3 没有文件夹概念，检查 key 是否以 / 结尾来判断是否是"文件夹"
+              const isDirectory = file.key.endsWith('/')
+
+              const index = currentFolder.children?.findIndex(item => item.name === fileName)
+              if (index !== undefined && index !== -1 && currentFolder.children) {
+                currentFolder.children[index].sha = file.etag
+                currentFolder.children[index].size = file.size
+                currentFolder.children[index].modifiedAt = file.lastModified
+              } else {
+                currentFolder.children?.push({
+                  name: fileName,
+                  isFile: !isDirectory,
+                  isSymlink: false,
+                  parent: currentFolder,
+                  isEditing: false,
+                  isDirectory: isDirectory,
+                  sha: file.etag,
+                  size: file.size,
+                  isLocale: false,
+                  modifiedAt: file.lastModified,
+                  children: isDirectory ? [] : undefined
+                })
+              }
+            })
+          } else {
+            // Git 平台处理逻辑
+            files.forEach((file: GithubContent | GiteeFile | GiteaDirectoryItem) => {
+              // 过滤以"."开头的文件和文件夹
+              if (file.name.startsWith('.')) {
+                return;
+              }
+
+              // 只加载直接子项，不加载孙子项
+              // 例如: fullpath='test', file.path='test/file.md' → 加载
+              //      fullpath='test', file.path='test/sub/file.md' → 跳过
+              const relativePath = fullpath ? file.path.substring(fullpath.length + 1) : file.path
+              const isDirectChild = !relativePath.includes('/')
+
+              if (!isDirectChild) {
+                return // 跳过非直接子项
+              }
+
+              const index = currentFolder.children?.findIndex(item => item.name === file.name)
+              if (index !== undefined && index !== -1 && currentFolder.children) {
+                currentFolder.children[index].sha = file.sha
+                currentFolder.children[index].size = (file as any).size
+              } else {
+                currentFolder.children?.push({
+                  name: file.name,
+                  isFile: file.type === 'file',
+                  isSymlink: false,
+                  parent: currentFolder,
+                  isEditing: false,
+                  isDirectory: file.type === 'dir',
+                  sha: file.sha,
+                  size: (file as any).size,
+                  isLocale: false,
+                  children: file.type === 'file' ? undefined : []
+                })
+              }
+            });
+          }
+
           // 移除加载状态
           currentFolder.loading = false
           set({ fileTree: cacheTree })
@@ -1282,6 +1692,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
   readFilePath: '',
   isPulling: false, // 新增：拉取状态
   justPulledFile: false, // 标记是否刚从远程拉取文件
+  skipSyncOnSave: false, // 标记是否跳过同步
+  aiGeneratingFilePath: null, // 标记当前正在 AI 生成的文件路径
+  aiTerminateFn: null, // AI 生成的终止函数
 
   setReadFilePath: (path: string) => {
     set({ readFilePath: path })
@@ -1351,6 +1764,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
             // 再次检查当前是否还是同一个文件
             if (get().activeFilePath === actualPath) {
               set({ currentArticle: remoteContent })
+              emitter.emit('editor-content-from-remote', { content: remoteContent })
             }
 
             // 拉取成功后，更新文件树的 isLocale 状态为本地文件
@@ -1412,6 +1826,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
             // 再次检查当前是否还是同一个文件
             if (get().activeFilePath === actualPath) {
               set({ currentArticle: remoteContent })
+              emitter.emit('editor-content-from-remote', { content: remoteContent })
             }
 
             // 拉取成功后，更新文件树的 isLocale 状态为本地文件
@@ -1503,6 +1918,18 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
   setJustPulledFile: (justPulled: boolean) => {
     set({ justPulledFile: justPulled })
+  },
+
+  setSkipSyncOnSave: (skip: boolean) => {
+    set({ skipSyncOnSave: skip })
+  },
+
+  setAiGeneratingFilePath: (path: string | null) => {
+    set({ aiGeneratingFilePath: path })
+  },
+
+  setAiTerminateFn: (fn: (() => void) | null) => {
+    set({ aiTerminateFn: fn })
   },
 
   // 更新文件 sha 状态（推送成功后调用）
@@ -1673,8 +2100,11 @@ const useArticleStore = create<NoteState>((set, get) => ({
         // 更新 currentArticle
         set({ currentArticle: saveContent })
 
-        // 通知文件已保存，触发同步推送
-        emitter.emit('article-saved', { path: savePath, content: saveContent })
+        // 通知文件已保存，触发同步推送（除非设置了 skipSyncOnSave）
+        const shouldSkipSync = get().skipSyncOnSave
+        if (!shouldSkipSync) {
+          emitter.emit('article-saved', { path: savePath, content: saveContent })
+        }
       }, 500)
 
       // 保存待处理的内容（最新的内容）
