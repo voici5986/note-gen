@@ -17,6 +17,7 @@ import { useRouter, usePathname } from "next/navigation"
 import initShowWindow from "@/lib/shortcut/show-window"
 import { initMcp } from "@/lib/mcp/init"
 import { SearchDialog } from "@/components/search-dialog"
+import { ActivityDrawer } from "@/components/activity/activity-drawer"
 import { reportAppStart } from "@/lib/event-report"
 import { TitleBar } from "@/components/title-bar"
 import { Store } from '@tauri-apps/plugin-store'
@@ -39,6 +40,7 @@ export default function RootLayout({
   const router = useRouter()
   const pathname = usePathname()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [activityOpen, setActivityOpen] = useState(false)
 
   // 重定向旧路径到新的 /core/main
   useEffect(() => {
@@ -54,20 +56,39 @@ export default function RootLayout({
   }, [pathname, router])
 
   useEffect(() => {
-    initSettingData()
-    initMainHosting()
-    initAllDatabases()
-    initShortcut()
-    initVectorDb()
-    initQuickRecordText()
-    initShowWindow()
-    initMcp()
-    // 上报应用启动事件
-    reportAppStart()
-    // 初始化更新检查
-    initUpdateStore().then(() => {
-      checkForUpdates()
-    })
+    let cancelled = false
+
+    const initializeApp = async () => {
+      try {
+        initSettingData()
+        initMainHosting()
+
+        // 先完成数据库和默认工作区初始化，避免首次启动时其他逻辑抢先读取空目录或未建表数据库。
+        await initAllDatabases()
+        if (cancelled) return
+
+        initShortcut()
+        await initVectorDb()
+        if (cancelled) return
+
+        initQuickRecordText()
+        initShowWindow()
+        initMcp()
+        reportAppStart()
+
+        await initUpdateStore()
+        if (cancelled) return
+        checkForUpdates()
+      } catch (error) {
+        console.error('Failed to initialize app core:', error)
+      }
+    }
+
+    void initializeApp()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // 应用界面缩放
@@ -152,10 +173,15 @@ export default function RootLayout({
       disableTransitionOnChange
     >
       <TextSizeProvider>
-        <TitleBar onSearchClick={() => setSearchOpen(true)} />
+        <TitleBar
+          onSearchClick={() => setSearchOpen(true)}
+          onActivityClick={() => setActivityOpen(open => !open)}
+          activityOpen={activityOpen}
+        />
         <main className="flex flex-1 flex-col overflow-hidden w-full h-[calc(100vh-36px)] mt-9">
           {children}
         </main>
+        <ActivityDrawer open={activityOpen} onOpenChange={setActivityOpen} />
         <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
         <SyncConfirmDialog />
       </TextSizeProvider>

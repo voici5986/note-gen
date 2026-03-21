@@ -10,7 +10,10 @@ src-tauri/gen/*
 *.local
 target/*
 .claude/*
-/docs/plans/*
+.superpowers/*
+.agents/*
+/docs/*/*
+skills-lock.json
 
 /.pnp
 .pnp.*
@@ -22,6 +25,7 @@ target/*
 
 # testing
 /coverage
+*.test.*
 
 # next.js
 /.next/

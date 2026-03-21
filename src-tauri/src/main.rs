@@ -8,6 +8,7 @@ mod window;
 mod app_setup;
 mod backup;
 mod mcp;
+mod mcp_runtime;
 mod device;
 mod skills;
 mod tray;
@@ -15,9 +16,10 @@ mod tray;
 use screenshot::{screenshot};
 use fuzzy_search::{fuzzy_search, fuzzy_search_parallel};
 use keywords::{rank_keywords};
-use backup::{export_app_data, import_app_data};
+use backup::{export_app_data, import_app_data, import_app_data_from_file};
 use skills::import_skill_zip;
 use mcp::{start_mcp_stdio_server, stop_mcp_server, send_mcp_message, McpServerManager};
+use mcp_runtime::{cancel_mcp_runtime_install, inspect_mcp_runtime, install_mcp_runtime, RuntimeInstallManager};
 use device::get_device_id;
 
 fn main() {
@@ -30,6 +32,7 @@ fn main() {
 
         // MCP 服务器管理器
         .manage(McpServerManager::new())
+        .manage(RuntimeInstallManager::new())
 
         // 系统级插件
         .plugin(tauri_plugin_process::init())
@@ -55,10 +58,14 @@ fn main() {
             rank_keywords,
             export_app_data,
             import_app_data,
+            import_app_data_from_file,
             import_skill_zip,
             start_mcp_stdio_server,
             stop_mcp_server,
             send_mcp_message,
+            inspect_mcp_runtime,
+            install_mcp_runtime,
+            cancel_mcp_runtime_install,
             get_device_id,
         ])
 

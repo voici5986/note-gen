@@ -303,6 +303,41 @@
       "jsonImportSkipped": "{count} 個の既存サーバーをスキップしました",
       "jsonImportNoServers": "サーバーがインポートされませんでした",
       "import": "インポート",
+      "mobileHttpOnlyTitle": "ローカルコマンド MCP はデスクトップ専用です",
+      "mobileHttpOnlyDesc": "ローカルコマンド型 MCP サーバーはデスクトップでのみ利用できます。モバイルでは現在 HTTP MCP のみサポートします。",
+      "runtimeEnvironment": "ランタイム環境",
+      "runtimeEnvironmentDesc": "MCP サーバーをテストする前に、必要なローカルランタイムが利用可能か確認します。",
+      "checkEnvironment": "環境を確認",
+      "recheckEnvironment": "再チェック",
+      "runtimeCheckFailed": "環境チェックに失敗しました",
+      "detectedLauncher": "検出されたランチャー",
+      "runtimeInstalled": "インストール済み",
+      "runtimeMissing": "未検出",
+      "runtimeVersion": "バージョン",
+      "runtimeInstalledSummary": "{installed}/{total} がインストール済み",
+      "showRuntimeDetails": "ランタイムの詳細を表示",
+      "hideRuntimeDetails": "ランタイムの詳細を隠す",
+      "runtimeNotChecked": "このランタイムはまだ確認していません。",
+      "runtimeCurrentUserScope": "対応している場合、推奨コマンドは現在のユーザー環境にインストールします。",
+      "runtimeManualOnly": "このプラットフォームでは自動インストールに対応していません。手動でインストールしてから再チェックしてください。",
+      "installRuntime": "ランタイムをインストール",
+      "runtimeInstallTitle": "ランタイムをインストール",
+      "runtimeInstallDesc": "確認後、NoteGen は以下のインストールコマンドを実行します。",
+      "runtimeInstallPreparing": "インストールを準備中",
+      "runtimeInstallRunning": "インストール中",
+      "runtimeInstallCompleted": "インストール完了",
+      "runtimeInstallCancelled": "キャンセル済み",
+      "runtimeInstallFailedState": "インストール失敗",
+      "runtimeInstallLogs": "インストールログ",
+      "runtimeInstallWaitingLogs": "インストール出力を待機中...",
+      "runtimeInstallClose": "閉じる",
+      "runtimeInstallCancel": "インストールを停止",
+      "runtimeInstallCancelledByUser": "ユーザーがインストールのキャンセルを要求しました。",
+      "runtimeInstallCancelFailed": "インストールの停止に失敗しました",
+      "runtimeInstallSuccess": "ランタイムのインストールが完了しました",
+      "runtimeInstallFailed": "ランタイムのインストールに失敗しました",
+      "runtimeNoGuidedSupport": "このコマンドにはまだガイド付きランタイム補助がありません。"
+      ,
       "enableTitle": "启用 MCP 功能",
       "enableDesc": "启用后，AI 可以调用配置的 MCP 服务器提供的工具。"
     },
@@ -1252,12 +1287,19 @@
     "audio": {
       "title": "语音设置",
       "desc": "在这里，你可以配置语音相关设置，包括文本转语音（朗读）和语音转文本（录音识别）功能。",
+      "mode": {
+        "title": "モード",
+        "auto": "自動（推奨）",
+        "local": "ローカルのみ",
+        "model": "モデルのみ"
+      },
       "tts": {
         "title": "文本转语音（TTS）",
         "desc": "配置朗读功能，为聊天内容提供语音播放。",
+        "modeDesc": "既定ではブラウザとシステム音声を優先し、必要な場合のみモデルを使って体験を強化します。",
         "model": {
           "title": "朗读模型",
-          "desc": "选择用于文本转语音的AI模型，支持多种语音类型和参数配置。"
+          "desc": "任意です。自動モードの強化やモデル専用モードで利用できます。"
         },
         "speed": {
           "title": "语速",
@@ -1267,15 +1309,31 @@
       "stt": {
         "title": "语音转文本（STT）",
         "desc": "配置录音识别功能，将语音转换为文字记录。",
-        "mode": {
-          "title": "识别方式",
-          "desc": "选择使用浏览器内置识别或大模型识别",
-          "builtin": "内置",
-          "model": "大模型"
-        },
+        "modeDesc": "既定ではブラウザ標準認識を優先し、ローカル利用不可時のみモデルへフォールバックします。",
         "model": {
           "title": "识别模型",
-          "desc": "选择用于语音识别的AI模型，支持实时语音转文字。"
+          "desc": "任意です。自動フォールバック用、またはモデル専用モードで使用できます。"
+        }
+      }
+    },
+    "readAloud": {
+      "title": "読み上げ",
+      "desc": "読み上げ方法を設定します。既定ではシステム音声を優先し、モデル音声は強化用として利用します。",
+      "options": {
+        "mode": {
+          "title": "モード",
+          "desc": "自動モードではシステム音声を優先し、ローカル音声が使えない場合のみモデルを試します。",
+          "auto": "自動（推奨）",
+          "local": "ローカルのみ",
+          "model": "モデルのみ"
+        },
+        "audioModel": {
+          "title": "読み上げモデル",
+          "desc": "任意です。自動モードの強化やモデル専用モードで利用できます。"
+        },
+        "speed": {
+          "title": "速度",
+          "desc": "読み上げ速度を0.5倍から2倍まで調整できます。既定値は1倍です。"
         }
       }
     }
@@ -1696,7 +1754,7 @@
           "translate": "翻訳モード"
         },
         "chatModeSelect": {
-          "chatDescription": "クイック会話、読み取り専用モード",
+          "chatDescription": "クイック会話、分析優先",
           "agentDescription": "スマートアシスタント、アクション実行可能"
         },
         "attachImage": "画像を添付",
@@ -1707,6 +1765,10 @@
           "acting": "実行中",
           "observation": "観察結果",
           "toolCalls": "ツール呼び出し",
+          "autoFinal": {
+            "createNote": "ノート「{name}」を作成しました。",
+            "createFile": "ファイル「{name}」を作成しました。"
+          },
           "thought": "思考",
           "action": "行動",
           "confirmation": {
@@ -1852,6 +1914,7 @@
     "view": "表示",
     "logout": "ログアウト",
     "setting": "設定",
+    "activity": "アクティビティ",
     "files": "ノート",
     "outline": "アウトライン",
     "hideLeftSidebar": "左サイドバーを非表示",
@@ -1861,6 +1924,42 @@
     "searchPlaceholder": "ノートまたは記録を検索...",
     "showCenterPanel": "显示编辑器",
     "hideCenterPanel": "隐藏编辑器"
+  },
+  "activity": {
+    "title": "アクティビティカレンダー",
+    "description": "記録、対話、執筆の活動を日ごとに確認できます。初版では既存の記録、ユーザー対話、ノート更新時刻をもとに集計します。",
+    "drawer": {
+      "title": "アクティビティ",
+      "description": "今日の状態と最近の活動傾向をすばやく確認できます。",
+      "today": "今日"
+    },
+    "loading": "アクティビティデータを読み込み中...",
+    "empty": "まだアクティビティデータがありません",
+    "refresh": "更新",
+    "summary": {
+      "totalCount": "総アクティビティ",
+      "activeDays": "活動日数",
+      "records": "記録回数",
+      "chats": "対話回数",
+      "writing": "執筆活動"
+    },
+    "labels": {
+      "record": "記録",
+      "writing": "執筆",
+      "chat": "対話"
+    },
+    "heatmap": {
+      "title": "直近 26 週間",
+      "range": "{startDate} - {endDate}",
+      "less": "少",
+      "more": "多",
+      "dayCount": "件の活動",
+      "emptyDay": "活動なし"
+    },
+    "detail": {
+      "title": "当日の詳細",
+      "empty": "日付を選択すると当日の活動詳細が表示されます。"
+    }
   },
   "chat": {
     "placeholder": {
@@ -2064,6 +2163,77 @@
         "openWorkspace": {
           "title": "ワークスペースを開く",
           "desc": "ワークスペースディレクトリを選択または切り替え"
+        }
+      },
+      "onboarding": {
+        "title": "初回ガイド",
+        "subtitle": "この 3 つのタスクで NoteGen の基本フローを体験できます。",
+        "dismiss": "オンボーディングをスキップ",
+        "reopen": "初回ガイドを再表示",
+        "start": "開始",
+        "viewHint": "ヒントを見る",
+        "continue": "次へ進む",
+        "completed": "完了",
+        "allDone": "スタートガイドのタスクはすべて完了しました。NoteGen の基本フローは体験済みです。",
+        "stepLabel": "タスク ({current}/{total})",
+        "stepCompletedLabel": "完了したタスク ({current}/{total})",
+        "afterOrganizeDialog": {
+          "title": "タスク完了 (2/3)",
+          "description": "記録をノートに整理できました。次は AI Agent を使って、このノートをバイリンガル版に翻訳してみますか？",
+          "confirm": "次へ進む",
+          "cancel": "今はしない"
+        },
+        "agentPrompt": {
+          "label": "サンプルプロンプト",
+          "use": "このプロンプトを使う",
+          "intro": "先ほど整理したこのノートを、中国語と英語のバイリンガル版に直接修正してください。",
+          "requirement1": "",
+          "requirement2": "",
+          "requirement3": "",
+          "requirement4": "",
+          "outro": ""
+        },
+        "steps": {
+          "createRecord": {
+            "title": "最初の記録を作成",
+            "desc": "サンプル記録を保存して、記録入口を覚えます。"
+          },
+          "organizeNote": {
+            "title": "ノートに整理",
+            "desc": "記録を正式なノートに整理します。"
+          },
+          "aiPolish": {
+            "title": "Agent でバイリンガル翻訳",
+            "desc": "AI Agent を使って、整理したノートをバイリンガル版に変換します。"
+          }
+        },
+        "completedStates": {
+          "create-record": {
+            "title": "最初の記録を作成しました",
+            "desc": "クイック記録の入口がどこにあるか分かりました。"
+          },
+          "organize-note": {
+            "title": "記録をノートに整理しました",
+            "desc": "次は AI でノートを編集してみましょう。"
+          },
+          "ai-polish": {
+            "title": "Agent でノートを処理しました",
+            "desc": "記録から整理、さらに Agent による処理まで、NoteGen の基本フローを体験できました。"
+          }
+        },
+        "spotlight": {
+          "create-record": {
+            "title": "ここからすぐに記録できます",
+            "desc": "この入口をクリックするとテキスト記録が開き、サンプル内容も自動で入ります。"
+          },
+          "organize-note": {
+            "title": "ここで記録をノートに整理します",
+            "desc": "このボタンで、保存した記録を Markdown ノートにまとめられます。"
+          },
+          "ai-polish": {
+            "title": "ここで今作成したノートを Agent に渡せます",
+            "desc": "サンプルプロンプトをチャットに入れて送信すると、Agent が現在のノートを元にバイリンガル版を生成します。"
+          }
         }
       }
     },
@@ -2381,11 +2551,18 @@
     "error": "エラー",
     "success": "成功",
     "noModelConfigured": "音声認識モデルが設定されていません。設定で構成してください",
+    "speechUnavailable": "現在の認識モードは利用できません。ローカル音声対応またはモデル設定を確認してください。",
+    "fallbackToModel": "ローカル音声認識が利用できないため、自動的にモデル文字起こしへ切り替えました。",
     "startError": "録音を開始できません",
     "noAudioData": "音声データが録音されていません",
     "transcriptionSuccess": "音声認識完了",
     "transcriptionEmpty": "認識結果が空です",
     "transcriptionError": "音声認識に失敗しました",
+    "configureModel": "モデルを設定",
+    "retryTranscription": "再認識",
+    "retrying": "再認識中...",
+    "retrySuccess": "再認識が完了しました",
+    "retryError": "再認識に失敗しました",
     "noContentDetected": "コンテンツが検出されませんでした",
     "doubleClickToSelectFile": "ダブルクリックで音声ファイルを選択",
     "mode": {
