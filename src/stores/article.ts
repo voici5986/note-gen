@@ -23,6 +23,7 @@ import { getFilePathOptions, getWorkspacePath, toWorkspaceRelativePath } from '@
 import emitter from '@/lib/emitter'
 import { isSkillsFolder } from '@/lib/skills/utils'
 import { buildVectorIndexedMap, getVectorDocumentKey } from '@/lib/vector-document-key'
+import { buildRemotePathsToLoad } from './article-remote-sync'
 
 // 缓存 Store 实例，避免每次都重新加载
 let storeInstance: Store | null = null
@@ -52,6 +53,12 @@ export interface DirTree extends DirEntry {
 export interface Article {
   article: string
   path: string
+}
+
+export interface EditorViewState {
+  selectionFrom: number
+  selectionTo: number
+  scrollTop: number
 }
 
 // 查找文件夹节点
@@ -198,6 +205,11 @@ interface NoteState {
   setActiveTabId: (id: string) => void
   addTab: (tab: { id: string; path: string; name: string; isFolder: boolean }) => void
   removeTab: (id: string) => void
+  editorViewStates: Record<string, EditorViewState>
+  setEditorViewState: (path: string, state: EditorViewState) => void
+  getEditorViewState: (path: string) => EditorViewState | null
+  removeEditorViewState: (path: string) => void
+  moveEditorViewState: (oldPath: string, newPath: string) => void
   cleanTabsByDeletedFile: (deletedPath: string) => Promise<void>
   cleanTabsByDeletedFolder: (deletedFolderPath: string) => Promise<void>
   clearTabs: () => void
@@ -237,7 +249,7 @@ interface NoteState {
   removeLocalEntry: (relativePath: string) => boolean
   moveLocalEntry: (oldPath: string, newPath: string) => boolean
   syncOpenTabsForPathChange: (oldPath: string, newPath: string) => Promise<void>
-  loadFileTree: () => Promise<void>
+  loadFileTree: (options?: { skipRemoteSync?: boolean }) => Promise<void>
   loadRemoteSyncFiles: () => Promise<void>
   loadCollapsibleFiles: (folderName: string) => Promise<void>
   loadFolderRemoteFiles: (folderName: string) => Promise<void>
@@ -451,8 +463,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
   // Tabs initialization - load from store
   openTabs: [],
   activeTabId: '',
+  editorViewStates: {},
   setOpenTabs: async (tabs) => {
-    set({ openTabs: tabs })
+    const keptPaths = new Set(tabs.map(tab => tab.path))
+    const nextEditorViewStates = Object.fromEntries(
+      Object.entries(get().editorViewStates).filter(([path]) => keptPaths.has(path))
+    )
+    set({ openTabs: tabs, editorViewStates: nextEditorViewStates })
     const store = await getStore();
     await store.set('openTabs', tabs)
   },
@@ -475,10 +492,53 @@ const useArticleStore = create<NoteState>((set, get) => ({
   },
   removeTab: async (id) => {
     const currentTabs = get().openTabs
+    const removedTab = currentTabs.find(t => t.id === id)
     const newTabs = currentTabs.filter(t => t.id !== id)
-    set({ openTabs: newTabs })
+    const nextEditorViewStates = { ...get().editorViewStates }
+    if (removedTab) {
+      delete nextEditorViewStates[removedTab.path]
+    }
+    set({ openTabs: newTabs, editorViewStates: nextEditorViewStates })
     const store = await getStore();
     await store.set('openTabs', newTabs)
+  },
+  setEditorViewState: (path, state) => {
+    if (!path) {
+      return
+    }
+    set(current => ({
+      editorViewStates: {
+        ...current.editorViewStates,
+        [path]: state,
+      }
+    }))
+  },
+  getEditorViewState: (path) => {
+    if (!path) {
+      return null
+    }
+    return get().editorViewStates[path] || null
+  },
+  removeEditorViewState: (path) => {
+    if (!path) {
+      return
+    }
+    const nextEditorViewStates = { ...get().editorViewStates }
+    delete nextEditorViewStates[path]
+    set({ editorViewStates: nextEditorViewStates })
+  },
+  moveEditorViewState: (oldPath, newPath) => {
+    if (!oldPath || !newPath || oldPath === newPath) {
+      return
+    }
+    const currentState = get().editorViewStates[oldPath]
+    if (!currentState) {
+      return
+    }
+    const nextEditorViewStates = { ...get().editorViewStates }
+    delete nextEditorViewStates[oldPath]
+    nextEditorViewStates[newPath] = currentState
+    set({ editorViewStates: nextEditorViewStates })
   },
 
   // 清理已被删除的文件对应的 tabs（根据路径匹配）
@@ -506,7 +566,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
         newActiveFilePath = ''
       }
 
-      set({ openTabs: newTabs, activeTabId: newActiveTabId, activeFilePath: newActiveFilePath, currentArticle: '' })
+      const nextEditorViewStates = { ...get().editorViewStates }
+      delete nextEditorViewStates[deletedPath]
+      set({ openTabs: newTabs, activeTabId: newActiveTabId, activeFilePath: newActiveFilePath, currentArticle: '', editorViewStates: nextEditorViewStates })
       const store = await getStore();
       await store.set('openTabs', newTabs)
       await store.set('activeTabId', newActiveTabId)
@@ -540,7 +602,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
         newActiveFilePath = ''
       }
 
-      set({ openTabs: newTabs, activeTabId: newActiveTabId, activeFilePath: newActiveFilePath, currentArticle: '' })
+      const nextEditorViewStates = { ...get().editorViewStates }
+      Object.keys(nextEditorViewStates).forEach(path => {
+        if (path.startsWith(folderPrefix)) {
+          delete nextEditorViewStates[path]
+        }
+      })
+      set({ openTabs: newTabs, activeTabId: newActiveTabId, activeFilePath: newActiveFilePath, currentArticle: '', editorViewStates: nextEditorViewStates })
       const store = await getStore();
       await store.set('openTabs', newTabs)
       await store.set('activeTabId', newActiveTabId)
@@ -549,7 +617,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
   },
 
   clearTabs: async () => {
-    set({ openTabs: [], activeTabId: '' })
+    set({ openTabs: [], activeTabId: '', editorViewStates: {} })
     const store = await getStore();
     await store.set('openTabs', [])
     await store.set('activeTabId', '')
@@ -672,7 +740,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
       ? currentActiveTabId
       : get().activeTabId
 
-    set({ openTabs: newTabs, activeTabId: nextActiveTabId })
+    const nextEditorViewStates = { ...get().editorViewStates }
+    if (nextEditorViewStates[oldPath]) {
+      nextEditorViewStates[newPath] = nextEditorViewStates[oldPath]
+      delete nextEditorViewStates[oldPath]
+    }
+
+    set({ openTabs: newTabs, activeTabId: nextActiveTabId, editorViewStates: nextEditorViewStates })
     const store = await getStore()
     await store.set('openTabs', newTabs)
     await store.set('activeTabId', nextActiveTabId)
@@ -732,7 +806,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
     set({ fileTree: [...fileTree] }) // 触发重新渲染
   },
   
-  loadFileTree: async () => {
+  loadFileTree: async (options) => {
     set({ fileTreeLoading: true })
     set({ fileTree: [] })
 
@@ -876,7 +950,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
     get().initVectorIndexedFiles()
 
     // 异步加载远程同步文件（不阻塞界面）
-    get().loadRemoteSyncFiles()
+    if (!options?.skipRemoteSync) {
+      get().loadRemoteSyncFiles()
+    }
   },
   
   // 加载远程同步文件（后台任务）
@@ -917,42 +993,14 @@ const useArticleStore = create<NoteState>((set, get) => ({
         }
       }
 
-    // 只为根目录和本地存在的已展开文件夹加载远程文件
-    // 云端文件夹默认折叠，不加载其子内容
-    const workspace = await getWorkspacePath()
+    // 为根目录和已展开的目录加载远程文件。
+    // 这样即使目录只存在于云端，只要用户已展开过，也能继续加载其远程内容。
     const collapsibleList = get().collapsibleList
-    const pathsToLoad: string[] = [''] // 总是加载根目录
+    const pathsToLoad = buildRemotePathsToLoad(collapsibleList)
     
-    // 检查 collapsibleList 中的路径是否在本地存在，或者尝试加载远程文件夹
-    for (const path of collapsibleList) {
-      const fullPath = await join(workspace.path, path)
-      let dirExists = false
-
-      try {
-        if (workspace.isCustom) {
-          dirExists = await exists(fullPath)
-        } else {
-          const dirRelative = await toWorkspaceRelativePath(fullPath)
-          const pathOptions = await getFilePathOptions(dirRelative)
-          dirExists = await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
-        }
-      } catch {
-        dirExists = false
-      }
-
-      // 本地存在的文件夹，或者对于云同步（GitHub/Gitee/GitLab/Gitea/S3/WebDAV），即使本地不存在也尝试加载远程
-      // 这样可以显示仅存在于云端的文件夹
-      if (dirExists || primaryBackupMethod !== 'github') {
-        // 对于非 Git 平台，总是尝试加载
-        pathsToLoad.push(path)
-      } else if (dirExists) {
-        // 对于 Git 平台，只加载本地存在的
-        pathsToLoad.push(path)
-      }
-    }
-    
-    // 使用 Promise.all 并发请求所有路径的远程文件
-    const loadPromises = pathsToLoad.map(async path => {
+    // 目录树会在加载过程中逐步插入父级节点，因此这里必须按层级顺序加载。
+    // 如果并发请求深层路径，远端子目录可能会在父目录节点尚未写入树时被跳过。
+    for (const path of pathsToLoad) {
       try {
         let files;
         switch (primaryBackupMethod) {
@@ -1143,14 +1191,11 @@ const useArticleStore = create<NoteState>((set, get) => ({
               }
             });
           }
-          set({ fileTree: dirs })
+          set({ fileTree: [...dirs] })
         }
       } catch {
       }
-    });
-
-    // 等待所有远程文件加载完成
-    await Promise.all(loadPromises)
+    }
   } catch {
   }
 },
@@ -1265,7 +1310,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
     // 设置子节点（可能为空）
     currentFolder.children = children
-    set({ fileTree: cacheTree })
+    set({ fileTree: [...cacheTree] })
     
     // 异步加载远程同步文件状态（不阻塞界面）
     // 这将会填充仅存在于云端的文件
@@ -1434,7 +1479,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
           // 移除加载状态
           currentFolder.loading = false
-          set({ fileTree: cacheTree })
+          set({ fileTree: [...cacheTree] })
         }
       }
     } catch {
