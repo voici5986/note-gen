@@ -23,7 +23,6 @@ import { SearchAndReplace } from '@sereneinserenade/tiptap-search-and-replace'
 import UniqueId from '@tiptap/extension-unique-id'
 import { Extension, nodeInputRule } from '@tiptap/core'
 import { Plugin, TextSelection } from '@tiptap/pm/state'
-import { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import 'katex/dist/katex.min.css'
 import { InlineMath, BlockMath } from './math-extension'
 import { MermaidDiagram } from './mermaid-extension'
@@ -35,22 +34,26 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { handleImageUpload } from '@/lib/image-handler'
 import useArticleStore from '@/stores/article'
 import { convertImageByWorkspace } from '@/lib/utils'
+import { resolveImagePathFromMarkdown } from '@/lib/markdown-image-path'
 import { isMobileDevice } from '@/lib/check'
 import { useTranslations } from 'next-intl'
+import { replaceLinesInRange } from '@/lib/agent/react-diff-helpers'
 import { BubbleMenu as BubbleMenuComponent } from './bubble-menu'
 import { ImageBubbleMenu } from './image-bubble-menu'
 import { toast } from '@/hooks/use-toast'
 import { FloatingTableMenu } from './floating-table-menu'
 import { FooterBar } from './footer-bar/index'
+import { Outline } from './outline'
 import { SlashCommand, suggestionOptions } from './slash-command'
 import { SlashCommandPortal } from './slash-command/slash-command-portal'
 import { fetchCompletionStream } from '@/lib/ai/completion'
 import { fetchAiPolishStream, fetchAiConciseStream, fetchAiExpandStream } from '@/lib/ai/rewrite'
+import { fetchAiTranslateStream } from '@/lib/ai/translate'
 import { AISuggestion } from './ai-suggestion'
 import { AISuggestionFloating } from './ai-suggestion-floating'
 import emitter from '@/lib/emitter'
 import { QuoteMark } from './quote-mark'
-import { MarkdownParagraph } from './markdown-paragraph'
+import { MarkdownParagraph, normalizeMarkdownPlaceholders } from './markdown-paragraph'
 import { StableCodeBlockLowlight } from './code-block-extension'
 import useSettingStore from '@/stores/setting'
 import useChatStore from '@/stores/chat'
@@ -62,43 +65,11 @@ import { MobileEditorMoreSheet } from './mobile-editor-more-sheet'
 import { shouldRestorePendingQuote } from './quote-session'
 import { getEditorContentContainerClass } from '@/lib/editor-layout-styles'
 import { getResultIndexToFocus } from './search-navigation'
+import { isOutlineOnLeft, type OutlinePosition } from '@/lib/outline-preferences'
+import { OUTLINE_PANEL_PADDING_CLASS } from '@/lib/outline-styles'
 import './style.css'
 
 const lowlight = createLowlight(common)
-
-// Helper function to convert 1-based line number to document position
-function lineToPosition(doc: ProseMirrorNode, line: number): number {
-  if (line <= 1) {
-    return 0
-  }
-
-  let pos = doc.content.size
-  let currentLine = 1
-
-  doc.descendants((node, nodePos) => {
-    if (!node.isTextblock) {
-      return true
-    }
-
-    if (currentLine === line) {
-      pos = nodePos + 1
-      return false
-    }
-
-    const blockText = node.textContent || ''
-    const lineBreaks = blockText.split('\n').length - 1
-    currentLine += lineBreaks + 1
-
-    if (currentLine === line) {
-      pos = nodePos + 1
-      return false
-    }
-
-    return true
-  })
-
-  return pos
-}
 
 // 自定义扩展：处理粘贴 Markdown 文本
 const PasteMarkdown = Extension.create({
@@ -159,6 +130,7 @@ interface TipTapEditorProps {
   onReady?: () => void
   onEditorReady?: (editor: any) => void
   outlineOpen?: boolean
+  outlinePosition?: OutlinePosition
   onToggleOutline?: () => void
   autoScroll?: boolean
   showOverlay?: boolean
@@ -203,6 +175,7 @@ export function TipTapEditor({
   onReady,
   onEditorReady,
   outlineOpen,
+  outlinePosition = 'right',
   onToggleOutline,
   autoScroll = false,
   showOverlay = false,
@@ -242,12 +215,16 @@ export function TipTapEditor({
   const [searchReplaceOpen, setSearchReplaceOpen] = useState(false)
   const [mobileContext, setMobileContext] = useState<MobileSelectionContext>(null)
   const [mobileSheetMode, setMobileSheetMode] = useState<MobileSheetMode>(null)
+  const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false)
   const [imageSrcDraft, setImageSrcDraft] = useState('')
   const [imageAltDraft, setImageAltDraft] = useState('')
   const aiActionHandlersRef = useRef({
     polish: async () => {},
     concise: async () => {},
     expand: async () => {},
+    translate: async (targetLanguage: string) => {
+      void targetLanguage
+    },
   })
 
   const isInitializedRef = useRef(false)
@@ -444,9 +421,7 @@ export function TipTapEditor({
       // Bug fix: Only trigger onChange if editor is ready (not during initialization)
       // Using counter to handle rapid successive updates
       if (externalUpdateCounterRef.current === 0 && isReadyRef.current) {
-        let markdown = editor.getMarkdown()
-        // 修复表格空单元格中的 &nbsp; 问题 - 替换为空格
-        markdown = markdown.replace(/&nbsp;/g, ' ')
+        const markdown = normalizeMarkdownPlaceholders(editor.getMarkdown())
         onChange?.(markdown)
         // Mark that we've processed the first update
         isFirstUpdateRef.current = false
@@ -1295,7 +1270,13 @@ export function TipTapEditor({
             position: coords,
           })
         },
-        controller.signal
+        controller.signal,
+        (thinkingText) => {
+          emitter.emit('update-ai-thinking-content', {
+            thinkingText,
+            position: initialCoords,
+          })
+        },
       )
 
       // Streaming complete - replace all content with proper Markdown parsing
@@ -1379,7 +1360,13 @@ export function TipTapEditor({
             position: coords,
           })
         },
-        controller.signal
+        controller.signal,
+        (thinkingText) => {
+          emitter.emit('update-ai-thinking-content', {
+            thinkingText,
+            position: initialCoords,
+          })
+        },
       )
 
       // Streaming complete - replace all content with proper Markdown parsing
@@ -1463,7 +1450,13 @@ export function TipTapEditor({
             position: coords,
           })
         },
-        controller.signal
+        controller.signal,
+        (thinkingText) => {
+          emitter.emit('update-ai-thinking-content', {
+            thinkingText,
+            position: initialCoords,
+          })
+        },
       )
 
       // Streaming complete - replace all content with proper Markdown parsing
@@ -1495,13 +1488,93 @@ export function TipTapEditor({
     }
   }, [editor])
 
+  const handleAITranslate = useCallback(async (targetLanguage: string) => {
+    if (!editor) return
+
+    const { from, to } = editor.state.selection
+    const selectedText = editor.state.doc.textBetween(from, to)
+
+    if (!selectedText.trim()) {
+      return
+    }
+
+    const controller = new AbortController()
+
+    editor.chain()
+      .focus()
+      .deleteSelection()
+      .run()
+
+    const initialCoords = editor.view.coordsAtPos(editor.state.selection.from)
+    emitter.emit('start-ai-streaming', {
+      originalText: selectedText,
+      type: 'translate',
+      position: initialCoords,
+      controller,
+    })
+
+    let accumulatedResult = ''
+    const startPosition = editor.state.selection.from
+
+    try {
+      await fetchAiTranslateStream(
+        selectedText,
+        targetLanguage,
+        (chunk) => {
+          editor.chain()
+            .insertContentAt(startPosition + accumulatedResult.length, chunk)
+            .run()
+
+          accumulatedResult += chunk
+
+          const coords = editor.view.coordsAtPos(startPosition + accumulatedResult.length)
+          emitter.emit('update-ai-streaming-content', {
+            suggestedText: accumulatedResult,
+            position: coords,
+          })
+        },
+        controller.signal,
+        (thinkingText) => {
+          emitter.emit('update-ai-thinking-content', {
+            thinkingText,
+            position: initialCoords,
+          })
+        },
+      )
+
+      editor.chain()
+        .deleteRange({ from: startPosition, to: startPosition + accumulatedResult.length })
+        .insertContent(accumulatedResult, { contentType: 'markdown' })
+        .run()
+
+      const finalCoords = editor.view.coordsAtPos(startPosition + accumulatedResult.length)
+      emitter.emit('ai-streaming-complete', {
+        originalText: selectedText,
+        suggestedText: accumulatedResult,
+        type: 'translate',
+        position: finalCoords,
+        generatedRange: { from: startPosition, to: startPosition + accumulatedResult.length },
+      })
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
+      editor.chain()
+        .focus()
+        .insertContent(selectedText)
+        .run()
+      emitter.emit('ai-streaming-complete')
+    }
+  }, [editor])
+
   useEffect(() => {
     aiActionHandlersRef.current = {
       polish: handleAIPolish,
       concise: handleAIConcise,
       expand: handleAIExpand,
+      translate: handleAITranslate,
     }
-  }, [handleAIPolish, handleAIConcise, handleAIExpand])
+  }, [handleAIPolish, handleAIConcise, handleAIExpand, handleAITranslate])
 
   // Initialize content only once - preserves undo/redo history when switching tabs
   // Bug fix: Only initialize if the editor is for the current file path
@@ -1546,18 +1619,13 @@ export function TipTapEditor({
       const editorDom = editor.view.dom
       const images = editorDom.querySelectorAll('img')
 
-      // 获取当前文件的父目录，用于计算相对路径
       const currentFilePath = useArticleStore.getState().activeFilePath
-      const parentDir = currentFilePath?.includes('/')
-        ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
-        : ''
 
       for (const img of images) {
         const src = img.getAttribute('src')
         // 如果是相对路径，转换为 asset://
-        if (src && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
-          // 计算完整的相对路径（基于当前文件所在目录）
-          const fullRelativePath = parentDir ? `${parentDir}/${src}` : src
+        if (src && currentFilePath && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
+          const fullRelativePath = resolveImagePathFromMarkdown(currentFilePath, src)
           // 异步转换路径
           convertImageByWorkspace(fullRelativePath).then((assetUrl: string) => {
             // 只有当 src 仍然是相对路径时才更新（避免覆盖已转换的）
@@ -1571,9 +1639,8 @@ export function TipTapEditor({
         if (img && !img.onerror) {
           img.onerror = async () => {
             const currentSrc = img.getAttribute('src')
-            if (currentSrc && !currentSrc.startsWith('http') && !currentSrc.startsWith('asset://') && !currentSrc.startsWith('tauri://')) {
-              // 计算完整的相对路径（基于当前文件所在目录）
-              const fullRelativePath = parentDir ? `${parentDir}/${currentSrc}` : currentSrc
+            if (currentSrc && currentFilePath && !currentSrc.startsWith('http') && !currentSrc.startsWith('asset://') && !currentSrc.startsWith('tauri://')) {
+              const fullRelativePath = resolveImagePathFromMarkdown(currentFilePath, currentSrc)
               const assetUrl = await convertImageByWorkspace(fullRelativePath)
               img.setAttribute('src', assetUrl)
             }
@@ -1604,20 +1671,39 @@ export function TipTapEditor({
     }
   }, [editor])
 
-  // Listen to editor updates and notify TabBar about undo/redo state
+  // Listen to editor transactions and notify header/tab bar about undo/redo state
   useEffect(() => {
     if (!editor) return
 
-    const handleUpdate = () => {
+    let frameId: number | null = null
+
+    const emitUndoRedoState = () => {
       emitter.emit('editor-undo-redo-changed', {
         undo: editor.can().undo(),
         redo: editor.can().redo()
       })
     }
 
-    editor.on('update', handleUpdate)
+    emitUndoRedoState()
+    const handleTransaction = () => {
+      emitUndoRedoState()
+
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+
+      frameId = requestAnimationFrame(() => {
+        emitUndoRedoState()
+        frameId = null
+      })
+    }
+
+    editor.on('transaction', handleTransaction)
     return () => {
-      editor.off('update', handleUpdate)
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+      editor.off('transaction', handleTransaction)
     }
   }, [editor, activeFilePath])
 
@@ -1995,17 +2081,14 @@ export function TipTapEditor({
     }
 
     // Get editor content
-    const handleGetContent = ({ resolve }: { resolve: (data: { markdown: string; html?: string; text: string; wordCount: number; charCount: number; totalLines?: number; numberedLines?: string; version: number }) => void }) => {
+    const handleGetContent = ({ resolve }: { resolve: (data: { markdown: string; text: string; wordCount: number; charCount: number; totalLines?: number; numberedLines?: string; version: number }) => void }) => {
       if (!editor) {
         resolve({ markdown: '', text: '', wordCount: 0, charCount: 0, totalLines: 1, numberedLines: '1 | ', version: 0 })
         return
       }
 
-      let markdown = editor.getMarkdown()
-      // 修复表格空单元格中的 &nbsp; 问题 - 替换为空格
-      markdown = markdown.replace(/&nbsp;/g, ' ')
+      const markdown = normalizeMarkdownPlaceholders(editor.getMarkdown())
       const text = editor.getText()
-      const html = editor.getHTML()
       const markdownLines = markdown.split('\n')
       const totalLines = markdownLines.length
       const lineNumberWidth = String(totalLines).length
@@ -2015,7 +2098,6 @@ export function TipTapEditor({
 
       resolve({
         markdown,
-        html,
         text,
         wordCount: text.split(/\s+/).filter(w => w).length,
         charCount: text.length,
@@ -2086,6 +2168,7 @@ export function TipTapEditor({
 
       try {
         let { from, to } = editor.state.selection
+        let replacementMode: 'range' | 'line' = 'range'
 
         // Mode 1: Position-based (use current selection if not specified)
         if (range) {
@@ -2144,10 +2227,7 @@ export function TipTapEditor({
         }
         // Mode 3: Line-based
         else if (startLine !== undefined && endLine !== undefined) {
-          const doc = editor.state.doc
-          // Convert 1-based line numbers to positions
-          from = lineToPosition(doc, startLine)
-          to = lineToPosition(doc, endLine + 1)
+          replacementMode = 'line'
         }
         // Fallback: use current selection (only if content is provided)
         else if (content) {
@@ -2162,11 +2242,23 @@ export function TipTapEditor({
         // Delete old content and insert new content with markdown parsing
         // Wrap in setTimeout to avoid React lifecycle flushSync conflict
         setTimeout(() => {
-          editor.chain()
-            .focus()
-            .deleteRange({ from, to })
-            .insertContent(newContent, { contentType: 'markdown' })
-            .run()
+          if (replacementMode === 'line' && startLine !== undefined && endLine !== undefined) {
+            const currentMarkdown = normalizeMarkdownPlaceholders(editor.getMarkdown())
+            const updatedMarkdown = replaceLinesInRange(
+              currentMarkdown,
+              startLine,
+              endLine,
+              newContent.split('\n')
+            )
+
+            editor.commands.setContent(updatedMarkdown, { contentType: 'markdown' })
+          } else {
+            editor.chain()
+              .focus()
+              .deleteRange({ from, to })
+              .insertContent(newContent, { contentType: 'markdown' })
+              .run()
+          }
 
           // Increment version after successful replacement
           contentVersionRef.current++
@@ -2247,6 +2339,11 @@ export function TipTapEditor({
       editor.chain().focus().redo().run()
     }
 
+    const handleMobileToggleOutline = () => {
+      if (!isMobile) return
+      setMobileOutlineOpen((prev) => !prev)
+    }
+
     // Handle query for undo/redo capability
     const handleCanUndoRedo = ({ resolve }: { resolve: (can: { undo: boolean; redo: boolean }) => void }) => {
       if (!editor) {
@@ -2271,6 +2368,7 @@ export function TipTapEditor({
       emitter.on('get-quote-from-editor', handleGetQuote)
       emitter.on('editor-undo', handleUndo)
       emitter.on('editor-redo', handleRedo)
+      emitter.on('mobile-editor-toggle-outline', handleMobileToggleOutline)
       emitter.on('editor-can-undo-redo', handleCanUndoRedo)
       document.addEventListener('tiptap-insert-mermaid', handleInsertMermaid as EventListener)
       listenersSetup = true
@@ -2284,6 +2382,7 @@ export function TipTapEditor({
       emitter.off('get-quote-from-editor', handleGetQuote)
       emitter.off('editor-undo', handleUndo)
       emitter.off('editor-redo', handleRedo)
+      emitter.off('mobile-editor-toggle-outline', handleMobileToggleOutline)
       emitter.off('editor-can-undo-redo', handleCanUndoRedo)
       // Only remove event listener if it was actually added
       if (listenersSetup) {
@@ -2304,6 +2403,15 @@ export function TipTapEditor({
     return null
   }
 
+  const effectiveOutlineOpen = isMobile ? mobileOutlineOpen : outlineOpen
+  const handleOutlineToggle = () => {
+    if (isMobile) {
+      setMobileOutlineOpen((prev) => !prev)
+      return
+    }
+    onToggleOutline?.()
+  }
+
   return (
     <div ref={editorContainerRef} id="aritcle-md-editor" className="tiptap-editor relative flex flex-col h-full">
       {isMobile && mobileContext && (
@@ -2322,7 +2430,21 @@ export function TipTapEditor({
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleEditorDrop}
       >
-        <div className={getEditorContentContainerClass({ centeredContent, isMobile })}>
+        <div
+          className={getEditorContentContainerClass({
+            centeredContent,
+            isMobile,
+            outlineOpen: !!outlineOpen,
+            outlinePosition,
+          })}
+          style={
+            !isMobile && outlineOpen
+              ? {
+                [isOutlineOnLeft(outlinePosition) ? 'paddingLeft' : 'paddingRight']: OUTLINE_PANEL_PADDING_CLASS,
+              }
+              : undefined
+          }
+        >
         <EditorContent editor={editor} className="h-full relative">
           {!isMobile && <ImageBubbleMenu editor={editor} />}
 
@@ -2336,6 +2458,7 @@ export function TipTapEditor({
               onAIPolish={handleAIPolish}
               onAIConcise={handleAIConcise}
               onAIExpand={handleAIExpand}
+              onAITranslate={handleAITranslate}
               onQuoteToChat={onQuoteToChat}
             />
           )}
@@ -2368,6 +2491,15 @@ export function TipTapEditor({
         />
       )}
 
+      {isMobile && (
+        <Outline
+          editor={editor}
+          isOpen={mobileOutlineOpen}
+          variant="drawer"
+          onHeadingSelect={() => setMobileOutlineOpen(false)}
+        />
+      )}
+
       {/* AI Generation Overlay */}
       {showOverlay && (
         <div className="absolute inset-0 z-50 flex items-start justify-end p-4 bg-background/20 pointer-events-none">
@@ -2391,8 +2523,8 @@ export function TipTapEditor({
       {/* Bottom toolbar - always visible */}
       <FooterBar
         editor={editor}
-        outlineOpen={outlineOpen}
-        onToggleOutline={onToggleOutline}
+        outlineOpen={effectiveOutlineOpen}
+        onToggleOutline={handleOutlineToggle}
       />
 
       <SlashCommandPortal />
