@@ -55,6 +55,7 @@ import emitter from '@/lib/emitter'
 import { QuoteMark } from './quote-mark'
 import { MarkdownParagraph, normalizeMarkdownPlaceholders } from './markdown-paragraph'
 import { StableCodeBlockLowlight } from './code-block-extension'
+import { shouldTransformImageSrcToWorkspaceAsset } from './image-src'
 import useSettingStore from '@/stores/setting'
 import useChatStore from '@/stores/chat'
 import { Loader2, X } from 'lucide-react'
@@ -81,12 +82,23 @@ const PasteMarkdown = Extension.create({
       new Plugin({
         props: {
           handlePaste(_view, event, _slice) {
-            void _view
             void _slice
             const text = (event as ClipboardEvent).clipboardData?.getData('text/plain')
 
             if (!text) {
               return false
+            }
+
+            const { selection, schema } = _view.state
+            const codeBlockType = schema.nodes.codeBlock
+            const isPastingInsideCodeBlock =
+              codeBlockType != null &&
+              selection.$from.parent.type === codeBlockType &&
+              selection.$to.parent.type === codeBlockType
+
+            if (isPastingInsideCodeBlock) {
+              _view.dispatch(_view.state.tr.insertText(text, selection.from, selection.to))
+              return true
             }
 
             // 检查文本是否看起来像 Markdown
@@ -116,8 +128,21 @@ function looksLikeMarkdown(text: string): boolean {
     /^\d+\.\s/.test(text) || // 有序列表
     /^>\s/.test(text) || // 引用
     /^```[\s\S]*```$/.test(text) || // 代码块
-    /`[^`]+`/.test(text) // 行内代码
+    /`[^`]+`/.test(text) || // 行内代码
+    /\$\$[\s\S]+?\$\$/.test(text) || // 块级公式
+    /(^|[^\$])\$[^\$\n]+\$(?!\$)/.test(text) // 行内公式
   )
+}
+
+function runDeferredEditorCommand(onSuccess: () => void, onError: (error: unknown) => void) {
+  setTimeout(() => {
+    try {
+      onSuccess()
+    } catch (error) {
+      console.error('[TipTap Editor] Deferred editor command failed:', error)
+      onError(error)
+    }
+  }, 0)
 }
 
 interface TipTapEditorProps {
@@ -354,7 +379,7 @@ export function TipTapEditor({
                 const relativeSrc = element.getAttribute('data-relative-src') || src
                 const uploading = element.getAttribute('data-uploading') === 'true'
                 // 如果是相对路径（非 http/https/asset://），转换为 asset://
-                if (src && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
+                if (shouldTransformImageSrcToWorkspaceAsset(src)) {
                   // 这里不能直接调用 async 函数，需要在后续处理
                   return {
                     src, // 先保持原样，后续通过其他方式处理
@@ -406,7 +431,7 @@ export function TipTapEditor({
         },
               }).configure({
         inline: true,
-        allowBase64: false,
+        allowBase64: true,
         HTMLAttributes: {
           class: 'max-w-full h-auto rounded-lg',
         },
@@ -1624,7 +1649,7 @@ export function TipTapEditor({
       for (const img of images) {
         const src = img.getAttribute('src')
         // 如果是相对路径，转换为 asset://
-        if (src && currentFilePath && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
+        if (src && currentFilePath && shouldTransformImageSrcToWorkspaceAsset(src)) {
           const fullRelativePath = resolveImagePathFromMarkdown(currentFilePath, src)
           // 异步转换路径
           convertImageByWorkspace(fullRelativePath).then((assetUrl: string) => {
@@ -1639,7 +1664,7 @@ export function TipTapEditor({
         if (img && !img.onerror) {
           img.onerror = async () => {
             const currentSrc = img.getAttribute('src')
-            if (currentSrc && currentFilePath && !currentSrc.startsWith('http') && !currentSrc.startsWith('asset://') && !currentSrc.startsWith('tauri://')) {
+            if (currentSrc && currentFilePath && shouldTransformImageSrcToWorkspaceAsset(currentSrc)) {
               const fullRelativePath = resolveImagePathFromMarkdown(currentFilePath, currentSrc)
               const assetUrl = await convertImageByWorkspace(fullRelativePath)
               img.setAttribute('src', assetUrl)
@@ -2117,7 +2142,7 @@ export function TipTapEditor({
       try {
         // Insert content with markdown parsing
         // Wrap in setTimeout to avoid React lifecycle flushSync conflict
-        setTimeout(() => {
+        runDeferredEditorCommand(() => {
           editor.commands.insertContent(content, { contentType: 'markdown' })
 
           // Use the actual cursor position after transaction
@@ -2128,7 +2153,9 @@ export function TipTapEditor({
             insertedLength: content.length,
             newCursorPosition: newPosition,
           })
-        }, 0)
+        }, () => {
+          resolve({ success: false, insertedLength: 0 })
+        })
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         resolve({ success: false, insertedLength: 0 })
@@ -2241,7 +2268,7 @@ export function TipTapEditor({
 
         // Delete old content and insert new content with markdown parsing
         // Wrap in setTimeout to avoid React lifecycle flushSync conflict
-        setTimeout(() => {
+        runDeferredEditorCommand(() => {
           if (replacementMode === 'line' && startLine !== undefined && endLine !== undefined) {
             const currentMarkdown = normalizeMarkdownPlaceholders(editor.getMarkdown())
             const updatedMarkdown = replaceLinesInRange(
@@ -2269,7 +2296,9 @@ export function TipTapEditor({
             message: `成功替换 ${to - from} 个字符为 ${newContent.length} 个字符`,
             newCursorPosition: from + newContent.length,
           })
-        }, 0)
+        }, (error) => {
+          resolve({ success: false, insertedLength: 0, error: String(error) })
+        })
       } catch (error) {
         resolve({ success: false, insertedLength: 0, error: String(error) })
       }
